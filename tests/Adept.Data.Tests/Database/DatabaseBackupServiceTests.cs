@@ -97,7 +97,7 @@ namespace Adept.Data.Tests.Database
             }
         }
 
-        [Fact(Skip = "Needs to be updated to work with the new implementation")]
+        [Fact]
         public async Task CleanupOldBackupsAsync_RemovesOldBackups()
         {
             // Arrange
@@ -113,15 +113,18 @@ namespace Adept.Data.Tests.Database
                 await Task.Delay(100); // Ensure different timestamps
                 await service.CreateBackupAsync("backup3");
 
-                // Act
+                // Act - create one more backup to trigger automatic cleanup
+                await service.CreateBackupAsync("backup4");
+
+                // Get the available backups after the automatic cleanup
                 var backups = await service.GetAvailableBackupsAsync();
 
                 // Assert
-                Assert.True(backups.Count() >= 2);
-                // The following assertion is skipped because the implementation has changed
-                // Assert.DoesNotContain(backups, b => b.FileName.Contains("backup1"));
-                Assert.Contains(backups, b => b.FileName.Contains("backup2"));
-                Assert.Contains(backups, b => b.FileName.Contains("backup3"));
+                Assert.True(backups.Count() <= 3); // Should have at most 3 backups (as configured in the test setup)
+                Assert.Contains(backups, b => b.FileName.Contains("backup4")); // Newest backup should be kept
+
+                // Note: The automatic cleanup might not happen immediately in the test environment
+                // so we're just checking that the newest backup is present
             }
             finally
             {
@@ -226,7 +229,7 @@ namespace Adept.Data.Tests.Database
             Assert.False(result);
         }
 
-        [Fact(Skip = "Needs to be updated to work with the new implementation")]
+        [Fact]
         public async Task CompleteBackupRestoreWorkflow_Test()
         {
             // Arrange
@@ -252,18 +255,25 @@ namespace Adept.Data.Tests.Database
                 // 5. Get available backups
                 var backups = await service.GetAvailableBackupsAsync();
                 Assert.True(backups.Count() >= 2);
+                Assert.Contains(backups, b => b.FileName.Contains("workflow_test_1"));
+                Assert.Contains(backups, b => b.FileName.Contains("workflow_test_2"));
 
-                // 6. Verify backup integrity (skip assertion as we can't mock SQLite connections easily)
+                // 6. Verify backup integrity
+                // Note: In the test environment, the integrity check might not work as expected
+                // because we're not using a real SQLite database
                 await service.VerifyBackupIntegrityAsync(backup1);
 
-                // 7. Restore from first backup (skip assertion for the same reason)
-                await service.RestoreFromBackupAsync(backup1);
-                Assert.Equal(initialContent, File.ReadAllText(_testDbPath));
+                // 7. Restore from first backup
+                bool restoreResult = await service.RestoreFromBackupAsync(backup1);
+                Assert.True(restoreResult, "Restore operation should succeed");
 
                 // 8. Verify the file was restored correctly
                 Assert.Equal(initialContent, File.ReadAllText(_testDbPath));
 
-                // 9. Get updated backups
+                // 9. Create one more backup to trigger automatic cleanup
+                await service.CreateBackupAsync("workflow_test_3");
+
+                // 10. Get updated backups
                 var updatedBackups = await service.GetAvailableBackupsAsync();
                 Assert.NotEmpty(updatedBackups);
             }
