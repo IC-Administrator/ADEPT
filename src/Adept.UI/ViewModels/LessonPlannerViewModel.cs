@@ -1,5 +1,6 @@
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
+using Adept.UI.Commands;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -68,7 +69,7 @@ namespace Adept.UI.ViewModels
                         OnPropertyChanged(nameof(LearningObjectives));
                         OnPropertyChanged(nameof(LessonComponents));
                     }
-                    
+
                     OnPropertyChanged(nameof(IsLessonSelected));
                     OnPropertyChanged(nameof(CanEditLesson));
                     OnPropertyChanged(nameof(CanDeleteLesson));
@@ -298,16 +299,16 @@ namespace Adept.UI.ViewModels
                 Lessons.Clear();
 
                 var lessons = await _lessonRepository.GetLessonsByClassIdAsync(SelectedClass.ClassId);
-                
+
                 // Filter by date
                 lessons = lessons.Where(l => l.Date == CurrentDate);
-                
+
                 foreach (var lesson in lessons.OrderBy(l => l.TimeSlot))
                 {
                     Lessons.Add(lesson);
                 }
 
-                _logger.LogInformation("Loaded {Count} lessons for class {ClassName} on {Date}", 
+                _logger.LogInformation("Loaded {Count} lessons for class {ClassName} on {Date}",
                     Lessons.Count, SelectedClass.Name, CurrentDate);
             }
             catch (Exception ex)
@@ -356,7 +357,7 @@ namespace Adept.UI.ViewModels
                 Lessons.Add(newLesson);
                 SelectedLesson = newLesson;
 
-                _logger.LogInformation("Added new lesson: {LessonTitle} for class {ClassName} on {Date}", 
+                _logger.LogInformation("Added new lesson: {LessonTitle} for class {ClassName} on {Date}",
                     newLesson.Title, SelectedClass.Name, CurrentDate);
             }
             catch (Exception ex)
@@ -419,7 +420,7 @@ namespace Adept.UI.ViewModels
             {
                 // In a real implementation, this would show a confirmation dialog
                 var lessonToDelete = SelectedLesson;
-                
+
                 IsBusy = true;
                 await _lessonRepository.DeleteLessonAsync(lessonToDelete.LessonId);
                 Lessons.Remove(lessonToDelete);
@@ -450,26 +451,26 @@ namespace Adept.UI.ViewModels
             try
             {
                 IsBusy = true;
-                
+
                 // Create a prompt for the LLM
                 var prompt = $"Create a lesson plan for a {SelectedClass.GradeLevel} {SelectedClass.Subject} class. " +
                              $"The lesson should be for {TimeSlots[SelectedTimeSlot]}. " +
                              $"Include a title, learning objectives, and a detailed lesson structure with timings, " +
                              $"activities, and resources needed.";
-                
+
                 // Send the prompt to the LLM
                 var response = await _llmService.SendMessageAsync(prompt);
-                
+
                 // Parse the response
                 var content = response.Message.Content;
-                
+
                 // Extract title and learning objectives (this is a simple implementation)
                 var titleMatch = System.Text.RegularExpressions.Regex.Match(content, @"Title:\s*(.+)");
                 var objectivesMatch = System.Text.RegularExpressions.Regex.Match(content, @"Learning Objectives:(.*?)(?=\n\n|\z)", System.Text.RegularExpressions.RegexOptions.Singleline);
-                
+
                 var title = titleMatch.Success ? titleMatch.Groups[1].Value.Trim() : "Generated Lesson";
                 var objectives = objectivesMatch.Success ? objectivesMatch.Groups[1].Value.Trim() : "";
-                
+
                 // Create a new lesson
                 var newLesson = new LessonPlan
                 {
@@ -480,13 +481,13 @@ namespace Adept.UI.ViewModels
                     LearningObjectives = objectives,
                     ComponentsJson = content
                 };
-                
+
                 // Add the lesson
                 await _lessonRepository.AddLessonAsync(newLesson);
                 Lessons.Add(newLesson);
                 SelectedLesson = newLesson;
-                
-                _logger.LogInformation("Generated lesson: {LessonTitle} for class {ClassName} on {Date}", 
+
+                _logger.LogInformation("Generated lesson: {LessonTitle} for class {ClassName} on {Date}",
                     newLesson.Title, SelectedClass.Name, CurrentDate);
             }
             catch (Exception ex)
@@ -539,19 +540,19 @@ namespace Adept.UI.ViewModels
             try
             {
                 IsBusy = true;
-                
+
                 // Remember the selected class
                 var selectedClassId = SelectedClass?.ClassId;
-                
+
                 // Reload classes
                 await LoadClassesAsync();
-                
+
                 // Restore the selected class
                 if (!string.IsNullOrEmpty(selectedClassId))
                 {
                     SelectedClass = Classes.FirstOrDefault(c => c.ClassId == selectedClassId);
                 }
-                
+
                 _logger.LogInformation("Refreshed data");
             }
             catch (Exception ex)
@@ -574,7 +575,7 @@ namespace Adept.UI.ViewModels
                 var date = DateTime.Parse(CurrentDate);
                 date = date.AddDays(-1);
                 CurrentDate = date.ToString("yyyy-MM-dd");
-                
+
                 _logger.LogInformation("Changed date to {Date}", CurrentDate);
             }
             catch (Exception ex)
@@ -593,7 +594,7 @@ namespace Adept.UI.ViewModels
                 var date = DateTime.Parse(CurrentDate);
                 date = date.AddDays(1);
                 CurrentDate = date.ToString("yyyy-MM-dd");
-                
+
                 _logger.LogInformation("Changed date to {Date}", CurrentDate);
             }
             catch (Exception ex)

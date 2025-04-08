@@ -5,7 +5,9 @@ using Adept.Data.Repositories;
 using Adept.Services.Configuration;
 using Adept.Services.Llm;
 using Adept.Services.Llm.Providers;
+using Adept.Services.Mcp;
 using Adept.Services.Security;
+using Adept.Services.Voice;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -104,9 +106,6 @@ namespace Adept.UI
 
             // Register MCP Services
             services.AddSingleton<IMcpServerManager, McpServerManager>();
-            services.AddSingleton<IMcpToolProvider, FileSystemToolProvider>();
-            services.AddSingleton<IMcpToolProvider, WebSearchToolProvider>();
-            services.AddSingleton<IMcpToolProvider, CalendarToolProvider>();
 
             // TODO: Register other services
 

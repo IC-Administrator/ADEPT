@@ -10,6 +10,11 @@ namespace Adept.UI.ViewModels
         private readonly ILogger<MainViewModel> _logger;
 
         /// <summary>
+        /// Gets the home view model
+        /// </summary>
+        public HomeViewModel HomeViewModel { get; }
+
+        /// <summary>
         /// Gets the chat view model
         /// </summary>
         public ChatViewModel ChatViewModel { get; }
@@ -37,6 +42,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Initializes a new instance of the <see cref="MainViewModel"/> class
         /// </summary>
+        /// <param name="homeViewModel">The home view model</param>
         /// <param name="chatViewModel">The chat view model</param>
         /// <param name="classViewModel">The class view model</param>
         /// <param name="lessonPlannerViewModel">The lesson planner view model</param>
@@ -44,6 +50,7 @@ namespace Adept.UI.ViewModels
         /// <param name="systemStatusViewModel">The system status view model</param>
         /// <param name="logger">The logger</param>
         public MainViewModel(
+            HomeViewModel homeViewModel,
             ChatViewModel chatViewModel,
             ClassViewModel classViewModel,
             LessonPlannerViewModel lessonPlannerViewModel,
@@ -51,6 +58,7 @@ namespace Adept.UI.ViewModels
             SystemStatusViewModel systemStatusViewModel,
             ILogger<MainViewModel> logger)
         {
+            HomeViewModel = homeViewModel;
             ChatViewModel = chatViewModel;
             ClassViewModel = classViewModel;
             LessonPlannerViewModel = lessonPlannerViewModel;

@@ -1,7 +1,9 @@
 using Adept.Core.Interfaces;
+using Adept.UI.Commands;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Windows.Input;
 
 namespace Adept.UI.ViewModels

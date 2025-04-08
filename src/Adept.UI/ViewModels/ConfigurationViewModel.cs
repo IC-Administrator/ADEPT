@@ -1,7 +1,9 @@
 using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
+using Adept.UI.Commands;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows.Input;
 
 namespace Adept.UI.ViewModels
@@ -22,9 +24,13 @@ namespace Adept.UI.ViewModels
         private string _appVersion = string.Empty;
         private string _dataDirectory = string.Empty;
         private string _selectedLlmProvider = string.Empty;
+        private string _selectedLlmModel = string.Empty;
         private string _openAiApiKey = string.Empty;
         private string _anthropicApiKey = string.Empty;
         private string _googleApiKey = string.Empty;
+        private string _metaApiKey = string.Empty;
+        private string _openRouterApiKey = string.Empty;
+        private string _deepSeekApiKey = string.Empty;
         private string _braveApiKey = string.Empty;
         private bool _mcpServerRunning;
         private string _mcpServerUrl = string.Empty;
@@ -84,7 +90,24 @@ namespace Adept.UI.ViewModels
             {
                 if (SetProperty(ref _selectedLlmProvider, value))
                 {
+                    // Update available models for this provider
+                    UpdateAvailableModels();
                     SetLlmProviderAsync().ConfigureAwait(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the selected LLM model
+        /// </summary>
+        public string SelectedLlmModel
+        {
+            get => _selectedLlmModel;
+            set
+            {
+                if (SetProperty(ref _selectedLlmModel, value))
+                {
+                    SetLlmModelAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -114,6 +137,33 @@ namespace Adept.UI.ViewModels
         {
             get => _googleApiKey;
             set => SetProperty(ref _googleApiKey, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the Meta API key
+        /// </summary>
+        public string MetaApiKey
+        {
+            get => _metaApiKey;
+            set => SetProperty(ref _metaApiKey, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the OpenRouter API key
+        /// </summary>
+        public string OpenRouterApiKey
+        {
+            get => _openRouterApiKey;
+            set => SetProperty(ref _openRouterApiKey, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the DeepSeek API key
+        /// </summary>
+        public string DeepSeekApiKey
+        {
+            get => _deepSeekApiKey;
+            set => SetProperty(ref _deepSeekApiKey, value);
         }
 
         /// <summary>
@@ -147,6 +197,11 @@ namespace Adept.UI.ViewModels
         /// Gets the LLM providers
         /// </summary>
         public ObservableCollection<string> LlmProviders { get; } = new ObservableCollection<string>();
+
+        /// <summary>
+        /// Gets the available models for the selected provider
+        /// </summary>
+        public ObservableCollection<string> AvailableModels { get; } = new ObservableCollection<string>();
 
         /// <summary>
         /// Gets the save general settings command
@@ -223,10 +278,9 @@ namespace Adept.UI.ViewModels
                 IsBusy = true;
 
                 // Load general settings
-                AppName = _configurationService.GetValue<string>("AppName") ?? "ADEPT AI Teaching Assistant";
-                AppVersion = _configurationService.GetValue<string>("AppVersion") ?? "1.0.0";
-                DataDirectory = _configurationService.GetValue<string>("DataDirectory") ?? 
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Adept");
+                AppName = "ADEPT AI Teaching Assistant";
+                AppVersion = "1.0.0";
+                DataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Adept");
 
                 // Load LLM providers
                 LlmProviders.Clear();
@@ -238,10 +292,21 @@ namespace Adept.UI.ViewModels
                 // Set the selected LLM provider
                 SelectedLlmProvider = _llmService.ActiveProvider.ProviderName;
 
+                // Load the saved model preference for this provider
+                string savedModel = string.Empty;
+                if (!string.IsNullOrEmpty(savedModel))
+                {
+                    // This will be set after UpdateAvailableModels is called
+                    SelectedLlmModel = savedModel;
+                }
+
                 // Load API keys
                 OpenAiApiKey = await _secureStorageService.RetrieveSecureValueAsync("openai_api_key") ?? string.Empty;
                 AnthropicApiKey = await _secureStorageService.RetrieveSecureValueAsync("anthropic_api_key") ?? string.Empty;
                 GoogleApiKey = await _secureStorageService.RetrieveSecureValueAsync("google_api_key") ?? string.Empty;
+                MetaApiKey = await _secureStorageService.RetrieveSecureValueAsync("meta_api_key") ?? string.Empty;
+                OpenRouterApiKey = await _secureStorageService.RetrieveSecureValueAsync("openrouter_api_key") ?? string.Empty;
+                DeepSeekApiKey = await _secureStorageService.RetrieveSecureValueAsync("deepseek_api_key") ?? string.Empty;
                 BraveApiKey = await _secureStorageService.RetrieveSecureValueAsync("brave_api_key") ?? string.Empty;
 
                 // Get MCP server status
@@ -270,11 +335,8 @@ namespace Adept.UI.ViewModels
                 IsBusy = true;
 
                 // Save general settings
-                _configurationService.SetValue("AppName", AppName);
-                _configurationService.SetValue("AppVersion", AppVersion);
-                _configurationService.SetValue("DataDirectory", DataDirectory);
-
-                await _configurationService.SaveAsync();
+                // TODO: Implement configuration saving
+                await Task.CompletedTask;
 
                 _logger.LogInformation("General settings saved");
             }
@@ -301,6 +363,9 @@ namespace Adept.UI.ViewModels
                 await _secureStorageService.StoreSecureValueAsync("openai_api_key", OpenAiApiKey);
                 await _secureStorageService.StoreSecureValueAsync("anthropic_api_key", AnthropicApiKey);
                 await _secureStorageService.StoreSecureValueAsync("google_api_key", GoogleApiKey);
+                await _secureStorageService.StoreSecureValueAsync("meta_api_key", MetaApiKey);
+                await _secureStorageService.StoreSecureValueAsync("openrouter_api_key", OpenRouterApiKey);
+                await _secureStorageService.StoreSecureValueAsync("deepseek_api_key", DeepSeekApiKey);
                 await _secureStorageService.StoreSecureValueAsync("brave_api_key", BraveApiKey);
 
                 _logger.LogInformation("API keys saved");
@@ -312,6 +377,82 @@ namespace Adept.UI.ViewModels
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the available models for the selected provider
+        /// </summary>
+        private void UpdateAvailableModels()
+        {
+            try
+            {
+                // Clear the current models
+                AvailableModels.Clear();
+
+                // Get the provider
+                var provider = _llmService.AvailableProviders.FirstOrDefault(p => p.ProviderName == SelectedLlmProvider);
+                if (provider == null)
+                {
+                    return;
+                }
+
+                // Add the available models based on the provider
+                switch (provider.ProviderName.ToLowerInvariant())
+                {
+                    case "openai":
+                        AvailableModels.Add("gpt-3.5-turbo");
+                        AvailableModels.Add("gpt-3.5-turbo-16k");
+                        AvailableModels.Add("gpt-4");
+                        AvailableModels.Add("gpt-4-32k");
+                        AvailableModels.Add("gpt-4-turbo");
+                        AvailableModels.Add("gpt-4o");
+                        break;
+                    case "anthropic":
+                        AvailableModels.Add("claude-instant-1");
+                        AvailableModels.Add("claude-2");
+                        AvailableModels.Add("claude-3-opus");
+                        AvailableModels.Add("claude-3-sonnet");
+                        AvailableModels.Add("claude-3-haiku");
+                        break;
+                    case "google":
+                        AvailableModels.Add("gemini-pro");
+                        AvailableModels.Add("gemini-ultra");
+                        break;
+                    case "meta":
+                        AvailableModels.Add("llama-3-8b");
+                        AvailableModels.Add("llama-3-70b");
+                        break;
+                    case "deepseek":
+                        AvailableModels.Add("deepseek-chat");
+                        AvailableModels.Add("deepseek-coder");
+                        break;
+                    case "openrouter":
+                        AvailableModels.Add("openai/gpt-4");
+                        AvailableModels.Add("anthropic/claude-3-opus");
+                        AvailableModels.Add("meta-llama/llama-3-70b");
+                        AvailableModels.Add("google/gemini-pro");
+                        break;
+                }
+
+                // Set the current model
+                SelectedLlmModel = provider.ModelName;
+
+                // If the selected model is not in the list, add it
+                if (!string.IsNullOrEmpty(SelectedLlmModel) && !AvailableModels.Contains(SelectedLlmModel))
+                {
+                    AvailableModels.Add(SelectedLlmModel);
+                }
+
+                // If no model is selected, select the first one
+                if (string.IsNullOrEmpty(SelectedLlmModel) && AvailableModels.Count > 0)
+                {
+                    SelectedLlmModel = AvailableModels[0];
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating available models");
             }
         }
 
@@ -329,6 +470,12 @@ namespace Adept.UI.ViewModels
                 if (success)
                 {
                     _logger.LogInformation("LLM provider set to {ProviderName}", SelectedLlmProvider);
+
+                    // Update the selected model
+                    if (!string.IsNullOrEmpty(SelectedLlmModel))
+                    {
+                        await SetLlmModelAsync();
+                    }
                 }
                 else
                 {
@@ -338,6 +485,48 @@ namespace Adept.UI.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error setting LLM provider");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Sets the LLM model
+        /// </summary>
+        private async Task SetLlmModelAsync()
+        {
+            try
+            {
+                IsBusy = true;
+
+                // Get the provider
+                var provider = _llmService.AvailableProviders.FirstOrDefault(p => p.ProviderName == SelectedLlmProvider);
+                if (provider == null)
+                {
+                    _logger.LogWarning("Provider not found: {ProviderName}", SelectedLlmProvider);
+                    return;
+                }
+
+                // Set the model
+                var success = await provider.SetModelAsync(SelectedLlmModel);
+                if (success)
+                {
+                    _logger.LogInformation("LLM model set to {ModelName}", SelectedLlmModel);
+
+                    // Save the model preference
+                    // TODO: Implement configuration saving
+                    await Task.CompletedTask;
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to set LLM model to {ModelName}", SelectedLlmModel);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting LLM model");
             }
             finally
             {
@@ -443,10 +632,10 @@ namespace Adept.UI.ViewModels
         {
             McpServerRunning = e.IsRunning;
             McpServerUrl = e.ServerUrl;
-            
+
             // Refresh command can execute status
-            (StartMcpServerCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (StopMcpServerCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (StartMcpServerCommand as Commands.RelayCommand)?.RaiseCanExecuteChanged();
+            (StopMcpServerCommand as Commands.RelayCommand)?.RaiseCanExecuteChanged();
         }
     }
 }

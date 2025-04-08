@@ -1,3 +1,5 @@
+using System;
+
 namespace Adept.Core.Models
 {
     /// <summary>
@@ -11,6 +13,11 @@ namespace Adept.Core.Models
         public string ClassId { get; set; } = Guid.NewGuid().ToString();
 
         /// <summary>
+        /// Name of the class
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
         /// Class code (e.g., "10A", "11B")
         /// </summary>
         public string ClassCode { get; set; } = string.Empty;
@@ -19,6 +26,21 @@ namespace Adept.Core.Models
         /// Education level (e.g., "KS3", "KS4", "GCSE")
         /// </summary>
         public string EducationLevel { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Grade level of the class
+        /// </summary>
+        public string GradeLevel { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Subject of the class
+        /// </summary>
+        public string Subject { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Academic year of the class
+        /// </summary>
+        public string AcademicYear { get; set; } = string.Empty;
 
         /// <summary>
         /// Current topic being taught

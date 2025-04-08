@@ -1,5 +1,6 @@
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
+using Adept.UI.Commands;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -265,11 +266,11 @@ namespace Adept.UI.ViewModels
                 Classes.Clear();
 
                 var classes = await _classRepository.GetAllClassesAsync();
-                
+
                 // Filter classes if search text is not empty
                 if (!string.IsNullOrWhiteSpace(SearchText))
                 {
-                    classes = classes.Where(c => 
+                    classes = classes.Where(c =>
                         c.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
                         c.Subject.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
                         c.GradeLevel.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
@@ -375,7 +376,7 @@ namespace Adept.UI.ViewModels
             {
                 // In a real implementation, this would show a confirmation dialog
                 var classToDelete = SelectedClass;
-                
+
                 IsBusy = true;
                 await _classRepository.DeleteClassAsync(classToDelete.ClassId);
                 Classes.Remove(classToDelete);
@@ -419,7 +420,7 @@ namespace Adept.UI.ViewModels
                 Students.Add(newStudent);
                 SelectedStudent = newStudent;
 
-                _logger.LogInformation("Added new student: {StudentName} to class {ClassName}", 
+                _logger.LogInformation("Added new student: {StudentName} to class {ClassName}",
                     newStudent.Name, SelectedClass.Name);
             }
             catch (Exception ex)
@@ -480,7 +481,7 @@ namespace Adept.UI.ViewModels
             {
                 // In a real implementation, this would show a confirmation dialog
                 var studentToDelete = SelectedStudent;
-                
+
                 IsBusy = true;
                 await _studentRepository.DeleteStudentAsync(studentToDelete.StudentId);
                 Students.Remove(studentToDelete);
@@ -506,19 +507,19 @@ namespace Adept.UI.ViewModels
             try
             {
                 IsBusy = true;
-                
+
                 // Remember the selected class
                 var selectedClassId = SelectedClass?.ClassId;
-                
+
                 // Reload classes
                 await LoadClassesAsync();
-                
+
                 // Restore the selected class
                 if (!string.IsNullOrEmpty(selectedClassId))
                 {
                     SelectedClass = Classes.FirstOrDefault(c => c.ClassId == selectedClassId);
                 }
-                
+
                 _logger.LogInformation("Refreshed data");
             }
             catch (Exception ex)
