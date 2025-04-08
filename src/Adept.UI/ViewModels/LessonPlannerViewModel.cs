@@ -430,7 +430,7 @@ namespace Adept.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting lesson {LessonId}", SelectedLesson.LessonId);
+                _logger.LogError(ex, "Error deleting lesson {LessonId}", SelectedLesson?.LessonId);
             }
             finally
             {
@@ -615,8 +615,10 @@ namespace Adept.UI.ViewModels
 
             try
             {
-                // In a real implementation, this would use the Calendar Tool Provider
-                _logger.LogInformation("Calendar integration not yet implemented");
+                await Task.Run(() => {
+                    // In a real implementation, this would use the Calendar Tool Provider
+                    _logger.LogInformation("Calendar integration not yet implemented");
+                });
             }
             catch (Exception ex)
             {

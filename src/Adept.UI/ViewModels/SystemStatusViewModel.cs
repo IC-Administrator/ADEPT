@@ -27,8 +27,8 @@ namespace Adept.UI.ViewModels
         private double _memoryUsage;
         private double _diskUsage;
         private string _logContent = string.Empty;
-        private readonly PerformanceCounter _cpuCounter;
-        private readonly PerformanceCounter _ramCounter;
+        private readonly PerformanceCounter? _cpuCounter;
+        private readonly PerformanceCounter? _ramCounter;
         private readonly System.Threading.Timer _refreshTimer;
 
         /// <summary>
@@ -184,44 +184,45 @@ namespace Adept.UI.ViewModels
         /// </summary>
         private async void RefreshAsync()
         {
-            try
+            await Task.Run(() =>
             {
-                IsBusy = true;
-
-                // Get MCP server status
-                McpServerRunning = _mcpServerManager.IsServerRunning;
-                McpServerUrl = _mcpServerManager.ServerUrl;
-
-                // Get voice service state
-                VoiceServiceState = _voiceService.State;
-
-                // Get LLM provider info
-                ActiveLlmProvider = _llmService.ActiveProvider.ProviderName;
-                ActiveLlmModel = _llmService.ActiveProvider.CurrentModel.Name;
-
-                // Get tool providers
-                ToolProviders.Clear();
-                foreach (var provider in _mcpServerManager.ToolProviders)
+                try
                 {
-                    ToolProviders.Add(provider.ProviderName);
+                    IsBusy = true;
+
+                    // Get MCP server status
+                    McpServerRunning = _mcpServerManager.IsServerRunning;
+                    McpServerUrl = _mcpServerManager.ServerUrl;
+
+                    // Get voice service state
+                    VoiceServiceState = _voiceService.State;
+
+                    // Get LLM provider info
+                    ActiveLlmProvider = _llmService.ActiveProvider.ProviderName;
+                    ActiveLlmModel = _llmService.ActiveProvider.CurrentModel.Name;
+
+                    // Get tool providers
+                    ToolProviders.Clear();
+                    foreach (var provider in _mcpServerManager.ToolProviders)
+                    {
+                        ToolProviders.Add(provider.ProviderName);
+                    }
+
+                    // Get system performance
+                    UpdateSystemPerformance();
+
+                    // Get logs
+                    LoadLogs();
+
+                    _logger.LogInformation("System status refreshed");
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error refreshing system status");
+                }
+            });
 
-                // Get system performance
-                UpdateSystemPerformance();
-
-                // Get logs
-                LoadLogs();
-
-                _logger.LogInformation("System status refreshed");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error refreshing system status");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
+            IsBusy = false;
         }
 
         /// <summary>
@@ -232,11 +233,11 @@ namespace Adept.UI.ViewModels
             try
             {
                 // Get CPU usage
-                CpuUsage = Math.Round(_cpuCounter.NextValue(), 1);
+                CpuUsage = _cpuCounter != null ? Math.Round(_cpuCounter.NextValue(), 1) : 0;
 
                 // Get memory usage
                 var totalPhysicalMemory = new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / (1024 * 1024);
-                var availableMemory = _ramCounter.NextValue();
+                var availableMemory = _ramCounter != null ? _ramCounter.NextValue() : 0;
                 MemoryUsage = Math.Round(100 - (availableMemory / totalPhysicalMemory * 100), 1);
 
                 // Get disk usage

@@ -20,8 +20,9 @@ namespace Adept.UI
 {
     public partial class App : Application
     {
-        private ServiceProvider _serviceProvider;
-        private IConfiguration _configuration;
+        // These fields are initialized in the OnStartup method before they're used
+        private ServiceProvider _serviceProvider = null!;
+        private IConfiguration _configuration = null!;
 
         protected override void OnStartup(StartupEventArgs e)
         {

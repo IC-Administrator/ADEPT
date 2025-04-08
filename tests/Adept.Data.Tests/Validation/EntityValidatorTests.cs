@@ -1,6 +1,8 @@
 using Adept.Core.Models;
+using Adept.Core.Interfaces;
 using Adept.Data.Validation;
 using System;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Adept.Data.Tests.Validation
@@ -31,7 +33,9 @@ namespace Adept.Data.Tests.Validation
         public void ValidateClass_NullClass_ReturnsInvalidResult()
         {
             // Act
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             var result = EntityValidator.ValidateClass(null);
+#pragma warning restore CS8625
 
             // Assert
             Assert.False(result.IsValid);
@@ -102,7 +106,9 @@ namespace Adept.Data.Tests.Validation
         public void ValidateStudent_NullStudent_ReturnsInvalidResult()
         {
             // Act
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             var result = EntityValidator.ValidateStudent(null);
+#pragma warning restore CS8625
 
             // Assert
             Assert.False(result.IsValid);
@@ -193,7 +199,9 @@ namespace Adept.Data.Tests.Validation
         public void ValidateLessonPlan_NullLessonPlan_ReturnsInvalidResult()
         {
             // Act
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             var result = EntityValidator.ValidateLessonPlan(null);
+#pragma warning restore CS8625
 
             // Assert
             Assert.False(result.IsValid);
@@ -304,6 +312,99 @@ namespace Adept.Data.Tests.Validation
             // Act & Assert
             var exception = Record.Exception(() => result.ThrowIfInvalid());
             Assert.Null(exception);
+        }
+
+        [Fact]
+        public void ValidateSystemPrompt_ValidSystemPrompt_ReturnsValidResult()
+        {
+            // Arrange
+            var systemPrompt = new SystemPrompt
+            {
+                PromptId = Guid.NewGuid().ToString(),
+                Name = "Default Assistant",
+                Content = "You are a helpful AI assistant.",
+
+                IsDefault = true
+            };
+
+            // Act
+            var result = EntityValidator.ValidateSystemPrompt(systemPrompt);
+
+            // Assert
+            Assert.True(result.IsValid);
+            Assert.Empty(result.Errors);
+        }
+
+        [Fact]
+        public void ValidateSystemPrompt_NullSystemPrompt_ReturnsInvalidResult()
+        {
+            // Act
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+            var result = EntityValidator.ValidateSystemPrompt(null);
+#pragma warning restore CS8625
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Contains("System prompt entity cannot be null", result.Errors);
+        }
+
+        [Fact]
+        public void ValidateSystemPrompt_EmptyName_ReturnsInvalidResult()
+        {
+            // Arrange
+            var systemPrompt = new SystemPrompt
+            {
+                PromptId = Guid.NewGuid().ToString(),
+                Name = "",
+                Content = "You are a helpful AI assistant."
+            };
+
+            // Act
+            var result = EntityValidator.ValidateSystemPrompt(systemPrompt);
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Contains("Prompt name is required", result.Errors);
+        }
+
+        [Fact]
+        public void ValidateSystemPrompt_EmptyContent_ReturnsInvalidResult()
+        {
+            // Arrange
+            var systemPrompt = new SystemPrompt
+            {
+                PromptId = Guid.NewGuid().ToString(),
+                Name = "Default Assistant",
+                Content = ""
+            };
+
+            // Act
+            var result = EntityValidator.ValidateSystemPrompt(systemPrompt);
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Contains("Prompt content is required", result.Errors);
+        }
+
+        [Fact]
+        public void ValidateSystemPrompt_MultipleErrors_ReturnsAllErrors()
+        {
+            // Arrange
+            var systemPrompt = new SystemPrompt
+            {
+                PromptId = Guid.NewGuid().ToString(),
+                Name = "",
+                Content = ""
+            };
+
+            // Act
+            var result = EntityValidator.ValidateSystemPrompt(systemPrompt);
+
+            // Assert
+            Assert.False(result.IsValid);
+            Assert.Equal(2, result.Errors.Count);
+            Assert.Contains("Prompt name is required", result.Errors);
+            Assert.Contains("Prompt content is required", result.Errors);
         }
     }
 }

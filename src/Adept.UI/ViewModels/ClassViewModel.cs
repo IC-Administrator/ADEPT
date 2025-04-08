@@ -386,7 +386,7 @@ namespace Adept.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting class {ClassId}", SelectedClass.ClassId);
+                _logger.LogError(ex, "Error deleting class {ClassId}", SelectedClass?.ClassId);
             }
             finally
             {
@@ -491,7 +491,7 @@ namespace Adept.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting student {StudentId}", SelectedStudent.StudentId);
+                _logger.LogError(ex, "Error deleting student {StudentId}", SelectedStudent?.StudentId);
             }
             finally
             {
@@ -539,8 +539,10 @@ namespace Adept.UI.ViewModels
         {
             try
             {
-                // In a real implementation, this would show a file picker and import data from Excel
-                _logger.LogInformation("Import functionality not yet implemented");
+                await Task.Run(() => {
+                    // In a real implementation, this would show a file picker and import data from Excel
+                    _logger.LogInformation("Import functionality not yet implemented");
+                });
             }
             catch (Exception ex)
             {
@@ -555,8 +557,10 @@ namespace Adept.UI.ViewModels
         {
             try
             {
-                // In a real implementation, this would show a file picker and export data to Excel
-                _logger.LogInformation("Export functionality not yet implemented");
+                await Task.Run(() => {
+                    // In a real implementation, this would show a file picker and export data to Excel
+                    _logger.LogInformation("Export functionality not yet implemented");
+                });
             }
             catch (Exception ex)
             {
