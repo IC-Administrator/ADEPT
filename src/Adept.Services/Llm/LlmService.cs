@@ -1,6 +1,7 @@
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace Adept.Services.Llm
 {
@@ -12,6 +13,7 @@ namespace Adept.Services.Llm
         private readonly IEnumerable<ILlmProvider> _providers;
         private readonly IConversationRepository _conversationRepository;
         private readonly ISystemPromptService _systemPromptService;
+        private readonly LlmToolIntegrationService _toolIntegrationService;
         private readonly ILogger<LlmService> _logger;
         private ILlmProvider? _activeProvider;
 
@@ -31,16 +33,19 @@ namespace Adept.Services.Llm
         /// <param name="providers">The LLM providers</param>
         /// <param name="conversationRepository">The conversation repository</param>
         /// <param name="systemPromptService">The system prompt service</param>
+        /// <param name="toolIntegrationService">The tool integration service</param>
         /// <param name="logger">The logger</param>
         public LlmService(
             IEnumerable<ILlmProvider> providers,
             IConversationRepository conversationRepository,
             ISystemPromptService systemPromptService,
+            LlmToolIntegrationService toolIntegrationService,
             ILogger<LlmService> logger)
         {
             _providers = providers;
             _conversationRepository = conversationRepository;
             _systemPromptService = systemPromptService;
+            _toolIntegrationService = toolIntegrationService;
             _logger = logger;
 
             // Initialize providers
@@ -67,7 +72,7 @@ namespace Adept.Services.Llm
 
             // Set the first provider with a valid API key as active
             _activeProvider = _providers.FirstOrDefault(p => p.HasValidApiKey) ?? _providers.FirstOrDefault();
-            
+
             if (_activeProvider != null)
             {
                 _logger.LogInformation("Active LLM provider set to: {ProviderName}", _activeProvider.ProviderName);
@@ -158,6 +163,21 @@ namespace Adept.Services.Llm
                     systemPrompt,
                     cancellationToken);
 
+                // Process any tool calls in the response
+                if (response.ToolCalls.Count > 0)
+                {
+                    response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                }
+                else
+                {
+                    // Check for tool calls in the message text
+                    var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
+                    if (processedContent != response.Message.Content)
+                    {
+                        response.Message.Content = processedContent;
+                    }
+                }
+
                 // Add the assistant response to the conversation
                 conversation.AddAssistantMessage(response.Message.Content);
                 await _conversationRepository.UpdateConversationAsync(conversation);
@@ -225,6 +245,21 @@ namespace Adept.Services.Llm
                     systemPrompt,
                     cancellationToken);
 
+                // Process any tool calls in the response
+                if (response.ToolCalls.Count > 0)
+                {
+                    response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                }
+                else
+                {
+                    // Check for tool calls in the message text
+                    var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
+                    if (processedContent != response.Message.Content)
+                    {
+                        response.Message.Content = processedContent;
+                    }
+                }
+
                 // Add the assistant response to the conversation
                 conversation.AddAssistantMessage(response.Message.Content);
                 await _conversationRepository.UpdateConversationAsync(conversation);
@@ -276,7 +311,7 @@ namespace Adept.Services.Llm
             try
             {
                 var conversation = new Conversation();
-                
+
                 // Add a system message with the default prompt
                 var defaultPrompt = await _systemPromptService.GetDefaultPromptAsync();
                 conversation.AddSystemMessage(defaultPrompt.Content);

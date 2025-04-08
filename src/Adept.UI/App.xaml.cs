@@ -83,7 +83,14 @@ namespace Adept.UI
 
             // Register LLM Services
             services.AddSingleton<ILlmProvider, SimpleLlmProvider>();
+            services.AddSingleton<LlmToolIntegrationService>();
             services.AddSingleton<ILlmService, LlmService>();
+
+            // Register MCP Services
+            services.AddSingleton<IMcpServerManager, McpServerManager>();
+            services.AddSingleton<IMcpToolProvider, FileSystemToolProvider>();
+            services.AddSingleton<IMcpToolProvider, WebSearchToolProvider>();
+            services.AddSingleton<IMcpToolProvider, CalendarToolProvider>();
 
             // TODO: Register other services
 
