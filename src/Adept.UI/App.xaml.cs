@@ -96,6 +96,12 @@ namespace Adept.UI
 
             // Register ViewModels
             services.AddSingleton<ViewModels.HomeViewModel>();
+            services.AddSingleton<ViewModels.ChatViewModel>();
+            services.AddSingleton<ViewModels.ClassViewModel>();
+            services.AddSingleton<ViewModels.LessonPlannerViewModel>();
+            services.AddSingleton<ViewModels.ConfigurationViewModel>();
+            services.AddSingleton<ViewModels.SystemStatusViewModel>();
+            services.AddSingleton<ViewModels.MainViewModel>();
 
             // Register MainWindow
             services.AddTransient<MainWindow>();

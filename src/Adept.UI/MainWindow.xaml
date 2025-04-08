@@ -21,8 +21,9 @@
         <!-- Main Tab Control -->
         <TabControl Grid.Row="1"
                     SelectedIndex="{Binding SelectedTabIndex}">
+            <!-- Bind to MainViewModel for all tabs except Home -->
 
-            <TabItem Header="Home">
+            <TabItem Header="Home" x:Name="HomeTab">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
@@ -77,20 +78,486 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Classes">
-                <TextBlock Text="Classes Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
+            <TabItem Header="Classes" x:Name="ClassesTab">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <ToolBar Grid.Row="0">
+                        <Button Content="Add Class" Command="{Binding ClassViewModel.AddClassCommand}" Margin="2" />
+                        <Button Content="Edit Class" Command="{Binding ClassViewModel.EditClassCommand}" Margin="2" />
+                        <Button Content="Delete Class" Command="{Binding ClassViewModel.DeleteClassCommand}" Margin="2" />
+                        <Separator />
+                        <Button Content="Refresh" Command="{Binding ClassViewModel.RefreshCommand}" Margin="2" />
+                        <Separator />
+                        <Button Content="Import" Command="{Binding ClassViewModel.ImportCommand}" Margin="2" />
+                        <Button Content="Export" Command="{Binding ClassViewModel.ExportCommand}" Margin="2" />
+                        <Separator />
+                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="5,0" />
+                        <TextBox Text="{Binding ClassViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" Width="150" Margin="2" />
+                    </ToolBar>
+
+                    <!-- Content -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Classes List -->
+                        <Grid Grid.Column="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Classes" FontWeight="Bold" Margin="5" />
+
+                            <ListView Grid.Row="1" ItemsSource="{Binding ClassViewModel.Classes}"
+                                      SelectedItem="{Binding ClassViewModel.SelectedClass}" Margin="5">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150" />
+                                        <GridViewColumn Header="Subject" DisplayMemberBinding="{Binding Subject}" Width="100" />
+                                        <GridViewColumn Header="Grade" DisplayMemberBinding="{Binding GradeLevel}" Width="80" />
+                                        <GridViewColumn Header="Year" DisplayMemberBinding="{Binding AcademicYear}" Width="80" />
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+
+                        <!-- Splitter -->
+                        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
+
+                        <!-- Students List -->
+                        <Grid Grid.Column="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Students" FontWeight="Bold" Margin="5" />
+
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
+                                <Button Content="Add Student" Command="{Binding ClassViewModel.AddStudentCommand}" Margin="0,0,5,0" />
+                                <Button Content="Edit Student" Command="{Binding ClassViewModel.EditStudentCommand}" Margin="0,0,5,0" />
+                                <Button Content="Delete Student" Command="{Binding ClassViewModel.DeleteStudentCommand}" />
+                            </StackPanel>
+
+                            <ListView Grid.Row="2" ItemsSource="{Binding ClassViewModel.Students}"
+                                      SelectedItem="{Binding ClassViewModel.SelectedStudent}" Margin="5">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150" />
+                                        <GridViewColumn Header="Ability" DisplayMemberBinding="{Binding AbilityLevel}" Width="80" />
+                                        <GridViewColumn Header="Reading Age" DisplayMemberBinding="{Binding ReadingAge}" Width="80" />
+                                        <GridViewColumn Header="FSM" DisplayMemberBinding="{Binding FsmStatus}" Width="50" />
+                                        <GridViewColumn Header="SEN" DisplayMemberBinding="{Binding SenStatus}" Width="50" />
+                                        <GridViewColumn Header="EAL" DisplayMemberBinding="{Binding EalStatus}" Width="50" />
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Busy Indicator -->
+                    <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
+                            Visibility="{Binding ClassViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </TabItem>
 
-            <TabItem Header="Lesson Planner">
-                <TextBlock Text="Lesson Planner Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
+            <TabItem Header="Lesson Planner" x:Name="LessonPlannerTab">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <ToolBar Grid.Row="0">
+                        <Button Content="Add Lesson" Command="{Binding LessonPlannerViewModel.AddLessonCommand}" Margin="2" />
+                        <Button Content="Generate Lesson" Command="{Binding LessonPlannerViewModel.GenerateLessonCommand}" Margin="2" />
+                        <Button Content="Save" Command="{Binding LessonPlannerViewModel.SaveLessonCommand}" Margin="2" />
+                        <Button Content="Delete Lesson" Command="{Binding LessonPlannerViewModel.DeleteLessonCommand}" Margin="2" />
+                        <Separator />
+                        <Button Content="Add to Calendar" Command="{Binding LessonPlannerViewModel.AddToCalendarCommand}" Margin="2" />
+                        <Separator />
+                        <Button Content="Refresh" Command="{Binding LessonPlannerViewModel.RefreshCommand}" Margin="2" />
+                    </ToolBar>
+
+                    <!-- Date and Class Selection -->
+                    <Grid Grid.Row="1" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="Class:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding LessonPlannerViewModel.Classes}"
+                                  SelectedItem="{Binding LessonPlannerViewModel.SelectedClass}"
+                                  DisplayMemberPath="Name" Margin="0,0,10,0" />
+
+                        <TextBlock Grid.Column="2" Text="Date:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <Button Grid.Column="3" Content="&lt;" Command="{Binding LessonPlannerViewModel.PreviousDayCommand}"
+                                Width="30" Margin="0,0,5,0" />
+                        <TextBox Grid.Column="4" Text="{Binding LessonPlannerViewModel.CurrentDate}"
+                                 Width="100" Margin="0,0,5,0" />
+                        <Button Grid.Column="5" Content="&gt;" Command="{Binding LessonPlannerViewModel.NextDayCommand}"
+                                Width="30" Margin="0,0,10,0" />
+
+                        <TextBlock Grid.Column="6" Text="Time Slot:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <ComboBox Grid.Column="7" ItemsSource="{Binding LessonPlannerViewModel.TimeSlots}"
+                                  SelectedIndex="{Binding LessonPlannerViewModel.SelectedTimeSlot}"
+                                  Width="150" />
+                    </Grid>
+
+                    <!-- Content -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="250" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Lessons List -->
+                        <Grid Grid.Column="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Lessons" FontWeight="Bold" Margin="5" />
+
+                            <ListView Grid.Row="1" ItemsSource="{Binding LessonPlannerViewModel.Lessons}"
+                                      SelectedItem="{Binding LessonPlannerViewModel.SelectedLesson}" Margin="5">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" FontWeight="Bold" />
+                                            <TextBlock>
+                                                <Run Text="Time: " />
+                                                <Run Text="{Binding TimeSlot}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+
+                        <!-- Splitter -->
+                        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
+
+                        <!-- Lesson Details -->
+                        <Grid Grid.Column="2" Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Lesson Details" FontWeight="Bold" Margin="0,0,0,5" />
+
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Title:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                <TextBox Grid.Column="1" Text="{Binding LessonPlannerViewModel.LessonTitle, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,5" />
+                            </Grid>
+
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Learning Objectives:" VerticalAlignment="Top" Margin="0,5,5,0" />
+                                <TextBox Grid.Column="1" Text="{Binding LessonPlannerViewModel.LearningObjectives, UpdateSourceTrigger=PropertyChanged}"
+                                         TextWrapping="Wrap" AcceptsReturn="True" Height="60" Margin="0,5,0,5" />
+                            </Grid>
+
+                            <Grid Grid.Row="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Lesson Components:" Margin="0,5,0,5" />
+                                <TextBox Grid.Row="1" Text="{Binding LessonPlannerViewModel.LessonComponents, UpdateSourceTrigger=PropertyChanged}"
+                                         TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                            </Grid>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Busy Indicator -->
+                    <Border Grid.Row="0" Grid.RowSpan="3" Background="#80000000"
+                            Visibility="{Binding LessonPlannerViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </TabItem>
 
-            <TabItem Header="Configuration">
-                <TextBlock Text="Configuration Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
+            <TabItem Header="Configuration" x:Name="ConfigurationTab">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Tab Selection -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
+                        <RadioButton Content="General" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=General, Mode=TwoWay}" Margin="5" />
+                        <RadioButton Content="API Keys" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=API Keys, Mode=TwoWay}" Margin="5" />
+                        <RadioButton Content="MCP Server" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=MCP Server, Mode=TwoWay}" Margin="5" />
+                        <RadioButton Content="About" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=About, Mode=TwoWay}" Margin="5" />
+                    </StackPanel>
+
+                    <!-- Content -->
+                    <Grid Grid.Row="1" Margin="10">
+                        <!-- General Settings -->
+                        <Grid Visibility="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=General, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Application Name:" VerticalAlignment="Center" Margin="0,5" />
+                            <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ConfigurationViewModel.AppName}" Margin="0,5" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Application Version:" VerticalAlignment="Center" Margin="0,5" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ConfigurationViewModel.AppVersion}" Margin="0,5" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Data Directory:" VerticalAlignment="Center" Margin="0,5" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ConfigurationViewModel.DataDirectory}" Margin="0,5" />
+                            <Button Grid.Row="2" Grid.Column="2" Content="Browse..." Command="{Binding ConfigurationViewModel.BrowseDataDirectoryCommand}" Margin="5,5,0,5" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="LLM Provider:" VerticalAlignment="Center" Margin="0,5" />
+                            <ComboBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding ConfigurationViewModel.LlmProviders}"
+                                      SelectedItem="{Binding ConfigurationViewModel.SelectedLlmProvider}" Margin="0,5" />
+
+                            <Button Grid.Row="4" Grid.Column="1" Content="Save Settings" Command="{Binding ConfigurationViewModel.SaveGeneralSettingsCommand}"
+                                    HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5" />
+                        </Grid>
+
+                        <!-- API Keys -->
+                        <Grid Visibility="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=API Keys, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="OpenAI API Key:" VerticalAlignment="Center" Margin="0,5" />
+                            <PasswordBox Grid.Row="0" Grid.Column="1" Password="{Binding ConfigurationViewModel.OpenAiApiKey}" Margin="0,5" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Anthropic API Key:" VerticalAlignment="Center" Margin="0,5" />
+                            <PasswordBox Grid.Row="1" Grid.Column="1" Password="{Binding ConfigurationViewModel.AnthropicApiKey}" Margin="0,5" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Google API Key:" VerticalAlignment="Center" Margin="0,5" />
+                            <PasswordBox Grid.Row="2" Grid.Column="1" Password="{Binding ConfigurationViewModel.GoogleApiKey}" Margin="0,5" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Brave API Key:" VerticalAlignment="Center" Margin="0,5" />
+                            <PasswordBox Grid.Row="3" Grid.Column="1" Password="{Binding ConfigurationViewModel.BraveApiKey}" Margin="0,5" />
+
+                            <Button Grid.Row="4" Grid.Column="1" Content="Save API Keys" Command="{Binding ConfigurationViewModel.SaveApiKeysCommand}"
+                                    HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5" />
+                        </Grid>
+
+                        <!-- MCP Server -->
+                        <Grid Visibility="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=MCP Server, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Server Status:" VerticalAlignment="Center" Margin="0,5" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ConfigurationViewModel.McpServerRunning, Converter={StaticResource BooleanToStatusConverter}}"
+                                       Foreground="{Binding ConfigurationViewModel.McpServerRunning, Converter={StaticResource BooleanToColorConverter}}"
+                                       FontWeight="Bold" VerticalAlignment="Center" Margin="0,5" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Server URL:" VerticalAlignment="Center" Margin="0,5" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ConfigurationViewModel.McpServerUrl}" IsReadOnly="True" Margin="0,5" />
+
+                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button Content="Start Server" Command="{Binding ConfigurationViewModel.StartMcpServerCommand}" Margin="0,0,5,0" Padding="10,5" />
+                                <Button Content="Stop Server" Command="{Binding ConfigurationViewModel.StopMcpServerCommand}" Margin="0,0,5,0" Padding="10,5" />
+                                <Button Content="Restart Server" Command="{Binding ConfigurationViewModel.RestartMcpServerCommand}" Padding="10,5" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- About -->
+                        <Grid Visibility="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=About, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="ADEPT AI Teaching Assistant" FontSize="24" FontWeight="Bold" Margin="0,0,0,10" />
+                                <TextBlock Text="Version 1.0.0" Margin="0,0,0,20" />
+                                <TextBlock Text="ADEPT (AI-Driven Education Planning Tool) is an AI teaching assistant designed to help science teachers with lesson planning, resource creation, and classroom instruction."
+                                           TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <TextBlock Text="© 2024 Augment Code. All rights reserved." Margin="0,20,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Busy Indicator -->
+                    <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
+                            Visibility="{Binding ConfigurationViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </TabItem>
 
-            <TabItem Header="System Status">
-                <TextBlock Text="System Status Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
+            <TabItem Header="System Status" x:Name="SystemStatusTab">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <ToolBar Grid.Row="0">
+                        <Button Content="Refresh" Command="{Binding SystemStatusViewModel.RefreshCommand}" Margin="2" />
+                        <Separator />
+                        <Button Content="Clear Logs" Command="{Binding SystemStatusViewModel.ClearLogsCommand}" Margin="2" />
+                    </ToolBar>
+
+                    <!-- Content -->
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Service Status -->
+                        <GroupBox Grid.Row="0" Header="Service Status" Margin="10">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="MCP Server:" VerticalAlignment="Center" Margin="0,5" />
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding SystemStatusViewModel.McpServerRunning, Converter={StaticResource BooleanToStatusConverter}}"
+                                               Foreground="{Binding SystemStatusViewModel.McpServerRunning, Converter={StaticResource BooleanToColorConverter}}"
+                                               FontWeight="Bold" VerticalAlignment="Center" Margin="0,5,10,5" />
+                                    <TextBlock Text="{Binding SystemStatusViewModel.McpServerUrl}" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Voice Service:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SystemStatusViewModel.VoiceServiceState}"
+                                           VerticalAlignment="Center" Margin="0,5" />
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="LLM Provider:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SystemStatusViewModel.ActiveLlmProvider}"
+                                           VerticalAlignment="Center" Margin="0,5" />
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="LLM Model:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SystemStatusViewModel.ActiveLlmModel}"
+                                           VerticalAlignment="Center" Margin="0,5" />
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- System Performance -->
+                        <GroupBox Grid.Row="1" Header="System Performance" Margin="10,0,10,10">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU Usage:" VerticalAlignment="Center" Margin="0,5" />
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                                    <ProgressBar Value="{Binding SystemStatusViewModel.CpuUsage}" Width="200" Height="15" Margin="0,5" />
+                                    <TextBlock Text="{Binding SystemStatusViewModel.CpuUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Memory Usage:" VerticalAlignment="Center" Margin="0,5" />
+                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                                    <ProgressBar Value="{Binding SystemStatusViewModel.MemoryUsage}" Width="200" Height="15" Margin="0,5" />
+                                    <TextBlock Text="{Binding SystemStatusViewModel.MemoryUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Disk Usage:" VerticalAlignment="Center" Margin="0,5" />
+                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
+                                    <ProgressBar Value="{Binding SystemStatusViewModel.DiskUsage}" Width="200" Height="15" Margin="0,5" />
+                                    <TextBlock Text="{Binding SystemStatusViewModel.DiskUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
+                                </StackPanel>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- Logs -->
+                        <GroupBox Grid.Row="2" Header="System Logs" Margin="10,0,10,10">
+                            <TextBox Text="{Binding SystemStatusViewModel.LogContent}" IsReadOnly="True"
+                                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                        </GroupBox>
+                    </Grid>
+
+                    <!-- Busy Indicator -->
+                    <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
+                            Visibility="{Binding SystemStatusViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </TabItem>
         </TabControl>
 

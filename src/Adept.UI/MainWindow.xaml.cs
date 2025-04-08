@@ -12,6 +12,11 @@ namespace Adept.UI
         private readonly IVoiceService _voiceService;
 
         /// <summary>
+        /// Gets the main view model
+        /// </summary>
+        public MainViewModel MainViewModel { get; }
+
+        /// <summary>
         /// Gets the home view model
         /// </summary>
         public HomeViewModel HomeViewModel { get; }
@@ -21,16 +26,23 @@ namespace Adept.UI
         /// </summary>
         public int SelectedTabIndex { get; set; }
 
-        public MainWindow(ILogger<MainWindow> logger, IVoiceService voiceService, HomeViewModel homeViewModel)
+        public MainWindow(ILogger<MainWindow> logger, IVoiceService voiceService, MainViewModel mainViewModel, HomeViewModel homeViewModel)
         {
             _logger = logger;
             _voiceService = voiceService;
+            MainViewModel = mainViewModel;
             HomeViewModel = homeViewModel;
 
             InitializeComponent();
 
             // Set the data context
             DataContext = this;
+
+            // Set the data context for the tabs
+            ClassesTab.DataContext = MainViewModel;
+            LessonPlannerTab.DataContext = MainViewModel;
+            ConfigurationTab.DataContext = MainViewModel;
+            SystemStatusTab.DataContext = MainViewModel;
 
             // Subscribe to voice service events
             _voiceService.StateChanged += OnVoiceServiceStateChanged;
