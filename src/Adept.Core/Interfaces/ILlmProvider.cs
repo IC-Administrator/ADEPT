@@ -56,6 +56,12 @@ namespace Adept.Core.Interfaces
         Task InitializeAsync();
 
         /// <summary>
+        /// Fetches the latest available models from the provider's API
+        /// </summary>
+        /// <returns>A collection of available models</returns>
+        Task<IEnumerable<LlmModel>> FetchAvailableModelsAsync();
+
+        /// <summary>
         /// Sets the API key for the provider
         /// </summary>
         /// <param name="apiKey">The API key</param>

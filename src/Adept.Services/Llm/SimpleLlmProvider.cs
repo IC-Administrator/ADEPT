@@ -103,6 +103,16 @@ namespace Adept.Services.Llm
         }
 
         /// <summary>
+        /// Fetches the latest available models from the provider
+        /// </summary>
+        /// <returns>A collection of available models</returns>
+        public Task<IEnumerable<LlmModel>> FetchAvailableModelsAsync()
+        {
+            // This is a simple provider with hardcoded models, so we just return them
+            return Task.FromResult<IEnumerable<LlmModel>>(_models);
+        }
+
+        /// <summary>
         /// Sets the API key for the provider
         /// </summary>
         /// <param name="apiKey">The API key</param>

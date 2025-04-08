@@ -34,6 +34,16 @@ namespace Adept.UI.ViewModels
         private string _braveApiKey = string.Empty;
         private bool _mcpServerRunning;
         private string _mcpServerUrl = string.Empty;
+        private string _selectedWakeWordProvider = string.Empty;
+        private string _selectedSttProvider = string.Empty;
+        private string _selectedTtsProvider = string.Empty;
+        private string _selectedTtsVoice = string.Empty;
+        private float _ttsSpeed = 1.0f;
+        private float _ttsVolume = 0.0f;
+        private float _ttsClarity = 0.0f;
+        private float _ttsEmotion = 0.0f;
+        private bool _useDiskCache = true;
+        private int _maxCacheItems = 100;
 
         /// <summary>
         /// Gets or sets whether the view model is busy
@@ -194,6 +204,103 @@ namespace Adept.UI.ViewModels
         }
 
         /// <summary>
+        /// Gets or sets the selected wake word provider
+        /// </summary>
+        public string SelectedWakeWordProvider
+        {
+            get => _selectedWakeWordProvider;
+            set => SetProperty(ref _selectedWakeWordProvider, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the selected speech-to-text provider
+        /// </summary>
+        public string SelectedSttProvider
+        {
+            get => _selectedSttProvider;
+            set => SetProperty(ref _selectedSttProvider, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the selected text-to-speech provider
+        /// </summary>
+        public string SelectedTtsProvider
+        {
+            get => _selectedTtsProvider;
+            set
+            {
+                if (SetProperty(ref _selectedTtsProvider, value))
+                {
+                    // Update available voices for this provider
+                    UpdateAvailableVoices();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the selected text-to-speech voice
+        /// </summary>
+        public string SelectedTtsVoice
+        {
+            get => _selectedTtsVoice;
+            set => SetProperty(ref _selectedTtsVoice, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the text-to-speech speed
+        /// </summary>
+        public float TtsSpeed
+        {
+            get => _ttsSpeed;
+            set => SetProperty(ref _ttsSpeed, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the text-to-speech volume
+        /// </summary>
+        public float TtsVolume
+        {
+            get => _ttsVolume;
+            set => SetProperty(ref _ttsVolume, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the text-to-speech clarity
+        /// </summary>
+        public float TtsClarity
+        {
+            get => _ttsClarity;
+            set => SetProperty(ref _ttsClarity, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the text-to-speech emotion
+        /// </summary>
+        public float TtsEmotion
+        {
+            get => _ttsEmotion;
+            set => SetProperty(ref _ttsEmotion, value);
+        }
+
+        /// <summary>
+        /// Gets or sets whether to use disk cache for text-to-speech
+        /// </summary>
+        public bool UseDiskCache
+        {
+            get => _useDiskCache;
+            set => SetProperty(ref _useDiskCache, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the maximum number of cache items
+        /// </summary>
+        public int MaxCacheItems
+        {
+            get => _maxCacheItems;
+            set => SetProperty(ref _maxCacheItems, value);
+        }
+
+        /// <summary>
         /// Gets the LLM providers
         /// </summary>
         public ObservableCollection<string> LlmProviders { get; } = new ObservableCollection<string>();
@@ -204,6 +311,26 @@ namespace Adept.UI.ViewModels
         public ObservableCollection<string> AvailableModels { get; } = new ObservableCollection<string>();
 
         /// <summary>
+        /// Gets the available wake word providers
+        /// </summary>
+        public ObservableCollection<string> WakeWordProviders { get; } = new ObservableCollection<string>();
+
+        /// <summary>
+        /// Gets the available speech-to-text providers
+        /// </summary>
+        public ObservableCollection<string> SttProviders { get; } = new ObservableCollection<string>();
+
+        /// <summary>
+        /// Gets the available text-to-speech providers
+        /// </summary>
+        public ObservableCollection<string> TtsProviders { get; } = new ObservableCollection<string>();
+
+        /// <summary>
+        /// Gets the available text-to-speech voices
+        /// </summary>
+        public ObservableCollection<string> TtsVoices { get; } = new ObservableCollection<string>();
+
+        /// <summary>
         /// Gets the save general settings command
         /// </summary>
         public ICommand SaveGeneralSettingsCommand { get; }
@@ -212,6 +339,11 @@ namespace Adept.UI.ViewModels
         /// Gets the save API keys command
         /// </summary>
         public ICommand SaveApiKeysCommand { get; }
+
+        /// <summary>
+        /// Gets the save voice settings command
+        /// </summary>
+        public ICommand SaveVoiceSettingsCommand { get; }
 
         /// <summary>
         /// Gets the start MCP server command
@@ -256,6 +388,7 @@ namespace Adept.UI.ViewModels
 
             SaveGeneralSettingsCommand = new RelayCommand(SaveGeneralSettingsAsync);
             SaveApiKeysCommand = new RelayCommand(SaveApiKeysAsync);
+            SaveVoiceSettingsCommand = new RelayCommand(SaveVoiceSettingsAsync);
             StartMcpServerCommand = new RelayCommand(StartMcpServerAsync, () => !McpServerRunning);
             StopMcpServerCommand = new RelayCommand(StopMcpServerAsync, () => McpServerRunning);
             RestartMcpServerCommand = new RelayCommand(RestartMcpServerAsync);
@@ -312,6 +445,34 @@ namespace Adept.UI.ViewModels
                 // Get MCP server status
                 McpServerRunning = _mcpServerManager.IsServerRunning;
                 McpServerUrl = _mcpServerManager.ServerUrl;
+
+                // Load voice settings
+                WakeWordProviders.Clear();
+                WakeWordProviders.Add("vosk");
+                WakeWordProviders.Add("simple");
+                SelectedWakeWordProvider = await _configurationService.GetConfigurationValueAsync("wake_word_detector", "vosk") ?? "vosk";
+
+                SttProviders.Clear();
+                SttProviders.Add("whisper");
+                SttProviders.Add("google");
+                SttProviders.Add("simple");
+                SelectedSttProvider = await _configurationService.GetConfigurationValueAsync("speech_to_text_provider", "whisper") ?? "whisper";
+
+                TtsProviders.Clear();
+                TtsProviders.Add("fishaudio");
+                TtsProviders.Add("openai");
+                TtsProviders.Add("google");
+                TtsProviders.Add("simple");
+                SelectedTtsProvider = await _configurationService.GetConfigurationValueAsync("text_to_speech_provider", "fishaudio") ?? "fishaudio";
+
+                // Load Fish Audio settings
+                SelectedTtsVoice = await _configurationService.GetConfigurationValueAsync("fish_audio_voice_id", "default") ?? "default";
+                TtsSpeed = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_speed", "1.0") ?? "1.0");
+                TtsVolume = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_volume", "0.0") ?? "0.0");
+                TtsClarity = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_clarity", "0.0") ?? "0.0");
+                TtsEmotion = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_emotion", "0.0") ?? "0.0");
+                UseDiskCache = bool.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_use_disk_cache", "true") ?? "true");
+                MaxCacheItems = int.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_max_cache_items", "100") ?? "100");
 
                 _logger.LogInformation("Configuration loaded");
             }
@@ -381,12 +542,47 @@ namespace Adept.UI.ViewModels
         }
 
         /// <summary>
-        /// Updates the available models for the selected provider
+        /// Saves the voice settings
         /// </summary>
-        private void UpdateAvailableModels()
+        private async void SaveVoiceSettingsAsync()
         {
             try
             {
+                IsBusy = true;
+
+                // Save voice settings
+                await _configurationService.SetConfigurationValueAsync("wake_word_detector", SelectedWakeWordProvider);
+                await _configurationService.SetConfigurationValueAsync("speech_to_text_provider", SelectedSttProvider);
+                await _configurationService.SetConfigurationValueAsync("text_to_speech_provider", SelectedTtsProvider);
+                await _configurationService.SetConfigurationValueAsync("fish_audio_voice_id", SelectedTtsVoice);
+                await _configurationService.SetConfigurationValueAsync("fish_audio_speed", TtsSpeed.ToString());
+                await _configurationService.SetConfigurationValueAsync("fish_audio_volume", TtsVolume.ToString());
+                await _configurationService.SetConfigurationValueAsync("fish_audio_clarity", TtsClarity.ToString());
+                await _configurationService.SetConfigurationValueAsync("fish_audio_emotion", TtsEmotion.ToString());
+                await _configurationService.SetConfigurationValueAsync("fish_audio_use_disk_cache", UseDiskCache.ToString());
+                await _configurationService.SetConfigurationValueAsync("fish_audio_max_cache_items", MaxCacheItems.ToString());
+
+                _logger.LogInformation("Voice settings saved");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving voice settings");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the available models for the selected provider
+        /// </summary>
+        private async void UpdateAvailableModels()
+        {
+            try
+            {
+                IsBusy = true;
+
                 // Clear the current models
                 AvailableModels.Clear();
 
@@ -397,42 +593,54 @@ namespace Adept.UI.ViewModels
                     return;
                 }
 
-                // Add the available models based on the provider
-                switch (provider.ProviderName.ToLowerInvariant())
+                // Try to fetch models from the API first
+                var models = await provider.FetchAvailableModelsAsync();
+
+                // Add the models to the UI list
+                foreach (var model in models)
                 {
-                    case "openai":
-                        AvailableModels.Add("gpt-3.5-turbo");
-                        AvailableModels.Add("gpt-3.5-turbo-16k");
-                        AvailableModels.Add("gpt-4");
-                        AvailableModels.Add("gpt-4-32k");
-                        AvailableModels.Add("gpt-4-turbo");
-                        AvailableModels.Add("gpt-4o");
-                        break;
-                    case "anthropic":
-                        AvailableModels.Add("claude-instant-1");
-                        AvailableModels.Add("claude-2");
-                        AvailableModels.Add("claude-3-opus");
-                        AvailableModels.Add("claude-3-sonnet");
-                        AvailableModels.Add("claude-3-haiku");
-                        break;
-                    case "google":
-                        AvailableModels.Add("gemini-pro");
-                        AvailableModels.Add("gemini-ultra");
-                        break;
-                    case "meta":
-                        AvailableModels.Add("llama-3-8b");
-                        AvailableModels.Add("llama-3-70b");
-                        break;
-                    case "deepseek":
-                        AvailableModels.Add("deepseek-chat");
-                        AvailableModels.Add("deepseek-coder");
-                        break;
-                    case "openrouter":
-                        AvailableModels.Add("openai/gpt-4");
-                        AvailableModels.Add("anthropic/claude-3-opus");
-                        AvailableModels.Add("meta-llama/llama-3-70b");
-                        AvailableModels.Add("google/gemini-pro");
-                        break;
+                    AvailableModels.Add(model.Id);
+                }
+
+                // If no models were fetched, add fallback models based on the provider
+                if (AvailableModels.Count == 0)
+                {
+                    switch (provider.ProviderName.ToLowerInvariant())
+                    {
+                        case "openai":
+                            AvailableModels.Add("gpt-3.5-turbo");
+                            AvailableModels.Add("gpt-3.5-turbo-16k");
+                            AvailableModels.Add("gpt-4");
+                            AvailableModels.Add("gpt-4-32k");
+                            AvailableModels.Add("gpt-4-turbo");
+                            AvailableModels.Add("gpt-4o");
+                            break;
+                        case "anthropic":
+                            AvailableModels.Add("claude-instant-1");
+                            AvailableModels.Add("claude-2");
+                            AvailableModels.Add("claude-3-opus");
+                            AvailableModels.Add("claude-3-sonnet");
+                            AvailableModels.Add("claude-3-haiku");
+                            break;
+                        case "google":
+                            AvailableModels.Add("gemini-pro");
+                            AvailableModels.Add("gemini-ultra");
+                            break;
+                        case "meta":
+                            AvailableModels.Add("llama-3-8b");
+                            AvailableModels.Add("llama-3-70b");
+                            break;
+                        case "deepseek":
+                            AvailableModels.Add("deepseek-chat");
+                            AvailableModels.Add("deepseek-coder");
+                            break;
+                        case "openrouter":
+                            AvailableModels.Add("openai/gpt-4");
+                            AvailableModels.Add("anthropic/claude-3-opus");
+                            AvailableModels.Add("meta-llama/llama-3-70b");
+                            AvailableModels.Add("google/gemini-pro");
+                            break;
+                    }
                 }
 
                 // Set the current model
@@ -453,6 +661,67 @@ namespace Adept.UI.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating available models");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the available voices for the selected provider
+        /// </summary>
+        private void UpdateAvailableVoices()
+        {
+            try
+            {
+                // Clear the current voices
+                TtsVoices.Clear();
+
+                // Add the available voices based on the provider
+                switch (SelectedTtsProvider.ToLowerInvariant())
+                {
+                    case "fishaudio":
+                        // Add default voices
+                        TtsVoices.Add("default");
+                        TtsVoices.Add("male-1");
+                        TtsVoices.Add("male-2");
+                        TtsVoices.Add("female-1");
+                        TtsVoices.Add("female-2");
+                        TtsVoices.Add("child-1");
+                        TtsVoices.Add("elder-1");
+                        TtsVoices.Add("narrator-1");
+                        TtsVoices.Add("assistant-1");
+                        break;
+                    case "openai":
+                        TtsVoices.Add("alloy");
+                        TtsVoices.Add("echo");
+                        TtsVoices.Add("fable");
+                        TtsVoices.Add("onyx");
+                        TtsVoices.Add("nova");
+                        TtsVoices.Add("shimmer");
+                        break;
+                    case "google":
+                        TtsVoices.Add("en-US-Neural2-A");
+                        TtsVoices.Add("en-US-Neural2-C");
+                        TtsVoices.Add("en-US-Neural2-D");
+                        TtsVoices.Add("en-US-Neural2-F");
+                        TtsVoices.Add("en-US-Neural2-H");
+                        break;
+                    default:
+                        TtsVoices.Add("default");
+                        break;
+                }
+
+                // Set the current voice
+                if (TtsVoices.Count > 0)
+                {
+                    SelectedTtsVoice = TtsVoices[0];
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating available voices");
             }
         }
 

@@ -31,24 +31,7 @@ namespace Adept.Services.Llm.Providers
         /// </summary>
         public string ModelName => _currentModel.Id;
 
-        /// <summary>
-        /// Sends messages to the LLM with streaming and gets a response
-        /// </summary>
-        /// <param name="messages">The messages to send</param>
-        /// <param name="systemPrompt">Optional system prompt to use</param>
-        /// <param name="onPartialResponse">Callback for partial responses</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>The complete LLM response</returns>
-        public async Task<LlmResponse> SendMessagesStreamingAsync(
-            IEnumerable<LlmMessage> messages,
-            string? systemPrompt = null,
-            Action<string>? onPartialResponse = null,
-            CancellationToken cancellationToken = default)
-        {
-            // TODO: Implement streaming
-            var userMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "";
-            return await SendMessageAsync(userMessage, systemPrompt, cancellationToken);
-        }
+
 
         /// <summary>
         /// Gets the available models for this provider
@@ -125,10 +108,59 @@ namespace Adept.Services.Llm.Providers
                 _apiKey = await _secureStorageService.RetrieveSecureValueAsync("meta_api_key") ?? string.Empty;
                 _isInitialized = true;
                 _logger.LogInformation("Meta provider initialized");
+
+                // Fetch available models if we have an API key
+                if (HasValidApiKey)
+                {
+                    await FetchAvailableModelsAsync();
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error initializing Meta provider");
+            }
+        }
+
+        /// <summary>
+        /// Fetches the latest available models from the Meta API
+        /// </summary>
+        /// <returns>A collection of available models</returns>
+        public async Task<IEnumerable<LlmModel>> FetchAvailableModelsAsync()
+        {
+            if (!HasValidApiKey)
+            {
+                _logger.LogWarning("Cannot fetch Meta models: API key not set");
+                return _availableModels;
+            }
+
+            try
+            {
+                // Meta doesn't have a public models endpoint, so we'll return the hardcoded list
+                // but we'll make sure it includes the latest models
+                _availableModels.Clear();
+
+                // Llama 3 models
+                _availableModels.Add(new LlmModel("llama-3-70b-instruct", "Llama 3 70B Instruct", 128000, true, false));
+                _availableModels.Add(new LlmModel("llama-3-8b-instruct", "Llama 3 8B Instruct", 128000, true, false));
+
+                // Llama 2 models
+                _availableModels.Add(new LlmModel("llama-2-70b-chat", "Llama 2 70B Chat", 4096, false, false));
+                _availableModels.Add(new LlmModel("llama-2-13b-chat", "Llama 2 13B Chat", 4096, false, false));
+                _availableModels.Add(new LlmModel("llama-2-7b-chat", "Llama 2 7B Chat", 4096, false, false));
+
+                // Set current model if not already set
+                if (_currentModel == null)
+                {
+                    _currentModel = _availableModels.First();
+                }
+
+                _logger.LogInformation("Fetched {Count} Meta models", _availableModels.Count);
+                return _availableModels;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Meta models");
+                return _availableModels;
             }
         }
 
@@ -276,11 +308,28 @@ namespace Adept.Services.Llm.Providers
         /// Sends messages to the LLM with streaming and gets a response
         /// </summary>
         /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await SendMessagesStreamingAsync(messages, onPartialResponse ?? (_ => {}), systemPrompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends messages to the LLM with streaming and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
         /// <param name="onChunk">Callback for each chunk of the response</param>
         /// <param name="systemPrompt">Optional system prompt to use</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The complete LLM response</returns>
-        public async Task<LlmResponse> SendMessagesStreamingAsync(IEnumerable<LlmMessage> messages, Action<string> onChunk, string? systemPrompt = null, CancellationToken cancellationToken = default)
+        private async Task<LlmResponse> SendMessagesStreamingAsync(IEnumerable<LlmMessage> messages, Action<string> onChunk, string? systemPrompt = null, CancellationToken cancellationToken = default)
         {
             if (!HasValidApiKey)
             {

@@ -2,7 +2,9 @@ using Adept.Core.Interfaces;
 using Adept.UI.Commands;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using static Adept.UI.ViewModels.HomeViewModel;
@@ -21,6 +23,9 @@ namespace Adept.UI.ViewModels
         private string _currentConversationId = string.Empty;
         private bool _isBusy;
         private bool _isStreaming = true;
+        private bool _isVoiceInputEnabled;
+        private bool _isVoiceOutputEnabled;
+        private VoiceServiceState _voiceServiceState = VoiceServiceState.NotListening;
 
         /// <summary>
         /// Gets or sets the user input
@@ -50,6 +55,33 @@ namespace Adept.UI.ViewModels
         }
 
         /// <summary>
+        /// Gets or sets whether voice input is enabled
+        /// </summary>
+        public bool IsVoiceInputEnabled
+        {
+            get => _isVoiceInputEnabled;
+            set => SetProperty(ref _isVoiceInputEnabled, value);
+        }
+
+        /// <summary>
+        /// Gets or sets whether voice output is enabled
+        /// </summary>
+        public bool IsVoiceOutputEnabled
+        {
+            get => _isVoiceOutputEnabled;
+            set => SetProperty(ref _isVoiceOutputEnabled, value);
+        }
+
+        /// <summary>
+        /// Gets the current voice service state
+        /// </summary>
+        public VoiceServiceState VoiceServiceState
+        {
+            get => _voiceServiceState;
+            private set => SetProperty(ref _voiceServiceState, value);
+        }
+
+        /// <summary>
         /// Gets the conversation messages
         /// </summary>
         public ObservableCollection<ChatMessage> Messages { get; } = new ObservableCollection<ChatMessage>();
@@ -65,6 +97,26 @@ namespace Adept.UI.ViewModels
         public ICommand ClearConversationCommand { get; }
 
         /// <summary>
+        /// Gets the toggle streaming command
+        /// </summary>
+        public ICommand ToggleStreamingCommand { get; }
+
+        /// <summary>
+        /// Gets the toggle voice input command
+        /// </summary>
+        public ICommand ToggleVoiceInputCommand { get; }
+
+        /// <summary>
+        /// Gets the toggle voice output command
+        /// </summary>
+        public ICommand ToggleVoiceOutputCommand { get; }
+
+        /// <summary>
+        /// Gets the start voice input command
+        /// </summary>
+        public ICommand StartVoiceInputCommand { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ChatViewModel"/> class
         /// </summary>
         /// <param name="llmService">The LLM service</param>
@@ -78,9 +130,17 @@ namespace Adept.UI.ViewModels
 
             SendMessageCommand = new RelayCommand(SendMessageAsync, CanSendMessage);
             ClearConversationCommand = new RelayCommand(ClearConversationAsync);
+            ToggleStreamingCommand = new RelayCommand(ToggleStreaming);
+            ToggleVoiceInputCommand = new RelayCommand(ToggleVoiceInput);
+            ToggleVoiceOutputCommand = new RelayCommand(ToggleVoiceOutput);
+            StartVoiceInputCommand = new RelayCommand(StartVoiceInputAsync, CanStartVoiceInput);
 
             // Subscribe to voice service events
             _voiceService.SpeechRecognized += OnSpeechRecognized;
+            _voiceService.StateChanged += OnVoiceServiceStateChanged;
+
+            // Initialize voice service state
+            VoiceServiceState = _voiceService.State;
 
             // Initialize a new conversation
             InitializeConversationAsync().ConfigureAwait(false);
@@ -140,33 +200,62 @@ namespace Adept.UI.ViewModels
                 var userInput = UserInput;
                 UserInput = string.Empty;
 
+                LlmResponse response;
+                ChatMessage assistantMessage;
+
                 if (IsStreaming)
                 {
                     // Create a placeholder for the assistant's response
-                    var assistantMessage = new ChatMessage
+                    assistantMessage = new ChatMessage
                     {
                         Role = "assistant",
                         Content = ""
                     };
                     Messages.Add(assistantMessage);
 
+                    // Convert the conversation history to LlmMessages
+                    var history = new List<LlmMessage>();
+                    foreach (var message in Messages.Take(Messages.Count - 1)) // Exclude the empty assistant message
+                    {
+                        LlmRole role = message.Role.ToLowerInvariant() switch
+                        {
+                            "user" => LlmRole.User,
+                            "assistant" => LlmRole.Assistant,
+                            "system" => LlmRole.System,
+                            _ => LlmRole.User
+                        };
+                        history.Add(new LlmMessage(role, message.Content));
+                    }
+
                     // Send the message to the LLM with streaming
-                    var response = await _llmService.SendMessageAsync(
-                        userInput,
+                    response = await _llmService.SendMessagesStreamingAsync(
+                        history,
+                        chunk =>
+                        {
+                            // Update the UI with each chunk
+                            App.Current.Dispatcher.Invoke(() =>
+                            {
+                                assistantMessage.Content += chunk;
+                                OnPropertyChanged(nameof(Messages));
+                            });
+                        },
                         null,
                         _currentConversationId);
 
-                    // Update the assistant's message with the response
-                    assistantMessage.Content = response.Message.Content;
-                    OnPropertyChanged(nameof(Messages));
+                    // Ensure the final content is set correctly
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        assistantMessage.Content = response.Message.Content;
+                        OnPropertyChanged(nameof(Messages));
+                    });
                 }
                 else
                 {
                     // Send the message to the LLM without streaming
-                    var response = await _llmService.SendMessageAsync(userInput, null, _currentConversationId);
+                    response = await _llmService.SendMessageAsync(userInput, null, _currentConversationId);
 
                     // Add the assistant message to the UI
-                    var assistantMessage = new ChatMessage
+                    assistantMessage = new ChatMessage
                     {
                         Role = "assistant",
                         Content = response.Message.Content
@@ -174,8 +263,11 @@ namespace Adept.UI.ViewModels
                     Messages.Add(assistantMessage);
                 }
 
-                // Speak the response (optional)
-                // await _voiceService.SpeakAsync(response.Message.Content);
+                // Speak the response if voice output is enabled
+                if (IsVoiceOutputEnabled)
+                {
+                    await _voiceService.SpeakAsync(assistantMessage.Content);
+                }
             }
             catch (Exception ex)
             {
@@ -240,6 +332,87 @@ namespace Adept.UI.ViewModels
             {
                 SendMessageAsync();
             }
+        }
+
+        /// <summary>
+        /// Toggles streaming mode on or off
+        /// </summary>
+        private void ToggleStreaming()
+        {
+            IsStreaming = !IsStreaming;
+            _logger.LogInformation($"Streaming mode {(IsStreaming ? "enabled" : "disabled")}");
+        }
+
+        /// <summary>
+        /// Toggles voice input on or off
+        /// </summary>
+        private void ToggleVoiceInput()
+        {
+            IsVoiceInputEnabled = !IsVoiceInputEnabled;
+            _logger.LogInformation($"Voice input {(IsVoiceInputEnabled ? "enabled" : "disabled")}");
+
+            if (IsVoiceInputEnabled)
+            {
+                // Start listening for wake word
+                _voiceService.StartListeningForWakeWordAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                // Stop listening
+                _voiceService.StopListeningForWakeWordAsync().ConfigureAwait(false);
+                _voiceService.StopListeningForSpeechAsync().ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Toggles voice output on or off
+        /// </summary>
+        private void ToggleVoiceOutput()
+        {
+            IsVoiceOutputEnabled = !IsVoiceOutputEnabled;
+            _logger.LogInformation($"Voice output {(IsVoiceOutputEnabled ? "enabled" : "disabled")}");
+        }
+
+        /// <summary>
+        /// Starts voice input
+        /// </summary>
+        private async void StartVoiceInputAsync()
+        {
+            try
+            {
+                // Start listening for speech
+                await _voiceService.StartListeningForSpeechAsync();
+                _logger.LogInformation("Started listening for speech");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting voice input");
+            }
+        }
+
+        /// <summary>
+        /// Determines whether voice input can be started
+        /// </summary>
+        private bool CanStartVoiceInput()
+        {
+            return IsVoiceInputEnabled &&
+                   VoiceServiceState != VoiceServiceState.ListeningForSpeech &&
+                   VoiceServiceState != VoiceServiceState.ProcessingSpeech;
+        }
+
+        /// <summary>
+        /// Handles voice service state changes
+        /// </summary>
+        private void OnVoiceServiceStateChanged(object? sender, VoiceServiceStateChangedEventArgs e)
+        {
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                VoiceServiceState = e.NewState;
+                _logger.LogInformation("Voice service state changed to {State}", e.NewState);
+
+                // Update command availability
+                (StartVoiceInputCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            });
         }
     }
 }

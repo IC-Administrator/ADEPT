@@ -47,6 +47,8 @@ namespace Adept.Services.Configuration
                 await SetDefaultConfigurationValueAsync("fish_audio_model", "speech-1.6");
                 await SetDefaultConfigurationValueAsync("fish_audio_speed", "1.0");
                 await SetDefaultConfigurationValueAsync("fish_audio_volume", "0.0");
+                await SetDefaultConfigurationValueAsync("fish_audio_clarity", "0.0");
+                await SetDefaultConfigurationValueAsync("fish_audio_emotion", "0.0");
                 await SetDefaultConfigurationValueAsync("fish_audio_use_disk_cache", "true");
                 await SetDefaultConfigurationValueAsync("fish_audio_max_cache_items", "100");
                 await SetDefaultConfigurationValueAsync("fish_audio_max_retries", "3");

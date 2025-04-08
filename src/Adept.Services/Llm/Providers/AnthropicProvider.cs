@@ -178,10 +178,62 @@ namespace Adept.Services.Llm.Providers
                 _apiKey = await _secureStorageService.RetrieveSecureValueAsync("anthropic_api_key") ?? string.Empty;
                 _isInitialized = true;
                 _logger.LogInformation("Anthropic provider initialized");
+
+                // Fetch available models if we have an API key
+                if (HasValidApiKey)
+                {
+                    await FetchAvailableModelsAsync();
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error initializing Anthropic provider");
+            }
+        }
+
+        /// <summary>
+        /// Fetches the latest available models from the Anthropic API
+        /// </summary>
+        /// <returns>A collection of available models</returns>
+        public async Task<IEnumerable<LlmModel>> FetchAvailableModelsAsync()
+        {
+            if (!HasValidApiKey)
+            {
+                _logger.LogWarning("Cannot fetch Anthropic models: API key not set");
+                return _availableModels;
+            }
+
+            try
+            {
+                // Anthropic doesn't have a models endpoint, so we'll return the hardcoded list
+                // but we'll make sure it includes the latest models
+                _availableModels.Clear();
+
+                // Claude 3 models
+                _availableModels.Add(new LlmModel("claude-3-opus-20240229", "Claude 3 Opus", 200000, true, true));
+                _availableModels.Add(new LlmModel("claude-3-sonnet-20240229", "Claude 3 Sonnet", 200000, true, true));
+                _availableModels.Add(new LlmModel("claude-3-haiku-20240307", "Claude 3 Haiku", 200000, true, false));
+
+                // Claude 2 models
+                _availableModels.Add(new LlmModel("claude-2.1", "Claude 2.1", 200000, true, false));
+                _availableModels.Add(new LlmModel("claude-2.0", "Claude 2.0", 100000, true, false));
+
+                // Claude Instant models
+                _availableModels.Add(new LlmModel("claude-instant-1.2", "Claude Instant 1.2", 100000, true, false));
+
+                // Set current model if not already set
+                if (_currentModel == null)
+                {
+                    _currentModel = _availableModels.First(m => m.Id == "claude-3-sonnet-20240229");
+                }
+
+                _logger.LogInformation("Fetched {Count} Anthropic models", _availableModels.Count);
+                return _availableModels;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching Anthropic models");
+                return _availableModels;
             }
         }
 

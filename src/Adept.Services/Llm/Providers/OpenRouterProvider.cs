@@ -31,24 +31,7 @@ namespace Adept.Services.Llm.Providers
         /// </summary>
         public string ModelName => _currentModel.Id;
 
-        /// <summary>
-        /// Sends messages to the LLM with streaming and gets a response
-        /// </summary>
-        /// <param name="messages">The messages to send</param>
-        /// <param name="systemPrompt">Optional system prompt to use</param>
-        /// <param name="onPartialResponse">Callback for partial responses</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>The complete LLM response</returns>
-        public async Task<LlmResponse> SendMessagesStreamingAsync(
-            IEnumerable<LlmMessage> messages,
-            string? systemPrompt = null,
-            Action<string>? onPartialResponse = null,
-            CancellationToken cancellationToken = default)
-        {
-            // TODO: Implement streaming
-            var userMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "";
-            return await SendMessageAsync(userMessage, systemPrompt, cancellationToken);
-        }
+
 
         /// <summary>
         /// Gets the available models for this provider
@@ -128,10 +111,92 @@ namespace Adept.Services.Llm.Providers
                 _apiKey = await _secureStorageService.RetrieveSecureValueAsync("openrouter_api_key") ?? string.Empty;
                 _isInitialized = true;
                 _logger.LogInformation("OpenRouter provider initialized");
+
+                // Fetch available models if we have an API key
+                if (HasValidApiKey)
+                {
+                    await FetchAvailableModelsAsync();
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error initializing OpenRouter provider");
+            }
+        }
+
+        /// <summary>
+        /// Fetches the latest available models from the OpenRouter API
+        /// </summary>
+        /// <returns>A collection of available models</returns>
+        public async Task<IEnumerable<LlmModel>> FetchAvailableModelsAsync()
+        {
+            if (!HasValidApiKey)
+            {
+                _logger.LogWarning("Cannot fetch OpenRouter models: API key not set");
+                return _availableModels;
+            }
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+                var response = await client.GetAsync("https://openrouter.ai/api/v1/models");
+                response.EnsureSuccessStatusCode();
+
+                var content = await response.Content.ReadAsStringAsync();
+                var modelsResponse = JsonSerializer.Deserialize<OpenRouterModelsResponse>(content);
+
+                if (modelsResponse?.Data == null)
+                {
+                    _logger.LogWarning("Failed to parse OpenRouter models response");
+                    return _availableModels;
+                }
+
+                // Clear existing models and add the fetched ones
+                _availableModels.Clear();
+
+                foreach (var model in modelsResponse.Data)
+                {
+                    // Skip models that are not available for chat
+                    if (!model.Features.Contains("chat"))
+                    {
+                        continue;
+                    }
+
+                    // Add the model
+                    _availableModels.Add(new LlmModel(
+                        model.Id,
+                        model.Name,
+                        model.Context_Length,
+                        model.Features.Contains("streaming"),
+                        model.Features.Contains("vision")));
+                }
+
+                // If no models were found, add default models
+                if (_availableModels.Count == 0)
+                {
+                    _availableModels.Add(new LlmModel("anthropic/claude-3-opus", "Claude 3 Opus (via OpenRouter)", 200000, true, true));
+                    _availableModels.Add(new LlmModel("openai/gpt-4o", "GPT-4o (via OpenRouter)", 128000, true, true));
+                    _availableModels.Add(new LlmModel("meta-llama/llama-3-70b-instruct", "Llama 3 70B (via OpenRouter)", 128000, true, false));
+                    _availableModels.Add(new LlmModel("google/gemini-1.5-pro", "Gemini 1.5 Pro (via OpenRouter)", 1000000, true, true));
+                    _availableModels.Add(new LlmModel("mistralai/mistral-large", "Mistral Large (via OpenRouter)", 32000, true, false));
+                    _availableModels.Add(new LlmModel("deepseek/deepseek-coder", "DeepSeek Coder (via OpenRouter)", 16000, false, false));
+                }
+
+                // Set current model if not already set
+                if (_currentModel == null)
+                {
+                    _currentModel = _availableModels.First();
+                }
+
+                _logger.LogInformation("Fetched {Count} OpenRouter models", _availableModels.Count);
+                return _availableModels;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching OpenRouter models");
+                return _availableModels;
             }
         }
 
@@ -281,11 +346,28 @@ namespace Adept.Services.Llm.Providers
         /// Sends messages to the LLM with streaming and gets a response
         /// </summary>
         /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await SendMessagesStreamingAsync(messages, onPartialResponse ?? (_ => {}), systemPrompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends messages to the LLM with streaming and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
         /// <param name="onChunk">Callback for each chunk of the response</param>
         /// <param name="systemPrompt">Optional system prompt to use</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The complete LLM response</returns>
-        public async Task<LlmResponse> SendMessagesStreamingAsync(IEnumerable<LlmMessage> messages, Action<string> onChunk, string? systemPrompt = null, CancellationToken cancellationToken = default)
+        private async Task<LlmResponse> SendMessagesStreamingAsync(IEnumerable<LlmMessage> messages, Action<string> onChunk, string? systemPrompt = null, CancellationToken cancellationToken = default)
         {
             if (!HasValidApiKey)
             {
@@ -657,5 +739,47 @@ namespace Adept.Services.Llm.Providers
                 throw;
             }
         }
+    }
+
+    /// <summary>
+    /// Response from the OpenRouter models API
+    /// </summary>
+    internal class OpenRouterModelsResponse
+    {
+        /// <summary>
+        /// Gets or sets the list of models
+        /// </summary>
+        public List<OpenRouterModel> Data { get; set; } = new();
+    }
+
+    /// <summary>
+    /// OpenRouter model information
+    /// </summary>
+    internal class OpenRouterModel
+    {
+        /// <summary>
+        /// Gets or sets the model ID
+        /// </summary>
+        public string Id { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the model name
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the model description
+        /// </summary>
+        public string Description { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the model context length
+        /// </summary>
+        public int Context_Length { get; set; }
+
+        /// <summary>
+        /// Gets or sets the model features
+        /// </summary>
+        public List<string> Features { get; set; } = new();
     }
 }

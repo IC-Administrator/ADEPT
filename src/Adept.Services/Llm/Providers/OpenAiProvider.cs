@@ -178,10 +178,99 @@ namespace Adept.Services.Llm.Providers
                 _apiKey = await _secureStorageService.RetrieveSecureValueAsync("openai_api_key") ?? string.Empty;
                 _isInitialized = true;
                 _logger.LogInformation("OpenAI provider initialized");
+
+                // Fetch available models if we have an API key
+                if (HasValidApiKey)
+                {
+                    await FetchAvailableModelsAsync();
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error initializing OpenAI provider");
+            }
+        }
+
+        /// <summary>
+        /// Fetches the latest available models from the OpenAI API
+        /// </summary>
+        /// <returns>A collection of available models</returns>
+        public async Task<IEnumerable<LlmModel>> FetchAvailableModelsAsync()
+        {
+            if (!HasValidApiKey)
+            {
+                _logger.LogWarning("Cannot fetch OpenAI models: API key not set");
+                return _availableModels;
+            }
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+                var response = await client.GetAsync("https://api.openai.com/v1/models");
+                response.EnsureSuccessStatusCode();
+
+                var content = await response.Content.ReadAsStringAsync();
+                var modelsResponse = JsonSerializer.Deserialize<OpenAiModelsResponse>(content);
+
+                if (modelsResponse?.Data == null)
+                {
+                    _logger.LogWarning("Failed to parse OpenAI models response");
+                    return _availableModels;
+                }
+
+                // Filter for chat models only
+                var chatModels = modelsResponse.Data
+                    .Where(m => m.Id.StartsWith("gpt-"))
+                    .Where(m => !m.Id.Contains("instruct") && !m.Id.Contains("vision") && !m.Id.Contains("preview"))
+                    .ToList();
+
+                // Clear existing models and add the fetched ones
+                _availableModels.Clear();
+
+                // Add GPT-4o models
+                var gpt4oModels = chatModels.Where(m => m.Id.StartsWith("gpt-4o")).ToList();
+                foreach (var model in gpt4oModels)
+                {
+                    _availableModels.Add(new LlmModel(model.Id, model.Id, 128000, true, true));
+                }
+
+                // Add GPT-4 models
+                var gpt4Models = chatModels.Where(m => m.Id.StartsWith("gpt-4") && !m.Id.StartsWith("gpt-4o")).ToList();
+                foreach (var model in gpt4Models)
+                {
+                    _availableModels.Add(new LlmModel(model.Id, model.Id, 128000, true, true));
+                }
+
+                // Add GPT-3.5 models
+                var gpt35Models = chatModels.Where(m => m.Id.StartsWith("gpt-3.5")).ToList();
+                foreach (var model in gpt35Models)
+                {
+                    _availableModels.Add(new LlmModel(model.Id, model.Id, 16000, true, false));
+                }
+
+                // If no models were found, add default models
+                if (_availableModels.Count == 0)
+                {
+                    _availableModels.Add(new LlmModel("gpt-4o", "GPT-4o", 128000, true, true));
+                    _availableModels.Add(new LlmModel("gpt-4-turbo", "GPT-4 Turbo", 128000, true, false));
+                    _availableModels.Add(new LlmModel("gpt-3.5-turbo", "GPT-3.5 Turbo", 16000, true, false));
+                }
+
+                // Set current model if not already set
+                if (_currentModel == null)
+                {
+                    _currentModel = _availableModels.First();
+                }
+
+                _logger.LogInformation("Fetched {Count} OpenAI models", _availableModels.Count);
+                return _availableModels;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching OpenAI models");
+                return _availableModels;
             }
         }
 
@@ -605,5 +694,42 @@ namespace Adept.Services.Llm.Providers
                 throw;
             }
         }
+    }
+
+    /// <summary>
+    /// Response from the OpenAI models API
+    /// </summary>
+    internal class OpenAiModelsResponse
+    {
+        /// <summary>
+        /// Gets or sets the list of models
+        /// </summary>
+        public List<OpenAiModel> Data { get; set; } = new();
+    }
+
+    /// <summary>
+    /// OpenAI model information
+    /// </summary>
+    internal class OpenAiModel
+    {
+        /// <summary>
+        /// Gets or sets the model ID
+        /// </summary>
+        public string Id { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the model object type
+        /// </summary>
+        public string Object { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the model creation timestamp
+        /// </summary>
+        public long Created { get; set; }
+
+        /// <summary>
+        /// Gets or sets the model owner
+        /// </summary>
+        public string OwnedBy { get; set; } = string.Empty;
     }
 }

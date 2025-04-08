@@ -64,7 +64,11 @@
             </Grid>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
-                <CheckBox Content="Use Streaming" IsChecked="{Binding IsStreaming}" Margin="0,0,10,0" />
+                <CheckBox Content="Use Streaming" IsChecked="{Binding IsStreaming}" Margin="0,0,10,0" Command="{Binding ToggleStreamingCommand}" />
+                <CheckBox Content="Voice Input" IsChecked="{Binding IsVoiceInputEnabled}" Margin="0,0,10,0" Command="{Binding ToggleVoiceInputCommand}" />
+                <CheckBox Content="Voice Output" IsChecked="{Binding IsVoiceOutputEnabled}" Margin="0,0,10,0" Command="{Binding ToggleVoiceOutputCommand}" />
+                <Button Content="🎤" ToolTip="Start Voice Input" Width="30" Height="30" Margin="0,0,10,0" Command="{Binding StartVoiceInputCommand}" />
+                <TextBlock Text="{Binding VoiceServiceState}" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
 

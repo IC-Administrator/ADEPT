@@ -1,5 +1,6 @@
 using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
 using System.Collections.Concurrent;
@@ -28,6 +29,8 @@ namespace Adept.Services.Voice
         private string _voiceId = string.Empty;
         private float _speechSpeed = 1.0f;
         private float _speechVolume = 0.0f;
+        private float _speechClarity = 0.0f;
+        private float _speechEmotion = 0.0f;
         private string _ttsModel = "speech-1.6";
         private int _maxRetries = 3;
         private int _reconnectDelayMs = 1000;
@@ -35,6 +38,26 @@ namespace Adept.Services.Voice
         private bool _disposed;
         private bool _useDiskCache = true;
         private int _maxCacheItems = 100;
+        private long _cacheHits = 0;
+        private long _cacheMisses = 0;
+        private long _totalCacheSize = 0;
+        private DateTime _lastCacheCleanup = DateTime.MinValue;
+
+        /// <summary>
+        /// Available voice options
+        /// </summary>
+        public static readonly Dictionary<string, string> AvailableVoices = new()
+        {
+            { "default", "Default" },
+            { "male-1", "Male 1" },
+            { "male-2", "Male 2" },
+            { "female-1", "Female 1" },
+            { "female-2", "Female 2" },
+            { "child-1", "Child" },
+            { "elder-1", "Elder" },
+            { "narrator-1", "Narrator" },
+            { "assistant-1", "Assistant" }
+        };
 
         /// <summary>
         /// Gets the name of the provider
@@ -80,6 +103,8 @@ namespace Adept.Services.Voice
                 _ttsModel = await _configurationService.GetConfigurationValueAsync("fish_audio_model", "speech-1.6") ?? "speech-1.6";
                 _speechSpeed = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_speed", "1.0") ?? "1.0");
                 _speechVolume = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_volume", "0.0") ?? "0.0");
+                _speechClarity = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_clarity", "0.0") ?? "0.0");
+                _speechEmotion = float.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_emotion", "0.0") ?? "0.0");
                 _useDiskCache = bool.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_use_disk_cache", "true") ?? "true");
                 _maxCacheItems = int.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_max_cache_items", "100") ?? "100");
                 _maxRetries = int.Parse(await _configurationService.GetConfigurationValueAsync("fish_audio_max_retries", "3") ?? "3");
@@ -165,6 +190,38 @@ namespace Adept.Services.Voice
         }
 
         /// <summary>
+        /// Sets the speech clarity
+        /// </summary>
+        /// <param name="clarity">The clarity value (-1.0 to 1.0)</param>
+        public async Task SetSpeechClarityAsync(float clarity)
+        {
+            if (clarity < -1.0f || clarity > 1.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clarity), "Speech clarity must be between -1.0 and 1.0");
+            }
+
+            _speechClarity = clarity;
+            await _configurationService.SetConfigurationValueAsync("fish_audio_clarity", clarity.ToString());
+            _logger.LogInformation("Set speech clarity to {Clarity}", clarity);
+        }
+
+        /// <summary>
+        /// Sets the speech emotion
+        /// </summary>
+        /// <param name="emotion">The emotion value (-1.0 to 1.0)</param>
+        public async Task SetSpeechEmotionAsync(float emotion)
+        {
+            if (emotion < -1.0f || emotion > 1.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(emotion), "Speech emotion must be between -1.0 and 1.0");
+            }
+
+            _speechEmotion = emotion;
+            await _configurationService.SetConfigurationValueAsync("fish_audio_emotion", emotion.ToString());
+            _logger.LogInformation("Set speech emotion to {Emotion}", emotion);
+        }
+
+        /// <summary>
         /// Clears the TTS cache
         /// </summary>
         public async Task ClearCacheAsync()
@@ -180,6 +237,12 @@ namespace Adept.Services.Voice
                     await _databaseContext.ExecuteNonQueryAsync("DELETE FROM TtsCache");
                 }
 
+                // Reset cache statistics
+                _cacheHits = 0;
+                _cacheMisses = 0;
+                _totalCacheSize = 0;
+                _lastCacheCleanup = DateTime.Now;
+
                 _logger.LogInformation("TTS cache cleared");
             }
             catch (Exception ex)
@@ -187,6 +250,86 @@ namespace Adept.Services.Voice
                 _logger.LogError(ex, "Error clearing TTS cache");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Gets the cache statistics
+        /// </summary>
+        /// <returns>A dictionary with cache statistics</returns>
+        public async Task<Dictionary<string, string>> GetCacheStatisticsAsync()
+        {
+            var stats = new Dictionary<string, string>
+            {
+                { "MemoryCacheCount", _memoryCache.Count.ToString() },
+                { "CacheHits", _cacheHits.ToString() },
+                { "CacheMisses", _cacheMisses.ToString() },
+                { "HitRatio", _cacheHits + _cacheMisses > 0 ? ((_cacheHits * 100.0) / (_cacheHits + _cacheMisses)).ToString("F2") + "%" : "0%" },
+                { "TotalCacheSize", _totalCacheSize.ToString() },
+                { "LastCacheCleanup", _lastCacheCleanup != DateTime.MinValue ? _lastCacheCleanup.ToString() : "Never" },
+                { "UseDiskCache", _useDiskCache.ToString() },
+                { "MaxCacheItems", _maxCacheItems.ToString() }
+            };
+
+            // Get disk cache count and size if enabled
+            if (_useDiskCache)
+            {
+                var diskCacheStats = await _databaseContext.QuerySingleOrDefaultAsync<DiskCacheStats>(
+                    "SELECT COUNT(*) AS Count, SUM(LENGTH(audio)) AS Size FROM TtsCache");
+
+                if (diskCacheStats != null)
+                {
+                    stats["DiskCacheCount"] = diskCacheStats.Count.ToString();
+                    stats["DiskCacheSize"] = diskCacheStats.Size.ToString();
+                }
+            }
+
+            return stats;
+        }
+
+        /// <summary>
+        /// Sets the maximum number of cache items
+        /// </summary>
+        /// <param name="maxItems">The maximum number of cache items</param>
+        public async Task SetMaxCacheItemsAsync(int maxItems)
+        {
+            if (maxItems < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxItems), "Maximum cache items must be at least 1");
+            }
+
+            _maxCacheItems = maxItems;
+            await _configurationService.SetConfigurationValueAsync("fish_audio_max_cache_items", maxItems.ToString());
+
+            // Trim memory cache if needed
+            if (_memoryCache.Count > _maxCacheItems)
+            {
+                var keysToRemove = _memoryCache.Keys.Take(_memoryCache.Count - _maxCacheItems);
+                foreach (var key in keysToRemove)
+                {
+                    _memoryCache.TryRemove(key, out _);
+                }
+            }
+
+            // Trim disk cache if needed
+            if (_useDiskCache)
+            {
+                await _databaseContext.ExecuteNonQueryAsync(
+                    "DELETE FROM TtsCache WHERE rowid NOT IN (SELECT rowid FROM TtsCache ORDER BY created_at DESC LIMIT @MaxItems)",
+                    new { MaxItems = _maxCacheItems });
+            }
+
+            _logger.LogInformation("Set maximum cache items to {MaxItems}", maxItems);
+        }
+
+        /// <summary>
+        /// Sets whether to use disk cache
+        /// </summary>
+        /// <param name="useDiskCache">Whether to use disk cache</param>
+        public async Task SetUseDiskCacheAsync(bool useDiskCache)
+        {
+            _useDiskCache = useDiskCache;
+            await _configurationService.SetConfigurationValueAsync("fish_audio_use_disk_cache", useDiskCache.ToString());
+            _logger.LogInformation("Set use disk cache to {UseDiskCache}", useDiskCache);
         }
 
         /// <summary>
@@ -211,6 +354,8 @@ namespace Adept.Services.Voice
                 // Check memory cache first
                 if (_memoryCache.TryGetValue(cacheKey, out var cachedAudioData))
                 {
+                    _cacheHits++;
+                    _cacheMisses--; // Adjust since we incremented in GenerateCacheKey
                     _logger.LogInformation("Retrieved audio from memory cache: {TextLength} characters", text.Length);
                     return cachedAudioData;
                 }
@@ -237,6 +382,8 @@ namespace Adept.Services.Voice
                             }
                         }
 
+                        _cacheHits++;
+                        _cacheMisses--; // Adjust since we incremented in GenerateCacheKey
                         _logger.LogInformation("Retrieved audio from disk cache: {TextLength} characters", text.Length);
                         return cachedResult.audio;
                     }
@@ -275,9 +422,13 @@ namespace Adept.Services.Voice
         private string GenerateCacheKey(string text, string voiceId, string model, float speed, float volume)
         {
             // Create a unique hash based on all parameters that affect the audio output
-            string combinedInput = $"{text}|{voiceId}|{model}|{speed}|{volume}";
+            string combinedInput = $"{text}|{voiceId}|{model}|{speed}|{volume}|{_speechClarity}|{_speechEmotion}";
             using var sha256 = SHA256.Create();
             var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(combinedInput));
+
+            // Update cache statistics
+            _cacheMisses++;
+
             return Convert.ToHexString(hashBytes).ToLowerInvariant();
         }
 
@@ -303,60 +454,59 @@ namespace Adept.Services.Voice
                         await _webSocket.ConnectAsync(new Uri("wss://api.fish.audio/v1/tts/live"), cancellationToken);
 
                         // Create the start event
-                        var startEvent = new
+                        var startEvent = new Dictionary<string, object>
                         {
-                            @event = "start",
-                            request = new
+                            ["event"] = "start",
+                            ["request"] = new Dictionary<string, object>
                             {
-                                text = "",  // Initial empty text
-                                latency = "normal",
-                                format = "wav",
-                                temperature = 0.7,
-                                top_p = 0.7,
-                                prosody = new
+                                ["text"] = "",  // Initial empty text
+                                ["latency"] = "normal",
+                                ["format"] = "wav",
+                                ["temperature"] = 0.7,
+                                ["top_p"] = 0.7,
+                                ["prosody"] = new Dictionary<string, object>
                                 {
-                                    speed = _speechSpeed,
-                                    volume = _speechVolume
+                                    ["speed"] = _speechSpeed,
+                                    ["volume"] = _speechVolume,
+                                    ["clarity"] = _speechClarity,
+                                    ["emotion"] = _speechEmotion
                                 },
-                                reference_id = _voiceId
+                                ["reference_id"] = _voiceId
                             }
                         };
 
                         // Send the start event
-                        var startJson = JsonSerializer.Serialize(startEvent);
-                        var startBytes = Encoding.UTF8.GetBytes(startJson);
+                        var startBytes = MessagePackSerializer.Serialize(startEvent);
                         await _webSocket.SendAsync(
                             new ArraySegment<byte>(startBytes),
-                            WebSocketMessageType.Text,
+                            WebSocketMessageType.Binary,
                             true,
                             cancellationToken);
 
                         // Send the text event
-                        var textEvent = new
+                        var textEvent = new Dictionary<string, object>
                         {
-                            @event = "text",
-                            text = text
+                            ["event"] = "text",
+                            ["text"] = text
                         };
 
-                        var textJson = JsonSerializer.Serialize(textEvent);
-                        var textBytes = Encoding.UTF8.GetBytes(textJson);
+                        var textBytes = MessagePackSerializer.Serialize(textEvent);
                         await _webSocket.SendAsync(
                             new ArraySegment<byte>(textBytes),
-                            WebSocketMessageType.Text,
+                            WebSocketMessageType.Binary,
                             true,
                             cancellationToken);
 
                         // Send the stop event
-                        var stopEvent = new
+                        var stopEvent = new Dictionary<string, object>
                         {
-                            @event = "stop"
+                            ["event"] = "stop"
                         };
 
-                        var stopJson = JsonSerializer.Serialize(stopEvent);
-                        var stopBytes = Encoding.UTF8.GetBytes(stopJson);
+                        var stopBytes = MessagePackSerializer.Serialize(stopEvent);
                         await _webSocket.SendAsync(
                             new ArraySegment<byte>(stopBytes),
-                            WebSocketMessageType.Text,
+                            WebSocketMessageType.Binary,
                             true,
                             cancellationToken);
 
@@ -380,30 +530,35 @@ namespace Adept.Services.Voice
                             }
 
                             // Process the received message
-                            if (result.MessageType == WebSocketMessageType.Text)
+                            if (result.MessageType == WebSocketMessageType.Binary)
                             {
-                                var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                                var responseObj = JsonSerializer.Deserialize<JsonElement>(message);
-
-                                if (responseObj.TryGetProperty("event", out var eventType))
+                                try
                                 {
-                                    if (eventType.GetString() == "audio" && responseObj.TryGetProperty("audio", out var audioData))
+                                    var responseObj = MessagePackSerializer.Deserialize<Dictionary<string, object>>(new ReadOnlyMemory<byte>(buffer, 0, result.Count));
+
+                                    if (responseObj.TryGetValue("event", out var eventValue) && eventValue is string eventType)
                                     {
-                                        // Convert base64 audio data to bytes and write to memory stream
-                                        var audioBytes = Convert.FromBase64String(audioData.GetString() ?? string.Empty);
-                                        memoryStream.Write(audioBytes, 0, audioBytes.Length);
-                                    }
-                                    else if (eventType.GetString() == "finish")
-                                    {
-                                        break;
+                                        if (eventType == "audio" && responseObj.TryGetValue("audio", out var audioValue) && audioValue is byte[] audioData)
+                                        {
+                                            // Write audio data directly to memory stream
+                                            memoryStream.Write(audioData, 0, audioData.Length);
+                                        }
+                                        else if (eventType == "finish")
+                                        {
+                                            break;
+                                        }
+                                        else if (eventType == "log" && responseObj.TryGetValue("message", out var messageValue) && messageValue is string logMessage)
+                                        {
+                                            _logger.LogInformation("Fish Audio API: {Message}", logMessage);
+                                        }
                                     }
                                 }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Error processing WebSocket message");
+                                }
                             }
-                            else if (result.MessageType == WebSocketMessageType.Binary)
-                            {
-                                // Write binary data directly to the memory stream
-                                memoryStream.Write(buffer, 0, result.Count);
-                            }
+
 
                             if (result.EndOfMessage && memoryStream.Length > 0)
                             {
@@ -462,6 +617,15 @@ namespace Adept.Services.Voice
         private class CachedTtsEntry
         {
             public byte[]? audio { get; set; }
+        }
+
+        /// <summary>
+        /// Class for disk cache statistics
+        /// </summary>
+        private class DiskCacheStats
+        {
+            public long Count { get; set; }
+            public long Size { get; set; }
         }
 
         /// <summary>
