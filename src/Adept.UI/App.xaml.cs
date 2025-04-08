@@ -117,6 +117,13 @@ namespace Adept.UI
 
             // Register MCP Services
             services.AddSingleton<IMcpServerManager, McpServerManager>();
+            services.AddSingleton<IMcpToolProvider, FileSystemToolProvider>();
+            services.AddSingleton<IMcpToolProvider, CalendarToolProvider>();
+            services.AddSingleton<IMcpToolProvider, WebSearchToolProvider>();
+            services.AddSingleton<IMcpToolProvider, ExcelToolProvider>();
+            services.AddSingleton<IMcpToolProvider, FetchToolProvider>();
+            services.AddSingleton<IMcpToolProvider, SequentialThinkingToolProvider>();
+            services.AddSingleton<IMcpToolProvider, PuppeteerToolProvider>();
 
             // Register Database Initialization
             services.AddSingleton<DatabaseBackupInitializer>();

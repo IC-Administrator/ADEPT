@@ -45,7 +45,8 @@ namespace Adept.Services.Mcp
         /// Initializes a new instance of the <see cref="McpServerManager"/> class
         /// </summary>
         /// <param name="logger">The logger</param>
-        public McpServerManager(ILogger<McpServerManager> logger)
+        /// <param name="toolProviders">The tool providers to register</param>
+        public McpServerManager(ILogger<McpServerManager> logger, IEnumerable<IMcpToolProvider>? toolProviders = null)
         {
             _logger = logger;
             _httpClient = new HttpClient();
@@ -63,6 +64,15 @@ namespace Adept.Services.Mcp
             if (!File.Exists(_serverPath))
             {
                 CreateBasicServerFile();
+            }
+
+            // Register tool providers if provided
+            if (toolProviders != null)
+            {
+                foreach (var provider in toolProviders)
+                {
+                    RegisterToolProvider(provider);
+                }
             }
         }
 
@@ -392,7 +402,7 @@ app.post('/register-tools', (req, res) => {
 // Execute tool endpoint
 app.post('/execute-tool', (req, res) => {
   const { toolName, parameters } = req.body;
-  
+
   if (!tools[toolName]) {
     return res.status(404).json({ success: false, errorMessage: `Tool ${toolName} not found` });
   }

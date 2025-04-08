@@ -1,4 +1,5 @@
 using Adept.Core.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
@@ -26,11 +27,28 @@ namespace Adept.Services.Mcp
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystemToolProvider"/> class
         /// </summary>
+        /// <param name="configuration">The configuration</param>
         /// <param name="logger">The logger</param>
-        public FileSystemToolProvider(ILogger<FileSystemToolProvider> logger)
+        public FileSystemToolProvider(IConfiguration configuration, ILogger<FileSystemToolProvider> logger)
         {
             _logger = logger;
-            _rootDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Adept");
+
+            // Get the scratchpad folder from configuration
+            var scratchpadFolder = configuration["ScratchpadFolder"];
+
+            // Replace environment variables in the path
+            if (!string.IsNullOrEmpty(scratchpadFolder))
+            {
+                scratchpadFolder = Environment.ExpandEnvironmentVariables(scratchpadFolder);
+            }
+            else
+            {
+                // Default to Documents\Adept\Scratchpad if not configured
+                scratchpadFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Adept", "Scratchpad");
+            }
+
+            _rootDirectory = scratchpadFolder;
+            _logger.LogInformation("FileSystem tool provider initialized with root directory: {RootDirectory}", _rootDirectory);
 
             // Create the root directory if it doesn't exist
             if (!Directory.Exists(_rootDirectory))
