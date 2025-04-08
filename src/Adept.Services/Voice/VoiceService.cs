@@ -1,0 +1,334 @@
+using Adept.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace Adept.Services.Voice
+{
+    /// <summary>
+    /// Service for voice recognition and synthesis
+    /// </summary>
+    public class VoiceService : IVoiceService, IDisposable
+    {
+        private readonly IWakeWordDetector _wakeWordDetector;
+        private readonly ISpeechToTextProvider _speechToTextProvider;
+        private readonly ITextToSpeechProvider _textToSpeechProvider;
+        private readonly ILogger<VoiceService> _logger;
+        private VoiceServiceState _state = VoiceServiceState.NotListening;
+        private CancellationTokenSource? _speechCancellationTokenSource;
+        private bool _disposed;
+
+        /// <summary>
+        /// Gets the current state of the voice service
+        /// </summary>
+        public VoiceServiceState State => _state;
+
+        /// <summary>
+        /// Event raised when the voice service state changes
+        /// </summary>
+        public event EventHandler<VoiceServiceStateChangedEventArgs>? StateChanged;
+
+        /// <summary>
+        /// Event raised when speech is recognized
+        /// </summary>
+        public event EventHandler<SpeechRecognizedEventArgs>? SpeechRecognized;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VoiceService"/> class
+        /// </summary>
+        /// <param name="wakeWordDetector">The wake word detector</param>
+        /// <param name="speechToTextProvider">The speech-to-text provider</param>
+        /// <param name="textToSpeechProvider">The text-to-speech provider</param>
+        /// <param name="logger">The logger</param>
+        public VoiceService(
+            IWakeWordDetector wakeWordDetector,
+            ISpeechToTextProvider speechToTextProvider,
+            ITextToSpeechProvider textToSpeechProvider,
+            ILogger<VoiceService> logger)
+        {
+            _wakeWordDetector = wakeWordDetector;
+            _speechToTextProvider = speechToTextProvider;
+            _textToSpeechProvider = textToSpeechProvider;
+            _logger = logger;
+
+            // Subscribe to wake word detection events
+            _wakeWordDetector.WakeWordDetected += OnWakeWordDetected;
+
+            // Initialize the providers
+            InitializeProvidersAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Initializes the providers
+        /// </summary>
+        private async Task InitializeProvidersAsync()
+        {
+            try
+            {
+                await _wakeWordDetector.InitializeAsync();
+                await _speechToTextProvider.InitializeAsync();
+                await _textToSpeechProvider.InitializeAsync();
+                _logger.LogInformation("Voice service providers initialized");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing voice service providers");
+            }
+        }
+
+        /// <summary>
+        /// Starts listening for the wake word
+        /// </summary>
+        public async Task StartListeningForWakeWordAsync()
+        {
+            if (_state != VoiceServiceState.NotListening)
+            {
+                _logger.LogWarning("Cannot start listening for wake word while in state {State}", _state);
+                return;
+            }
+
+            try
+            {
+                await _wakeWordDetector.StartListeningAsync();
+                SetState(VoiceServiceState.ListeningForWakeWord);
+                _logger.LogInformation("Started listening for wake word");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting wake word detection");
+            }
+        }
+
+        /// <summary>
+        /// Stops listening for the wake word
+        /// </summary>
+        public async Task StopListeningForWakeWordAsync()
+        {
+            if (_state != VoiceServiceState.ListeningForWakeWord)
+            {
+                _logger.LogWarning("Cannot stop listening for wake word while in state {State}", _state);
+                return;
+            }
+
+            try
+            {
+                await _wakeWordDetector.StopListeningAsync();
+                SetState(VoiceServiceState.NotListening);
+                _logger.LogInformation("Stopped listening for wake word");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stopping wake word detection");
+            }
+        }
+
+        /// <summary>
+        /// Starts listening for speech
+        /// </summary>
+        public async Task StartListeningForSpeechAsync()
+        {
+            if (_state != VoiceServiceState.NotListening && _state != VoiceServiceState.ListeningForWakeWord)
+            {
+                _logger.LogWarning("Cannot start listening for speech while in state {State}", _state);
+                return;
+            }
+
+            try
+            {
+                // If we were listening for the wake word, stop that first
+                if (_state == VoiceServiceState.ListeningForWakeWord)
+                {
+                    await _wakeWordDetector.StopListeningAsync();
+                }
+
+                await _speechToTextProvider.StartListeningAsync();
+                SetState(VoiceServiceState.ListeningForSpeech);
+                _logger.LogInformation("Started listening for speech");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting speech recognition");
+                // Try to go back to listening for the wake word
+                if (_state == VoiceServiceState.ListeningForWakeWord)
+                {
+                    await StartListeningForWakeWordAsync();
+                }
+                else
+                {
+                    SetState(VoiceServiceState.NotListening);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Stops listening for speech
+        /// </summary>
+        public async Task StopListeningForSpeechAsync()
+        {
+            if (_state != VoiceServiceState.ListeningForSpeech)
+            {
+                _logger.LogWarning("Cannot stop listening for speech while in state {State}", _state);
+                return;
+            }
+
+            try
+            {
+                SetState(VoiceServiceState.ProcessingSpeech);
+                var (text, confidence) = await _speechToTextProvider.StopListeningAsync();
+                
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    _logger.LogInformation("Speech recognized: {Text} (Confidence: {Confidence})", text, confidence);
+                    SpeechRecognized?.Invoke(this, new SpeechRecognizedEventArgs(text, confidence));
+                }
+                else
+                {
+                    _logger.LogInformation("No speech recognized");
+                }
+
+                // Go back to listening for the wake word
+                await StartListeningForWakeWordAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stopping speech recognition");
+                SetState(VoiceServiceState.NotListening);
+            }
+        }
+
+        /// <summary>
+        /// Speaks the specified text
+        /// </summary>
+        /// <param name="text">The text to speak</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        public async Task SpeakAsync(string text, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            try
+            {
+                // Cancel any ongoing speech
+                await CancelSpeechAsync();
+
+                // Create a new cancellation token source
+                _speechCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                
+                // Set the state to speaking
+                var previousState = _state;
+                SetState(VoiceServiceState.Speaking);
+
+                // Speak the text
+                await _textToSpeechProvider.SpeakAsync(text, _speechCancellationTokenSource.Token);
+
+                // If we were cancelled, don't change the state
+                if (!_speechCancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    // Go back to the previous state if it was listening for the wake word
+                    if (previousState == VoiceServiceState.ListeningForWakeWord)
+                    {
+                        await StartListeningForWakeWordAsync();
+                    }
+                    else
+                    {
+                        SetState(VoiceServiceState.NotListening);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Speech cancelled");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error speaking text");
+                SetState(VoiceServiceState.NotListening);
+            }
+            finally
+            {
+                _speechCancellationTokenSource?.Dispose();
+                _speechCancellationTokenSource = null;
+            }
+        }
+
+        /// <summary>
+        /// Cancels any ongoing speech
+        /// </summary>
+        public async Task CancelSpeechAsync()
+        {
+            if (_state == VoiceServiceState.Speaking && _speechCancellationTokenSource != null)
+            {
+                try
+                {
+                    _speechCancellationTokenSource.Cancel();
+                    await _textToSpeechProvider.CancelSpeechAsync();
+                    _logger.LogInformation("Speech cancelled");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error cancelling speech");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the state of the voice service
+        /// </summary>
+        /// <param name="newState">The new state</param>
+        private void SetState(VoiceServiceState newState)
+        {
+            if (_state == newState)
+            {
+                return;
+            }
+
+            var previousState = _state;
+            _state = newState;
+            _logger.LogInformation("Voice service state changed from {PreviousState} to {NewState}", previousState, newState);
+            StateChanged?.Invoke(this, new VoiceServiceStateChangedEventArgs(previousState, newState));
+        }
+
+        /// <summary>
+        /// Handles wake word detection
+        /// </summary>
+        /// <param name="sender">The sender</param>
+        /// <param name="e">The event arguments</param>
+        private async void OnWakeWordDetected(object? sender, WakeWordDetectedEventArgs e)
+        {
+            _logger.LogInformation("Wake word detected: {WakeWord} (Confidence: {Confidence})", e.WakeWord, e.Confidence);
+            await StartListeningForSpeechAsync();
+        }
+
+        /// <summary>
+        /// Disposes the voice service
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Disposes the voice service
+        /// </summary>
+        /// <param name="disposing">Whether to dispose managed resources</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Unsubscribe from events
+                    _wakeWordDetector.WakeWordDetected -= OnWakeWordDetected;
+
+                    // Cancel any ongoing speech
+                    _speechCancellationTokenSource?.Cancel();
+                    _speechCancellationTokenSource?.Dispose();
+                    _speechCancellationTokenSource = null;
+                }
+
+                _disposed = true;
+            }
+        }
+    }
+}

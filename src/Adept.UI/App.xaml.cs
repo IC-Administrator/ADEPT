@@ -70,10 +70,16 @@ namespace Adept.UI
 
             // Register Repositories
             services.AddSingleton<IClassRepository, ClassRepository>();
-            // TODO: Register other repositories
+            services.AddSingleton<IStudentRepository, StudentRepository>();
+            services.AddSingleton<ILessonRepository, LessonRepository>();
 
-            // Register Services
-            // TODO: Register voice, LLM, and other services
+            // Register Voice Services
+            services.AddSingleton<IWakeWordDetector, SimpleWakeWordDetector>();
+            services.AddSingleton<ISpeechToTextProvider, SimpleSpeechToTextProvider>();
+            services.AddSingleton<ITextToSpeechProvider, SimpleTextToSpeechProvider>();
+            services.AddSingleton<IVoiceService, VoiceService>();
+
+            // TODO: Register LLM and other services
 
             // Register ViewModels
             // TODO: Register ViewModels

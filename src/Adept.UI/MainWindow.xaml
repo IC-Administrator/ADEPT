@@ -7,39 +7,41 @@
         mc:Ignorable="d"
         Title="Adept AI Teaching Assistant"
         MinHeight="600" MinWidth="800"
-        Height="720" Width="1024">
+        Height="720" Width="1024"
+        Loaded="Window_Loaded"
+        Closing="Window_Closing">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        
+
         <!-- Main Tab Control -->
-        <TabControl Grid.Row="1" 
+        <TabControl Grid.Row="1"
                     SelectedIndex="{Binding SelectedTabIndex}">
-            
+
             <TabItem Header="Home">
                 <TextBlock Text="Home Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </TabItem>
-            
+
             <TabItem Header="Classes">
                 <TextBlock Text="Classes Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </TabItem>
-            
+
             <TabItem Header="Lesson Planner">
                 <TextBlock Text="Lesson Planner Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </TabItem>
-            
+
             <TabItem Header="Configuration">
                 <TextBlock Text="Configuration Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </TabItem>
-            
+
             <TabItem Header="System Status">
                 <TextBlock Text="System Status Tab Content" VerticalAlignment="Center" HorizontalAlignment="Center" />
             </TabItem>
         </TabControl>
-        
+
         <!-- Status Bar -->
         <StatusBar Grid.Row="2" Height="28">
             <StatusBar.ItemsPanel>
@@ -53,14 +55,14 @@
                     </Grid>
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
-            
+
             <StatusBarItem Grid.Column="0">
                 <StackPanel Orientation="Horizontal">
-                    <Ellipse Width="12" Height="12" Margin="5,0" Fill="Gray" />
-                    <TextBlock Text="Not Listening" />
+                    <Ellipse x:Name="StatusEllipse" Width="12" Height="12" Margin="5,0" Fill="Gray" />
+                    <TextBlock x:Name="StatusText" Text="Not Listening" />
                 </StackPanel>
             </StatusBarItem>
-            
+
             <StatusBarItem Grid.Column="2">
                 <TextBlock>
                     <Run Text="Current Lesson: " />
