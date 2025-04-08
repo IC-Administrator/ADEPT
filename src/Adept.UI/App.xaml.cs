@@ -6,6 +6,7 @@ using Adept.Services.Calendar;
 using Adept.Services.Configuration;
 using Adept.Services.Database;
 using Adept.Services.Extensions;
+using Adept.Services.FileSystem;
 using Adept.Services.Llm;
 using Adept.Services.Llm.Providers;
 using Adept.Services.Mcp;
@@ -120,6 +121,9 @@ namespace Adept.UI
 
             // Register Calendar Services
             services.AddCalendarServices();
+
+            // Register File System Services
+            services.AddFileSystemServices();
 
             // Register MCP Services
             services.AddSingleton<IMcpServerManager, McpServerManager>();
