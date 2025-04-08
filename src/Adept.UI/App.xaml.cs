@@ -72,6 +72,8 @@ namespace Adept.UI
             services.AddSingleton<IClassRepository, ClassRepository>();
             services.AddSingleton<IStudentRepository, StudentRepository>();
             services.AddSingleton<ILessonRepository, LessonRepository>();
+            services.AddSingleton<ISystemPromptService, SystemPromptRepository>();
+            services.AddSingleton<IConversationRepository, ConversationRepository>();
 
             // Register Voice Services
             services.AddSingleton<IWakeWordDetector, SimpleWakeWordDetector>();
@@ -79,10 +81,14 @@ namespace Adept.UI
             services.AddSingleton<ITextToSpeechProvider, SimpleTextToSpeechProvider>();
             services.AddSingleton<IVoiceService, VoiceService>();
 
-            // TODO: Register LLM and other services
+            // Register LLM Services
+            services.AddSingleton<ILlmProvider, SimpleLlmProvider>();
+            services.AddSingleton<ILlmService, LlmService>();
+
+            // TODO: Register other services
 
             // Register ViewModels
-            // TODO: Register ViewModels
+            services.AddSingleton<ViewModels.HomeViewModel>();
 
             // Register MainWindow
             services.AddTransient<MainWindow>();

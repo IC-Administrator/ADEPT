@@ -1,4 +1,5 @@
 using Adept.Core.Interfaces;
+using Adept.UI.ViewModels;
 using Microsoft.Extensions.Logging;
 using System.Windows;
 using System.Windows.Media;
@@ -10,16 +11,29 @@ namespace Adept.UI
         private readonly ILogger<MainWindow> _logger;
         private readonly IVoiceService _voiceService;
 
-        public MainWindow(ILogger<MainWindow> logger, IVoiceService voiceService)
+        /// <summary>
+        /// Gets the home view model
+        /// </summary>
+        public HomeViewModel HomeViewModel { get; }
+
+        /// <summary>
+        /// Gets or sets the selected tab index
+        /// </summary>
+        public int SelectedTabIndex { get; set; }
+
+        public MainWindow(ILogger<MainWindow> logger, IVoiceService voiceService, HomeViewModel homeViewModel)
         {
             _logger = logger;
             _voiceService = voiceService;
+            HomeViewModel = homeViewModel;
 
             InitializeComponent();
 
+            // Set the data context
+            DataContext = this;
+
             // Subscribe to voice service events
             _voiceService.StateChanged += OnVoiceServiceStateChanged;
-            _voiceService.SpeechRecognized += OnSpeechRecognized;
 
             _logger.LogInformation("MainWindow initialized");
         }
