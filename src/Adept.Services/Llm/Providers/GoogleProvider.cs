@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,30 @@ namespace Adept.Services.Llm.Providers
         /// Gets the name of the provider
         /// </summary>
         public string ProviderName => "Google";
+
+        /// <summary>
+        /// Gets the name of the currently selected model
+        /// </summary>
+        public string ModelName => _currentModel.Id;
+
+        /// <summary>
+        /// Sends messages to the LLM with streaming and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            // TODO: Implement streaming
+            var userMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "";
+            return await SendMessageAsync(userMessage, systemPrompt, cancellationToken);
+        }
 
         /// <summary>
         /// Gets the available models for this provider
@@ -76,9 +101,9 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
-            _availableModels.Add(new LlmModel("gemini-1.5-pro", "Gemini 1.5 Pro", "Google's most capable model", 1000000, true, true));
-            _availableModels.Add(new LlmModel("gemini-1.5-flash", "Gemini 1.5 Flash", "Google's fastest model", 1000000, true, true));
-            _availableModels.Add(new LlmModel("gemini-1.0-pro", "Gemini 1.0 Pro", "Google's previous generation model", 32000, true, true));
+            _availableModels.Add(new LlmModel("gemini-1.5-pro", "Gemini 1.5 Pro", 1000000, true, true));
+            _availableModels.Add(new LlmModel("gemini-1.5-flash", "Gemini 1.5 Flash", 1000000, true, true));
+            _availableModels.Add(new LlmModel("gemini-1.0-pro", "Gemini 1.0 Pro", 32000, true, true));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -178,7 +203,7 @@ namespace Adept.Services.Llm.Providers
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                
+
                 // Prepare the request
                 var requestMessages = new List<object>();
 
@@ -209,7 +234,7 @@ namespace Adept.Services.Llm.Providers
 
                 var modelEndpoint = _currentModel.Id.Replace(".", "-");
                 var url = $"https://generativelanguage.googleapis.com/v1/models/{modelEndpoint}:generateContent?key={_apiKey}";
-                
+
                 var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(url, content, cancellationToken);
                 response.EnsureSuccessStatusCode();
@@ -271,7 +296,7 @@ namespace Adept.Services.Llm.Providers
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                
+
                 // Prepare the request
                 var requestMessages = new List<object>();
 
@@ -306,7 +331,7 @@ namespace Adept.Services.Llm.Providers
 
                 var modelEndpoint = _currentModel.Id.Replace(".", "-");
                 var url = $"https://generativelanguage.googleapis.com/v1/models/{modelEndpoint}:streamGenerateContent?key={_apiKey}";
-                
+
                 var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(url, content, cancellationToken);
                 response.EnsureSuccessStatusCode();
@@ -318,7 +343,7 @@ namespace Adept.Services.Llm.Providers
 
                 while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
                 {
-                    var line = await reader.ReadLineAsync(cancellationToken);
+                    var line = await reader.ReadLineAsync();
                     if (string.IsNullOrEmpty(line) || !line.StartsWith("data: "))
                     {
                         continue;
@@ -336,8 +361,8 @@ namespace Adept.Services.Llm.Providers
                         if (chunk.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
                         {
                             var candidate = candidates[0];
-                            if (candidate.TryGetProperty("content", out var content_obj) && 
-                                content_obj.TryGetProperty("parts", out var parts) && 
+                            if (candidate.TryGetProperty("content", out var content_obj) &&
+                                content_obj.TryGetProperty("parts", out var parts) &&
                                 parts.GetArrayLength() > 0)
                             {
                                 var part = parts[0];
@@ -410,10 +435,10 @@ namespace Adept.Services.Llm.Providers
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                
+
                 // Convert image to base64
                 var base64Image = Convert.ToBase64String(imageData);
-                
+
                 // Prepare the request
                 var requestBody = new
                 {
@@ -422,7 +447,7 @@ namespace Adept.Services.Llm.Providers
                         new
                         {
                             role = "user",
-                            parts = new[]
+                            parts = new object[]
                             {
                                 new { text = message },
                                 new
@@ -446,7 +471,7 @@ namespace Adept.Services.Llm.Providers
 
                 var modelEndpoint = _currentModel.Id.Replace(".", "-");
                 var url = $"https://generativelanguage.googleapis.com/v1/models/{modelEndpoint}:generateContent?key={_apiKey}";
-                
+
                 var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(url, content, cancellationToken);
                 response.EnsureSuccessStatusCode();
@@ -512,10 +537,115 @@ namespace Adept.Services.Llm.Providers
 
             try
             {
-                // For now, we'll just call the regular SendMessagesAsync method
-                // In a real implementation, this would include the tool definitions in the request
-                _logger.LogWarning("Tool calls not fully implemented for Google provider");
-                return await SendMessagesAsync(messages, systemPrompt, cancellationToken);
+                var client = _httpClientFactory.CreateClient();
+
+                // Prepare the request
+                var requestMessages = new List<object>();
+
+                // Convert messages to Google format
+                foreach (var message in messages)
+                {
+                    var role = message.Role == LlmRole.User ? "user" : "model";
+                    requestMessages.Add(new { role = role, parts = new[] { new { text = message.Content } } });
+                }
+
+                // Add system prompt if provided
+                if (!string.IsNullOrEmpty(systemPrompt))
+                {
+                    // For Gemini, system prompts are added as a special user message at the beginning
+                    requestMessages.Insert(0, new { role = "user", parts = new[] { new { text = systemPrompt } } });
+                }
+
+                // Convert tools to the format expected by the API
+                var toolsFormatted = tools.Select(t => new
+                {
+                    function_declarations = new[]
+                    {
+                        new
+                        {
+                            name = t.Function.Name,
+                            description = t.Function.Description,
+                            parameters = t.Function.Parameters
+                        }
+                    }
+                }).ToArray();
+
+                var requestBody = new
+                {
+                    contents = requestMessages,
+                    tools = toolsFormatted,
+                    generationConfig = new
+                    {
+                        temperature = 0.7,
+                        maxOutputTokens = 2000,
+                        topP = 1.0
+                    }
+                };
+
+                var modelEndpoint = _currentModel.Id.Replace(".", "-");
+                var url = $"https://generativelanguage.googleapis.com/v1/models/{modelEndpoint}:generateContent?key={_apiKey}";
+
+                var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(url, content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var responseObject = JsonSerializer.Deserialize<JsonElement>(responseBody);
+
+                // Extract the response message
+                var candidates = responseObject.GetProperty("candidates");
+                var firstCandidate = candidates[0];
+                var content_obj = firstCandidate.GetProperty("content");
+                var parts = content_obj.GetProperty("parts");
+                var firstPart = parts[0];
+                var content_text = firstPart.TryGetProperty("text", out var textElement)
+                    ? textElement.GetString() ?? string.Empty
+                    : string.Empty;
+
+                // Extract tool calls if present
+                var toolCalls = new List<LlmToolCall>();
+                if (content_obj.TryGetProperty("parts", out var contentParts))
+                {
+                    foreach (var part in contentParts.EnumerateArray())
+                    {
+                        if (part.TryGetProperty("functionCall", out var functionCall))
+                        {
+                            var name = functionCall.GetProperty("name").GetString() ?? string.Empty;
+                            var args = functionCall.TryGetProperty("args", out var argsElement)
+                                ? JsonSerializer.Serialize(argsElement)
+                                : "{}";
+
+                            toolCalls.Add(new LlmToolCall
+                            {
+                                Id = Guid.NewGuid().ToString(), // Google doesn't provide IDs
+                                ToolName = name,
+                                Arguments = args
+                            });
+                        }
+                    }
+                }
+
+                // Create the response
+                var llmResponse = new LlmResponse
+                {
+                    Message = new LlmMessage
+                    {
+                        Role = LlmRole.Assistant,
+                        Content = content_text
+                    },
+                    ToolCalls = toolCalls,
+                    ProviderName = ProviderName,
+                    ModelName = _currentModel.Name,
+                    Usage = new LlmUsage
+                    {
+                        PromptTokens = 0, // Google doesn't provide token counts
+                        CompletionTokens = 0,
+                        TotalTokens = 0
+                    }
+                };
+
+                _logger.LogInformation("Google response with tools received");
+                return llmResponse;
             }
             catch (Exception ex)
             {

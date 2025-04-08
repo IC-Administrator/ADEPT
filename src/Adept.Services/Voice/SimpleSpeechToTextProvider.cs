@@ -75,7 +75,7 @@ namespace Adept.Services.Voice
                 // Clear any existing audio buffers
                 while (_audioBuffers.TryDequeue(out _)) { }
 
-                _waveIn?.Start();
+                _waveIn?.StartRecording();
                 _isListening = true;
                 _logger.LogInformation("Speech-to-text provider started listening");
                 return Task.CompletedTask;
@@ -100,7 +100,7 @@ namespace Adept.Services.Voice
 
             try
             {
-                _waveIn?.Stop();
+                _waveIn?.StopRecording();
                 _isListening = false;
                 _logger.LogInformation("Speech-to-text provider stopped listening");
 
@@ -142,7 +142,7 @@ namespace Adept.Services.Voice
 
             try
             {
-                _waveIn?.Stop();
+                _waveIn?.StopRecording();
                 _isListening = false;
 
                 // Clear any existing audio buffers

@@ -67,7 +67,7 @@ namespace Adept.Services.Voice
                 _wakeWordDetector.WakeWordDetected += OnWakeWordDetected;
 
                 // Subscribe to the speech recognized event
-                if (_speechToTextProvider is ISpeechToTextProvider stt && stt.SpeechRecognized != null)
+                if (_speechToTextProvider is ISpeechToTextProvider stt)
                 {
                     stt.SpeechRecognized += OnSpeechRecognized;
                 }

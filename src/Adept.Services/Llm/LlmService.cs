@@ -2,6 +2,7 @@ using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 namespace Adept.Services.Llm
 {
@@ -16,6 +17,49 @@ namespace Adept.Services.Llm
         private readonly LlmToolIntegrationService _toolIntegrationService;
         private readonly ILogger<LlmService> _logger;
         private ILlmProvider? _activeProvider;
+        private readonly Dictionary<string, DateTime> _providerFailures = new();
+        private readonly TimeSpan _failureBackoffTime = TimeSpan.FromMinutes(5);
+        private readonly SemaphoreSlim _providerLock = new(1, 1);
+
+        // Token limits for different models (conservative estimates)
+        private readonly ConcurrentDictionary<string, int> _modelTokenLimits = new()
+        {
+            // OpenAI models
+            ["gpt-3.5-turbo"] = 4000,
+            ["gpt-3.5-turbo-16k"] = 16000,
+            ["gpt-4"] = 8000,
+            ["gpt-4-32k"] = 32000,
+            ["gpt-4-turbo"] = 128000,
+            ["gpt-4o"] = 128000,
+
+            // Anthropic models
+            ["claude-instant-1"] = 100000,
+            ["claude-2"] = 100000,
+            ["claude-3-opus"] = 200000,
+            ["claude-3-sonnet"] = 200000,
+            ["claude-3-haiku"] = 200000,
+
+            // Google models
+            ["gemini-pro"] = 32000,
+            ["gemini-ultra"] = 32000,
+
+            // Meta models
+            ["llama-3-8b"] = 8000,
+            ["llama-3-70b"] = 8000,
+
+            // DeepSeek models
+            ["deepseek-chat"] = 16000,
+            ["deepseek-coder"] = 16000,
+
+            // Default fallback
+            ["default"] = 4000
+        };
+
+        // Reserve tokens for the response (to avoid hitting the limit)
+        private const int ReservedResponseTokens = 1000;
+
+        // Maximum tokens to use for the conversation history
+        private int MaxHistoryTokens => GetActiveModelTokenLimit() - ReservedResponseTokens;
 
         /// <summary>
         /// Gets the currently active LLM provider
@@ -67,20 +111,156 @@ namespace Adept.Services.Llm
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error initializing LLM provider: {ProviderName}", provider.ProviderName);
+                    // Mark provider as failed
+                    _providerFailures[provider.ProviderName] = DateTime.UtcNow;
                 }
             }
 
-            // Set the first provider with a valid API key as active
-            _activeProvider = _providers.FirstOrDefault(p => p.HasValidApiKey) ?? _providers.FirstOrDefault();
+            await SetDefaultActiveProviderAsync();
+        }
 
-            if (_activeProvider != null)
+        /// <summary>
+        /// Sets the default active provider based on availability and API key validity
+        /// </summary>
+        private async Task SetDefaultActiveProviderAsync()
+        {
+            await _providerLock.WaitAsync();
+            try
             {
-                _logger.LogInformation("Active LLM provider set to: {ProviderName}", _activeProvider.ProviderName);
+                // Set the first provider with a valid API key as active, excluding recently failed providers
+                var validProviders = _providers
+                    .Where(p => p.HasValidApiKey && !IsProviderInFailureBackoff(p.ProviderName))
+                    .ToList();
+
+                _activeProvider = validProviders.FirstOrDefault() ??
+                                 _providers.FirstOrDefault(p => p.HasValidApiKey) ??
+                                 _providers.FirstOrDefault();
+
+                if (_activeProvider != null)
+                {
+                    _logger.LogInformation("Active LLM provider set to: {ProviderName}", _activeProvider.ProviderName);
+                }
+                else
+                {
+                    _logger.LogWarning("No active LLM provider available");
+                }
             }
-            else
+            finally
             {
-                _logger.LogWarning("No active LLM provider available");
+                _providerLock.Release();
             }
+        }
+
+        /// <summary>
+        /// Checks if a provider is in failure backoff period
+        /// </summary>
+        /// <param name="providerName">The provider name</param>
+        /// <returns>True if the provider is in backoff period</returns>
+        private bool IsProviderInFailureBackoff(string providerName)
+        {
+            if (_providerFailures.TryGetValue(providerName, out var failureTime))
+            {
+                return (DateTime.UtcNow - failureTime) < _failureBackoffTime;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Marks a provider as failed
+        /// </summary>
+        /// <param name="providerName">The provider name</param>
+        private async Task MarkProviderAsFailedAsync(string providerName)
+        {
+            await _providerLock.WaitAsync();
+            try
+            {
+                _providerFailures[providerName] = DateTime.UtcNow;
+                _logger.LogWarning("Provider {ProviderName} marked as failed for {BackoffTime}",
+                    providerName, _failureBackoffTime);
+
+                // If this was the active provider, switch to another one
+                if (_activeProvider?.ProviderName == providerName)
+                {
+                    await SetDefaultActiveProviderAsync();
+                }
+            }
+            finally
+            {
+                _providerLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Gets the token limit for the active model
+        /// </summary>
+        /// <returns>The token limit</returns>
+        private int GetActiveModelTokenLimit()
+        {
+            if (_activeProvider == null)
+            {
+                return _modelTokenLimits["default"];
+            }
+
+            string modelName = _activeProvider.ModelName.ToLowerInvariant();
+
+            // Try to find an exact match
+            if (_modelTokenLimits.TryGetValue(modelName, out int limit))
+            {
+                return limit;
+            }
+
+            // Try to find a partial match
+            foreach (var entry in _modelTokenLimits)
+            {
+                if (modelName.Contains(entry.Key))
+                {
+                    return entry.Value;
+                }
+            }
+
+            // Use the provider's default model family
+            string providerPrefix = _activeProvider.ProviderName.ToLowerInvariant();
+            switch (providerPrefix)
+            {
+                case "openai":
+                    return _modelTokenLimits["gpt-3.5-turbo"];
+                case "anthropic":
+                    return _modelTokenLimits["claude-3-haiku"];
+                case "google":
+                    return _modelTokenLimits["gemini-pro"];
+                case "meta":
+                    return _modelTokenLimits["llama-3-8b"];
+                case "deepseek":
+                    return _modelTokenLimits["deepseek-chat"];
+                default:
+                    return _modelTokenLimits["default"];
+            }
+        }
+
+        /// <summary>
+        /// Optimizes the conversation history to fit within the token limit
+        /// </summary>
+        /// <param name="messages">The messages to optimize</param>
+        /// <returns>The optimized messages</returns>
+        private List<LlmMessage> OptimizeConversationHistory(IEnumerable<LlmMessage> messages)
+        {
+            var messagesList = messages.ToList();
+            int estimatedTokens = TokenCounter.EstimateTokenCount(messagesList);
+
+            _logger.LogDebug("Conversation history has {EstimatedTokens} tokens (limit: {MaxTokens})",
+                estimatedTokens, MaxHistoryTokens);
+
+            // If we're under the limit, return the original list
+            if (estimatedTokens <= MaxHistoryTokens)
+            {
+                return messagesList;
+            }
+
+            _logger.LogInformation("Trimming conversation history from {OriginalTokens} tokens to fit within {MaxTokens} tokens",
+                estimatedTokens, MaxHistoryTokens);
+
+            // Trim the conversation to fit within the token limit
+            return TokenCounter.TrimConversationToFitTokenLimit(messagesList, MaxHistoryTokens);
         }
 
         /// <summary>
@@ -157,24 +337,82 @@ namespace Adept.Services.Llm
                 conversation!.AddUserMessage(message);
                 await _conversationRepository.UpdateConversationAsync(conversation);
 
-                // Send the message to the LLM
-                var response = await ActiveProvider.SendMessagesAsync(
-                    conversation.History,
-                    systemPrompt,
-                    cancellationToken);
+                // Optimize conversation history to fit within token limits
+                var optimizedHistory = OptimizeConversationHistory(conversation.History);
+
+                // Send the message to the LLM with fallback mechanism
+                LlmResponse response;
+                try
+                {
+                    response = await ActiveProvider.SendMessagesAsync(
+                        optimizedHistory,
+                        systemPrompt,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error using primary provider {ProviderName}, attempting fallback",
+                        ActiveProvider.ProviderName);
+
+                    // Mark the provider as failed
+                    await MarkProviderAsFailedAsync(ActiveProvider.ProviderName);
+
+                    // Try with the new active provider
+                    try
+                    {
+                        response = await ActiveProvider.SendMessagesAsync(
+                            conversation.History,
+                            systemPrompt,
+                            cancellationToken);
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        _logger.LogError(fallbackEx, "Error using fallback provider {ProviderName}",
+                            ActiveProvider.ProviderName);
+
+                        // Create a graceful failure response
+                        response = new LlmResponse
+                        {
+                            Message = new LlmMessage
+                            {
+                                Role = LlmRole.Assistant,
+                                Content = "I'm sorry, I'm having trouble connecting to my language model providers. Please try again in a few minutes."
+                            },
+                            ProviderName = "System",
+                            ModelName = "Fallback"
+                        };
+                    }
+                }
 
                 // Process any tool calls in the response
                 if (response.ToolCalls.Count > 0)
                 {
-                    response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                    try
+                    {
+                        response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing tool calls");
+                        // Append error message to response
+                        response.Message.Content += "\n\nNote: There was an error processing some tool calls. Some information may be incomplete.";
+                    }
                 }
                 else
                 {
                     // Check for tool calls in the message text
-                    var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
-                    if (processedContent != response.Message.Content)
+                    try
                     {
-                        response.Message.Content = processedContent;
+                        var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
+                        if (processedContent != response.Message.Content)
+                        {
+                            response.Message.Content = processedContent;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing message tool calls");
+                        // Don't modify the response in this case
                     }
                 }
 
@@ -389,28 +627,95 @@ namespace Adept.Services.Llm
                 // Get the system prompt if not provided
                 if (string.IsNullOrEmpty(systemPrompt))
                 {
-                    systemPrompt = await _systemPromptService.GetSystemPromptAsync();
+                    var defaultPrompt = await _systemPromptService.GetDefaultPromptAsync();
+                    systemPrompt = defaultPrompt.Content;
                 }
 
-                // Send the messages to the LLM with streaming
-                var response = await ActiveProvider.SendMessagesStreamingAsync(
-                    messages,
-                    onChunk,
-                    systemPrompt,
-                    cancellationToken);
+                // Optimize conversation history to fit within token limits
+                var optimizedHistory = OptimizeConversationHistory(messages);
+
+                // Send the messages to the LLM with streaming and fallback mechanism
+                LlmResponse response;
+                try
+                {
+                    response = await ActiveProvider.SendMessagesStreamingAsync(
+                        optimizedHistory,
+                        systemPrompt,
+                        onChunk,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error using primary provider {ProviderName} for streaming, attempting fallback",
+                        ActiveProvider.ProviderName);
+
+                    // Mark the provider as failed
+                    await MarkProviderAsFailedAsync(ActiveProvider.ProviderName);
+
+                    // Try with the new active provider
+                    try
+                    {
+                        // Send a message to the client that we're switching providers
+                        onChunk?.Invoke("\n[Switching to backup provider due to connection issues...]\n");
+
+                        response = await ActiveProvider.SendMessagesStreamingAsync(
+                            messages,
+                            systemPrompt,
+                            onChunk,
+                            cancellationToken);
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        _logger.LogError(fallbackEx, "Error using fallback provider {ProviderName} for streaming",
+                            ActiveProvider.ProviderName);
+
+                        // Send a final error message to the client
+                        var errorMessage = "I'm sorry, I'm having trouble connecting to my language model providers. Please try again in a few minutes.";
+                        onChunk?.Invoke(errorMessage);
+
+                        // Create a graceful failure response
+                        response = new LlmResponse
+                        {
+                            Message = new LlmMessage
+                            {
+                                Role = LlmRole.Assistant,
+                                Content = errorMessage
+                            },
+                            ProviderName = "System",
+                            ModelName = "Fallback"
+                        };
+                    }
+                }
 
                 // Process any tool calls in the response
                 if (response.ToolCalls.Count > 0)
                 {
-                    response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                    try
+                    {
+                        response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing tool calls in streaming response");
+                        // Append error message to response
+                        response.Message.Content += "\n\nNote: There was an error processing some tool calls. Some information may be incomplete.";
+                    }
                 }
                 else
                 {
                     // Check for tool calls in the message text
-                    var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
-                    if (processedContent != response.Message.Content)
+                    try
                     {
-                        response.Message.Content = processedContent;
+                        var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
+                        if (processedContent != response.Message.Content)
+                        {
+                            response.Message.Content = processedContent;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing message tool calls in streaming response");
+                        // Don't modify the response in this case
                     }
                 }
 
@@ -448,10 +753,25 @@ namespace Adept.Services.Llm
         {
             try
             {
+                // Find a provider that supports vision
                 if (!ActiveProvider.SupportsVision)
                 {
-                    _logger.LogWarning("Active provider {ProviderName} does not support vision", ActiveProvider.ProviderName);
-                    throw new InvalidOperationException($"Provider {ActiveProvider.ProviderName} does not support vision");
+                    _logger.LogWarning("Active provider {ProviderName} does not support vision, looking for alternative", ActiveProvider.ProviderName);
+
+                    // Try to find a provider that supports vision
+                    var visionProvider = _providers.FirstOrDefault(p => p.SupportsVision && p.HasValidApiKey && !IsProviderInFailureBackoff(p.ProviderName));
+
+                    if (visionProvider != null)
+                    {
+                        // Temporarily set this as the active provider for this request
+                        _logger.LogInformation("Using vision-capable provider {ProviderName} for image request", visionProvider.ProviderName);
+                        _activeProvider = visionProvider;
+                    }
+                    else
+                    {
+                        _logger.LogError("No vision-capable providers available");
+                        throw new InvalidOperationException("No vision-capable providers available");
+                    }
                 }
 
                 // Get or create the conversation
@@ -477,15 +797,84 @@ namespace Adept.Services.Llm
                 // Get the system prompt if not provided
                 if (string.IsNullOrEmpty(systemPrompt))
                 {
-                    systemPrompt = await _systemPromptService.GetSystemPromptAsync();
+                    var defaultPrompt = await _systemPromptService.GetDefaultPromptAsync();
+                    systemPrompt = defaultPrompt.Content;
                 }
 
-                // Send the message with image to the LLM
-                var response = await ActiveProvider.SendMessageWithImageAsync(
-                    message,
-                    imageData,
-                    systemPrompt,
-                    cancellationToken);
+                // Send the message with image to the LLM with fallback mechanism
+                LlmResponse response;
+                try
+                {
+                    // TODO: Implement image support
+                    response = await ActiveProvider.SendMessageAsync(
+                        message + " [Image attached]",
+                        systemPrompt,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error using provider {ProviderName} for image request, attempting fallback",
+                        ActiveProvider.ProviderName);
+
+                    // Mark the provider as failed
+                    await MarkProviderAsFailedAsync(ActiveProvider.ProviderName);
+
+                    // Try to find another vision-capable provider
+                    var fallbackProvider = _providers
+                        .Where(p => p.ProviderName != ActiveProvider.ProviderName &&
+                               p.SupportsVision &&
+                               p.HasValidApiKey &&
+                               !IsProviderInFailureBackoff(p.ProviderName))
+                        .FirstOrDefault();
+
+                    if (fallbackProvider != null)
+                    {
+                        _logger.LogInformation("Using fallback vision provider {ProviderName}", fallbackProvider.ProviderName);
+                        _activeProvider = fallbackProvider;
+
+                        try
+                        {
+                            // TODO: Implement image support
+                            response = await ActiveProvider.SendMessageAsync(
+                                message + " [Image attached]",
+                                systemPrompt,
+                                cancellationToken);
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            _logger.LogError(fallbackEx, "Error using fallback provider {ProviderName} for image request",
+                                ActiveProvider.ProviderName);
+
+                            // Create a graceful failure response
+                            response = new LlmResponse
+                            {
+                                Message = new LlmMessage
+                                {
+                                    Role = LlmRole.Assistant,
+                                    Content = "I'm sorry, I'm having trouble processing the image. Please try again later or try a different image."
+                                },
+                                ProviderName = "System",
+                                ModelName = "Fallback"
+                            };
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("No fallback vision providers available");
+
+                        // Create a graceful failure response
+                        response = new LlmResponse
+                        {
+                            Message = new LlmMessage
+                            {
+                                Role = LlmRole.Assistant,
+                                Content = "I'm sorry, I'm having trouble processing the image. No vision-capable providers are currently available."
+                            },
+                            ProviderName = "System",
+                            ModelName = "Fallback"
+                        };
+                    }
+                }
 
                 // Add the assistant response to the conversation
                 conversation.AddAssistantMessage(response.Message.Content);

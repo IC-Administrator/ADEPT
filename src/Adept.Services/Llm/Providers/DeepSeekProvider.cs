@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,30 @@ namespace Adept.Services.Llm.Providers
         /// Gets the name of the provider
         /// </summary>
         public string ProviderName => "DeepSeek";
+
+        /// <summary>
+        /// Gets the name of the currently selected model
+        /// </summary>
+        public string ModelName => _currentModel.Id;
+
+        /// <summary>
+        /// Sends messages to the LLM with streaming and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            // TODO: Implement streaming
+            var userMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "";
+            return await SendMessageAsync(userMessage, systemPrompt, cancellationToken);
+        }
 
         /// <summary>
         /// Gets the available models for this provider
@@ -76,8 +101,8 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
-            _availableModels.Add(new LlmModel("deepseek-chat", "DeepSeek Chat", "General purpose chat model", 32000, true, false));
-            _availableModels.Add(new LlmModel("deepseek-coder", "DeepSeek Coder", "Specialized for coding tasks", 32000, true, false));
+            _availableModels.Add(new LlmModel("deepseek-chat", "DeepSeek Chat", 32000, true, false));
+            _availableModels.Add(new LlmModel("deepseek-coder", "DeepSeek Coder", 32000, true, false));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -191,8 +216,8 @@ namespace Adept.Services.Llm.Providers
                 // Add conversation history
                 foreach (var message in messages)
                 {
-                    var role = message.Role == LlmRole.User ? "user" : "assistant";
-                    requestMessages.Add(new { role = role, content = message.Content });
+                    var messageRole = message.Role == LlmRole.User ? "user" : "assistant";
+                    requestMessages.Add(new { role = messageRole, content = message.Content });
                 }
 
                 var requestBody = new
@@ -305,7 +330,7 @@ namespace Adept.Services.Llm.Providers
 
                 while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
                 {
-                    var line = await reader.ReadLineAsync(cancellationToken);
+                    var line = await reader.ReadLineAsync();
                     if (string.IsNullOrEmpty(line) || !line.StartsWith("data: "))
                     {
                         continue;
@@ -446,8 +471,8 @@ namespace Adept.Services.Llm.Providers
                 // Add conversation history
                 foreach (var message in messages)
                 {
-                    var role = message.Role == LlmRole.User ? "user" : "assistant";
-                    requestMessages.Add(new { role = role, content = message.Content });
+                    var messageRole = message.Role == LlmRole.User ? "user" : "assistant";
+                    requestMessages.Add(new { role = messageRole, content = message.Content });
                 }
 
                 // Convert tools to the format expected by the API
@@ -484,8 +509,8 @@ namespace Adept.Services.Llm.Providers
                 var firstChoice = choices[0];
                 var messageObj = firstChoice.GetProperty("message");
                 var role = messageObj.GetProperty("role").GetString() ?? "assistant";
-                var content_text = messageObj.TryGetProperty("content", out var contentElement) 
-                    ? contentElement.GetString() ?? string.Empty 
+                var content_text = messageObj.TryGetProperty("content", out var contentElement)
+                    ? contentElement.GetString() ?? string.Empty
                     : string.Empty;
 
                 // Extract tool calls if present
@@ -496,13 +521,13 @@ namespace Adept.Services.Llm.Providers
                     {
                         var id = toolCall.GetProperty("id").GetString() ?? string.Empty;
                         var type = toolCall.GetProperty("type").GetString() ?? string.Empty;
-                        
+
                         if (type == "function")
                         {
                             var function = toolCall.GetProperty("function");
                             var name = function.GetProperty("name").GetString() ?? string.Empty;
                             var arguments = function.GetProperty("arguments").GetString() ?? string.Empty;
-                            
+
                             toolCalls.Add(new LlmToolCall
                             {
                                 Id = id,

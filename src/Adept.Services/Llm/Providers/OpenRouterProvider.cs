@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,30 @@ namespace Adept.Services.Llm.Providers
         /// Gets the name of the provider
         /// </summary>
         public string ProviderName => "OpenRouter";
+
+        /// <summary>
+        /// Gets the name of the currently selected model
+        /// </summary>
+        public string ModelName => _currentModel.Id;
+
+        /// <summary>
+        /// Sends messages to the LLM with streaming and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            // TODO: Implement streaming
+            var userMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "";
+            return await SendMessageAsync(userMessage, systemPrompt, cancellationToken);
+        }
 
         /// <summary>
         /// Gets the available models for this provider
@@ -76,12 +101,12 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
-            _availableModels.Add(new LlmModel("anthropic/claude-3-opus", "Claude 3 Opus (via OpenRouter)", "Anthropic's most powerful model", 200000, true, true));
-            _availableModels.Add(new LlmModel("openai/gpt-4o", "GPT-4o (via OpenRouter)", "OpenAI's most advanced model", 128000, true, true));
-            _availableModels.Add(new LlmModel("meta-llama/llama-3-70b-instruct", "Llama 3 70B (via OpenRouter)", "Meta's most powerful model", 128000, true, false));
-            _availableModels.Add(new LlmModel("google/gemini-1.5-pro", "Gemini 1.5 Pro (via OpenRouter)", "Google's most capable model", 1000000, true, true));
-            _availableModels.Add(new LlmModel("mistralai/mistral-large", "Mistral Large (via OpenRouter)", "Mistral's most powerful model", 32000, true, false));
-            _availableModels.Add(new LlmModel("deepseek/deepseek-coder", "DeepSeek Coder (via OpenRouter)", "Specialized for coding tasks", 16000, false, false));
+            _availableModels.Add(new LlmModel("anthropic/claude-3-opus", "Claude 3 Opus (via OpenRouter)", 200000, true, true));
+            _availableModels.Add(new LlmModel("openai/gpt-4o", "GPT-4o (via OpenRouter)", 128000, true, true));
+            _availableModels.Add(new LlmModel("meta-llama/llama-3-70b-instruct", "Llama 3 70B (via OpenRouter)", 128000, true, false));
+            _availableModels.Add(new LlmModel("google/gemini-1.5-pro", "Gemini 1.5 Pro (via OpenRouter)", 1000000, true, true));
+            _availableModels.Add(new LlmModel("mistralai/mistral-large", "Mistral Large (via OpenRouter)", 32000, true, false));
+            _availableModels.Add(new LlmModel("deepseek/deepseek-coder", "DeepSeek Coder (via OpenRouter)", 16000, false, false));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -197,8 +222,8 @@ namespace Adept.Services.Llm.Providers
                 // Add conversation history
                 foreach (var message in messages)
                 {
-                    var role = message.Role == LlmRole.User ? "user" : "assistant";
-                    requestMessages.Add(new { role = role, content = message.Content });
+                    var messageRole = message.Role == LlmRole.User ? "user" : "assistant";
+                    requestMessages.Add(new { role = messageRole, content = message.Content });
                 }
 
                 var requestBody = new
@@ -313,7 +338,7 @@ namespace Adept.Services.Llm.Providers
 
                 while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
                 {
-                    var line = await reader.ReadLineAsync(cancellationToken);
+                    var line = await reader.ReadLineAsync();
                     if (string.IsNullOrEmpty(line) || !line.StartsWith("data: "))
                     {
                         continue;
@@ -537,8 +562,8 @@ namespace Adept.Services.Llm.Providers
                 // Add conversation history
                 foreach (var message in messages)
                 {
-                    var role = message.Role == LlmRole.User ? "user" : "assistant";
-                    requestMessages.Add(new { role = role, content = message.Content });
+                    var messageRole = message.Role == LlmRole.User ? "user" : "assistant";
+                    requestMessages.Add(new { role = messageRole, content = message.Content });
                 }
 
                 // Convert tools to the format expected by the API
@@ -575,8 +600,8 @@ namespace Adept.Services.Llm.Providers
                 var firstChoice = choices[0];
                 var messageObj = firstChoice.GetProperty("message");
                 var role = messageObj.GetProperty("role").GetString() ?? "assistant";
-                var content_text = messageObj.TryGetProperty("content", out var contentElement) 
-                    ? contentElement.GetString() ?? string.Empty 
+                var content_text = messageObj.TryGetProperty("content", out var contentElement)
+                    ? contentElement.GetString() ?? string.Empty
                     : string.Empty;
 
                 // Extract tool calls if present
@@ -587,13 +612,13 @@ namespace Adept.Services.Llm.Providers
                     {
                         var id = toolCall.GetProperty("id").GetString() ?? string.Empty;
                         var type = toolCall.GetProperty("type").GetString() ?? string.Empty;
-                        
+
                         if (type == "function")
                         {
                             var function = toolCall.GetProperty("function");
                             var name = function.GetProperty("name").GetString() ?? string.Empty;
                             var arguments = function.GetProperty("arguments").GetString() ?? string.Empty;
-                            
+
                             toolCalls.Add(new LlmToolCall
                             {
                                 Id = id,

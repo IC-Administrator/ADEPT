@@ -75,7 +75,7 @@ namespace Adept.Services.Voice
 
             try
             {
-                _waveIn?.Start();
+                _waveIn?.StartRecording();
                 _isListening = true;
                 _logger.LogInformation("Wake word detector started listening");
                 return Task.CompletedTask;
@@ -99,7 +99,7 @@ namespace Adept.Services.Voice
 
             try
             {
-                _waveIn?.Stop();
+                _waveIn?.StopRecording();
                 _isListening = false;
                 _logger.LogInformation("Wake word detector stopped listening");
                 return Task.CompletedTask;
