@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Adept.UI"
+        xmlns:views="clr-namespace:Adept.UI.Views"
         xmlns:viewmodels="clr-namespace:Adept.UI.ViewModels"
         mc:Ignorable="d"
         Title="Adept AI Teaching Assistant"
@@ -76,6 +77,10 @@
                         </StackPanel>
                     </Border>
                 </Grid>
+            </TabItem>
+
+            <TabItem Header="Chat" x:Name="ChatTab">
+                <views:ChatView DataContext="{Binding ChatViewModel}" />
             </TabItem>
 
             <TabItem Header="Classes" x:Name="ClassesTab">
