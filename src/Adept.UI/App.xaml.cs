@@ -3,6 +3,7 @@ using Adept.Core.Interfaces;
 using Adept.Data.Database;
 using Adept.Data.Repositories;
 using Adept.Services.Configuration;
+using Adept.Services.Database;
 using Adept.Services.Llm;
 using Adept.Services.Llm.Providers;
 using Adept.Services.Mcp;
@@ -45,6 +46,10 @@ namespace Adept.UI
 
             _serviceProvider = services.BuildServiceProvider();
 
+            // Initialize database backup and maintenance
+            var databaseInitializer = _serviceProvider.GetRequiredService<DatabaseBackupInitializer>();
+            databaseInitializer.InitializeAsync().ConfigureAwait(false);
+
             // Start the application
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
@@ -64,8 +69,13 @@ namespace Adept.UI
             // Add HTTP clients
             services.AddHttpClient();
 
-            // Register Database
-            services.AddSingleton<IDatabaseContext, SqliteDatabaseContext>();
+            // Register Database Services
+            services.AddSingleton<IDatabaseBackupService, DatabaseBackupService>();
+            services.AddSingleton<IDatabaseIntegrityService, DatabaseIntegrityService>();
+            services.AddSingleton<IDatabaseContext>(provider => new SqliteDatabaseContext(
+                provider.GetRequiredService<IConfiguration>(),
+                provider.GetRequiredService<ILogger<SqliteDatabaseContext>>(),
+                provider.GetRequiredService<IDatabaseBackupService>()));
 
             // Register Core Services
             services.AddSingleton<ICryptographyService, CryptographyService>();
@@ -107,7 +117,8 @@ namespace Adept.UI
             // Register MCP Services
             services.AddSingleton<IMcpServerManager, McpServerManager>();
 
-            // TODO: Register other services
+            // Register Database Initialization
+            services.AddSingleton<DatabaseBackupInitializer>();
 
             // Register ViewModels
             services.AddSingleton<ViewModels.HomeViewModel>();

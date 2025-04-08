@@ -16,16 +16,19 @@ namespace Adept.Data.Database
     {
         private readonly string _connectionString;
         private readonly ILogger<SqliteDatabaseContext> _logger;
+        private readonly IDatabaseBackupService? _backupService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqliteDatabaseContext"/> class
         /// </summary>
         /// <param name="configuration">The configuration</param>
         /// <param name="logger">The logger</param>
-        public SqliteDatabaseContext(IConfiguration configuration, ILogger<SqliteDatabaseContext> logger)
+        /// <param name="backupService">The backup service (optional)</param>
+        public SqliteDatabaseContext(IConfiguration configuration, ILogger<SqliteDatabaseContext> logger, IDatabaseBackupService? backupService = null)
         {
             _connectionString = configuration["Database:ConnectionString"] ?? "Data Source=data/adept.db";
             _logger = logger;
+            _backupService = backupService;
 
             // Ensure the database directory exists
             var dbPath = _connectionString.Replace("Data Source=", "");
@@ -429,9 +432,81 @@ namespace Adept.Data.Database
                         UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
                     END;
                     "
+                },
+                {
+                    3,
+                    @"
+                    -- Add validation triggers for Conversations table
+                    CREATE TRIGGER IF NOT EXISTS validate_conversation_insert
+                    BEFORE INSERT ON Conversations
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
+                                THEN RAISE(ABORT, 'Conversation date cannot be empty')
+                            WHEN NEW.class_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
+                                THEN RAISE(ABORT, 'Referenced class does not exist')
+                            WHEN NEW.time_slot IS NOT NULL AND (NEW.time_slot < 0 OR NEW.time_slot > 4)
+                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
+                        END;
+                    END;
+
+                    CREATE TRIGGER IF NOT EXISTS validate_conversation_update
+                    BEFORE UPDATE ON Conversations
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
+                                THEN RAISE(ABORT, 'Conversation date cannot be empty')
+                            WHEN NEW.class_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
+                                THEN RAISE(ABORT, 'Referenced class does not exist')
+                            WHEN NEW.time_slot IS NOT NULL AND (NEW.time_slot < 0 OR NEW.time_slot > 4)
+                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
+                        END;
+                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
+                    END;
+
+                    -- Add validation triggers for SystemPrompts table
+                    CREATE TRIGGER IF NOT EXISTS validate_prompt_insert
+                    BEFORE INSERT ON SystemPrompts
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
+                                THEN RAISE(ABORT, 'Prompt name cannot be empty')
+                            WHEN NEW.content IS NULL OR trim(NEW.content) = ''
+                                THEN RAISE(ABORT, 'Prompt content cannot be empty')
+                        END;
+                    END;
+
+                    CREATE TRIGGER IF NOT EXISTS validate_prompt_update
+                    BEFORE UPDATE ON SystemPrompts
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
+                                THEN RAISE(ABORT, 'Prompt name cannot be empty')
+                            WHEN NEW.content IS NULL OR trim(NEW.content) = ''
+                                THEN RAISE(ABORT, 'Prompt content cannot be empty')
+                        END;
+                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
+                    END;
+                    "
                 }
                 // Add more migrations as needed
             };
+
+            // Create a backup before applying migrations if backup service is available
+            if (_backupService != null && currentVersion < migrations.Keys.Max())
+            {
+                try
+                {
+                    _logger.LogInformation("Creating database backup before applying migrations");
+                    string backupPath = await _backupService.CreateMigrationBackupAsync();
+                    _logger.LogInformation("Database backup created at {BackupPath}", backupPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to create database backup before migrations");
+                    // Continue with migrations even if backup fails
+                }
+            }
 
             // Apply migrations in order
             using var transaction = await BeginTransactionAsync();

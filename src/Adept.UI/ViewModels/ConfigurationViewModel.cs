@@ -1,9 +1,13 @@
 using Adept.Common.Interfaces;
+using Adept.Common.Models;
 using Adept.Core.Interfaces;
 using Adept.UI.Commands;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace Adept.UI.ViewModels
@@ -17,6 +21,8 @@ namespace Adept.UI.ViewModels
         private readonly ISecureStorageService _secureStorageService;
         private readonly ILlmService _llmService;
         private readonly IMcpServerManager _mcpServerManager;
+        private readonly IDatabaseBackupService _databaseBackupService;
+        private readonly IDatabaseIntegrityService _databaseIntegrityService;
         private readonly ILogger<ConfigurationViewModel> _logger;
         private bool _isBusy;
         private string _selectedTab = "General";
@@ -61,6 +67,76 @@ namespace Adept.UI.ViewModels
         {
             get => _selectedTab;
             set => SetProperty(ref _selectedTab, value);
+        }
+
+        private ObservableCollection<DatabaseBackupInfo> _availableBackups = new ObservableCollection<DatabaseBackupInfo>();
+        /// <summary>
+        /// Gets the available database backups
+        /// </summary>
+        public ObservableCollection<DatabaseBackupInfo> AvailableBackups
+        {
+            get => _availableBackups;
+            private set => SetProperty(ref _availableBackups, value);
+        }
+
+        private string _selectedBackupPath = string.Empty;
+        /// <summary>
+        /// Gets or sets the selected backup path
+        /// </summary>
+        public string SelectedBackupPath
+        {
+            get => _selectedBackupPath;
+            set => SetProperty(ref _selectedBackupPath, value);
+        }
+
+        private string _backupName = string.Empty;
+        /// <summary>
+        /// Gets or sets the backup name
+        /// </summary>
+        public string BackupName
+        {
+            get => _backupName;
+            set => SetProperty(ref _backupName, value);
+        }
+
+        private string _databaseStatus = "Unknown";
+        /// <summary>
+        /// Gets or sets the database status
+        /// </summary>
+        public string DatabaseStatus
+        {
+            get => _databaseStatus;
+            set => SetProperty(ref _databaseStatus, value);
+        }
+
+        private bool _isBackupInProgress = false;
+        /// <summary>
+        /// Gets or sets a value indicating whether a backup is in progress
+        /// </summary>
+        public bool IsBackupInProgress
+        {
+            get => _isBackupInProgress;
+            set => SetProperty(ref _isBackupInProgress, value);
+        }
+
+        private bool _isRestoreInProgress = false;
+        /// <summary>
+        /// Gets or sets a value indicating whether a restore is in progress
+        /// </summary>
+        public bool IsRestoreInProgress
+        {
+            get => _isRestoreInProgress;
+            set => SetProperty(ref _isRestoreInProgress, value);
+        }
+
+        private bool _isMaintenanceInProgress = false;
+        /// <summary>
+        /// Gets or sets a value indicating whether maintenance is in progress
+        /// </summary>
+        public bool IsMaintenanceInProgress
+        {
+            get => _isMaintenanceInProgress;
+            set => SetProperty(ref _isMaintenanceInProgress, value);
         }
 
         /// <summary>
@@ -366,24 +442,55 @@ namespace Adept.UI.ViewModels
         public ICommand BrowseDataDirectoryCommand { get; }
 
         /// <summary>
+        /// Gets the create database backup command
+        /// </summary>
+        public ICommand CreateBackupCommand { get; }
+
+        /// <summary>
+        /// Gets the restore database backup command
+        /// </summary>
+        public ICommand RestoreBackupCommand { get; }
+
+        /// <summary>
+        /// Gets the verify database integrity command
+        /// </summary>
+        public ICommand VerifyDatabaseCommand { get; }
+
+        /// <summary>
+        /// Gets the perform database maintenance command
+        /// </summary>
+        public ICommand PerformMaintenanceCommand { get; }
+
+        /// <summary>
+        /// Gets the refresh database backups command
+        /// </summary>
+        public ICommand RefreshBackupsCommand { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationViewModel"/> class
         /// </summary>
         /// <param name="configurationService">The configuration service</param>
         /// <param name="secureStorageService">The secure storage service</param>
         /// <param name="llmService">The LLM service</param>
         /// <param name="mcpServerManager">The MCP server manager</param>
+        /// <param name="databaseBackupService">The database backup service</param>
+        /// <param name="databaseIntegrityService">The database integrity service</param>
         /// <param name="logger">The logger</param>
         public ConfigurationViewModel(
             IConfigurationService configurationService,
             ISecureStorageService secureStorageService,
             ILlmService llmService,
             IMcpServerManager mcpServerManager,
+            IDatabaseBackupService databaseBackupService,
+            IDatabaseIntegrityService databaseIntegrityService,
             ILogger<ConfigurationViewModel> logger)
         {
             _configurationService = configurationService;
             _secureStorageService = secureStorageService;
             _llmService = llmService;
             _mcpServerManager = mcpServerManager;
+            _databaseBackupService = databaseBackupService;
+            _databaseIntegrityService = databaseIntegrityService;
             _logger = logger;
 
             SaveGeneralSettingsCommand = new RelayCommand(SaveGeneralSettingsAsync);
@@ -394,11 +501,19 @@ namespace Adept.UI.ViewModels
             RestartMcpServerCommand = new RelayCommand(RestartMcpServerAsync);
             BrowseDataDirectoryCommand = new RelayCommand(BrowseDataDirectoryAsync);
 
+            // Database commands
+            CreateBackupCommand = new RelayCommand(CreateBackupAsync);
+            RestoreBackupCommand = new RelayCommand<string>(RestoreBackupAsync);
+            VerifyDatabaseCommand = new RelayCommand(VerifyDatabaseAsync);
+            PerformMaintenanceCommand = new RelayCommand(PerformMaintenanceAsync);
+            RefreshBackupsCommand = new RelayCommand(() => { RefreshBackupsAsync().ConfigureAwait(false); });
+
             // Subscribe to MCP server status changes
             _mcpServerManager.ServerStatusChanged += OnMcpServerStatusChanged;
 
-            // Load configuration
+            // Load configuration and database backups
             LoadConfigurationAsync().ConfigureAwait(false);
+            RefreshBackupsAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -906,5 +1021,180 @@ namespace Adept.UI.ViewModels
             (StartMcpServerCommand as Commands.RelayCommand)?.RaiseCanExecuteChanged();
             (StopMcpServerCommand as Commands.RelayCommand)?.RaiseCanExecuteChanged();
         }
+
+        #region Database Management
+
+        /// <summary>
+        /// Creates a database backup
+        /// </summary>
+        private async void CreateBackupAsync()
+        {
+            try
+            {
+                IsBackupInProgress = true;
+
+                // Create a backup with the specified name or a timestamp if no name is provided
+                string backupPath = await _databaseBackupService.CreateBackupAsync(string.IsNullOrWhiteSpace(BackupName) ? null : BackupName);
+
+                // Refresh the list of backups
+                await RefreshBackupsAsync();
+
+                // Clear the backup name field
+                BackupName = string.Empty;
+
+                _logger.LogInformation("Database backup created at {BackupPath}", backupPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating database backup");
+            }
+            finally
+            {
+                IsBackupInProgress = false;
+            }
+        }
+
+        /// <summary>
+        /// Restores a database backup
+        /// </summary>
+        /// <param name="backupPath">The backup path</param>
+        private async void RestoreBackupAsync(string backupPath)
+        {
+            if (string.IsNullOrEmpty(backupPath))
+            {
+                backupPath = SelectedBackupPath;
+            }
+
+            if (string.IsNullOrEmpty(backupPath))
+            {
+                _logger.LogWarning("No backup selected for restore");
+                return;
+            }
+
+            try
+            {
+                IsRestoreInProgress = true;
+
+                // Verify the backup integrity first
+                bool isValid = await _databaseBackupService.VerifyBackupIntegrityAsync(backupPath);
+                if (!isValid)
+                {
+                    _logger.LogWarning("Backup integrity check failed for {BackupPath}", backupPath);
+                    return;
+                }
+
+                // Restore the backup
+                bool success = await _databaseBackupService.RestoreFromBackupAsync(backupPath);
+                if (success)
+                {
+                    _logger.LogInformation("Database restored from backup {BackupPath}", backupPath);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to restore database from backup {BackupPath}", backupPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error restoring database from backup {BackupPath}", backupPath);
+            }
+            finally
+            {
+                IsRestoreInProgress = false;
+            }
+        }
+
+        /// <summary>
+        /// Verifies the database integrity
+        /// </summary>
+        private async void VerifyDatabaseAsync()
+        {
+            try
+            {
+                IsMaintenanceInProgress = true;
+
+                // Check database integrity
+                var result = await _databaseIntegrityService.CheckIntegrityAsync();
+                if (result.IsValid)
+                {
+                    DatabaseStatus = "Valid";
+                    _logger.LogInformation("Database integrity check passed");
+                }
+                else
+                {
+                    DatabaseStatus = "Invalid: " + string.Join(", ", result.Issues);
+                    _logger.LogWarning("Database integrity check failed: {Issues}", string.Join(", ", result.Issues));
+                }
+            }
+            catch (Exception ex)
+            {
+                DatabaseStatus = "Error: " + ex.Message;
+                _logger.LogError(ex, "Error checking database integrity");
+            }
+            finally
+            {
+                IsMaintenanceInProgress = false;
+            }
+        }
+
+        /// <summary>
+        /// Performs database maintenance
+        /// </summary>
+        private async void PerformMaintenanceAsync()
+        {
+            try
+            {
+                IsMaintenanceInProgress = true;
+
+                // Perform database maintenance
+                bool success = await _databaseIntegrityService.PerformMaintenanceAsync();
+                if (success)
+                {
+                    DatabaseStatus = "Maintenance completed successfully";
+                    _logger.LogInformation("Database maintenance completed successfully");
+                }
+                else
+                {
+                    DatabaseStatus = "Maintenance failed";
+                    _logger.LogWarning("Database maintenance failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                DatabaseStatus = "Error: " + ex.Message;
+                _logger.LogError(ex, "Error performing database maintenance");
+            }
+            finally
+            {
+                IsMaintenanceInProgress = false;
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the list of available backups
+        /// </summary>
+        private async Task RefreshBackupsAsync()
+        {
+            try
+            {
+                // Get available backups
+                var backups = await _databaseBackupService.GetAvailableBackupsAsync();
+
+                // Update the collection
+                AvailableBackups.Clear();
+                foreach (var backup in backups)
+                {
+                    AvailableBackups.Add(backup);
+                }
+
+                _logger.LogInformation("Found {Count} database backups", AvailableBackups.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing database backups");
+            }
+        }
+
+        #endregion
     }
 }
