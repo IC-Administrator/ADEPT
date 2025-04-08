@@ -125,6 +125,11 @@ namespace Adept.UI
             // Register File System Services
             services.AddFileSystemServices();
 
+            // Register mock services for testing
+            services.AddSingleton<ICalendarSyncService, MockCalendarSyncService>();
+            services.AddSingleton<ILessonPlanService, MockLessonPlanService>();
+            services.AddSingleton<IClassService, MockClassService>();
+
             // Register MCP Services
             services.AddSingleton<IMcpServerManager, McpServerManager>();
             services.AddSingleton<IMcpToolProvider, FileSystemToolProvider>();

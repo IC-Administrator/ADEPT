@@ -279,7 +279,7 @@ namespace Adept.Services.FileSystem
         /// <param name="path">The relative path within the scratchpad to search in</param>
         /// <param name="fileExtensions">File extensions to include in the search</param>
         /// <returns>List of files containing the search pattern</returns>
-        public async Task<IEnumerable<FileInfo>> SearchFilesByContentAsync(string searchPattern, string path = "", string[] fileExtensions = null)
+        public async Task<IEnumerable<FileInfo>> SearchFilesByContentAsync(string searchPattern, string path = "", string[]? fileExtensions = null)
         {
             try
             {
@@ -440,10 +440,10 @@ namespace Adept.Services.FileSystem
 
             // Remove potentially dangerous path traversal
             path = path.Replace("..", "");
-            
+
             // Remove leading slashes
             path = path.TrimStart('/', '\\');
-            
+
             return path;
         }
 

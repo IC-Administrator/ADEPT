@@ -65,7 +65,7 @@ namespace Adept.Common.Interfaces
         /// <param name="path">The relative path within the scratchpad to search in</param>
         /// <param name="fileExtensions">File extensions to include in the search</param>
         /// <returns>List of files containing the search pattern</returns>
-        Task<IEnumerable<FileInfo>> SearchFilesByContentAsync(string searchPattern, string path = "", string[] fileExtensions = null);
+        Task<IEnumerable<FileInfo>> SearchFilesByContentAsync(string searchPattern, string path = "", string[]? fileExtensions = null);
 
         /// <summary>
         /// Moves a file or directory

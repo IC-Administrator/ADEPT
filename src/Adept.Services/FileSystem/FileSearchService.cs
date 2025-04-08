@@ -81,7 +81,7 @@ namespace Adept.Services.FileSystem
         /// <param name="fileExtensions">File extensions to include in the search</param>
         /// <returns>List of matching files with context</returns>
         public async Task<IEnumerable<(FileInfo File, string Context)>> SearchFilesByContentWithContextAsync(
-            string searchText, string path = "", string[] fileExtensions = null)
+            string searchText, string path = "", string[]? fileExtensions = null)
         {
             try
             {
@@ -146,30 +146,30 @@ namespace Adept.Services.FileSystem
 
                         // Check if the metadata matches
                         bool isMatch = false;
-                        if (string.Equals(metadataKey, "title", StringComparison.OrdinalIgnoreCase) && 
-                            !string.IsNullOrEmpty(metadata.Title) && 
+                        if (string.Equals(metadataKey, "title", StringComparison.OrdinalIgnoreCase) &&
+                            !string.IsNullOrEmpty(metadata.Title) &&
                             metadata.Title.Contains(metadataValue, StringComparison.OrdinalIgnoreCase))
                         {
                             isMatch = true;
                         }
-                        else if (string.Equals(metadataKey, "description", StringComparison.OrdinalIgnoreCase) && 
-                                !string.IsNullOrEmpty(metadata.Description) && 
+                        else if (string.Equals(metadataKey, "description", StringComparison.OrdinalIgnoreCase) &&
+                                !string.IsNullOrEmpty(metadata.Description) &&
                                 metadata.Description.Contains(metadataValue, StringComparison.OrdinalIgnoreCase))
                         {
                             isMatch = true;
                         }
-                        else if (string.Equals(metadataKey, "author", StringComparison.OrdinalIgnoreCase) && 
-                                !string.IsNullOrEmpty(metadata.Author) && 
+                        else if (string.Equals(metadataKey, "author", StringComparison.OrdinalIgnoreCase) &&
+                                !string.IsNullOrEmpty(metadata.Author) &&
                                 metadata.Author.Contains(metadataValue, StringComparison.OrdinalIgnoreCase))
                         {
                             isMatch = true;
                         }
-                        else if (string.Equals(metadataKey, "tags", StringComparison.OrdinalIgnoreCase) || 
+                        else if (string.Equals(metadataKey, "tags", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(metadataKey, "keywords", StringComparison.OrdinalIgnoreCase))
                         {
                             isMatch = metadata.Keywords.Any(k => k.Contains(metadataValue, StringComparison.OrdinalIgnoreCase));
                         }
-                        else if (metadata.Properties.TryGetValue(metadataKey, out var value) && 
+                        else if (metadata.Properties.TryGetValue(metadataKey, out var value) &&
                                 value.Contains(metadataValue, StringComparison.OrdinalIgnoreCase))
                         {
                             isMatch = true;
@@ -242,13 +242,13 @@ namespace Adept.Services.FileSystem
                     var length = endIndex - startIndex;
 
                     var context = content.Substring(startIndex, length);
-                    
+
                     // Add ellipsis if we're not at the beginning or end
                     if (startIndex > 0)
                     {
                         context = "..." + context;
                     }
-                    
+
                     if (endIndex < content.Length)
                     {
                         context = context + "...";

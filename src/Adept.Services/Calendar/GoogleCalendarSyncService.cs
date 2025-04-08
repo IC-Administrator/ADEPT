@@ -300,7 +300,7 @@ namespace Adept.Services.Calendar
 
             if (eventElement.TryGetProperty("start", out var startElement))
             {
-                calendarEvent.Start = new EventDateTime();
+                calendarEvent.Start = new CalendarDateTime();
                 if (startElement.TryGetProperty("dateTime", out var startDateTimeElement))
                 {
                     calendarEvent.Start.DateTime = startDateTimeElement.GetString();
@@ -313,7 +313,7 @@ namespace Adept.Services.Calendar
 
             if (eventElement.TryGetProperty("end", out var endElement))
             {
-                calendarEvent.End = new EventDateTime();
+                calendarEvent.End = new CalendarDateTime();
                 if (endElement.TryGetProperty("dateTime", out var endDateTimeElement))
                 {
                     calendarEvent.End.DateTime = endDateTimeElement.GetString();

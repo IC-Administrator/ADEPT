@@ -118,6 +118,8 @@ namespace Adept.Services.Calendar
         {
             try
             {
+                // Flag to indicate if attachments are supported
+                bool supportsAttachments = false;
                 // Ensure we have a valid token
                 var token = await _oauthService.GetValidTokenAsync();
 
@@ -160,8 +162,9 @@ namespace Adept.Services.Calendar
                 if (attachments != null && attachments.Count > 0)
                 {
                     // Enable attachments support
-                    var requestUrl = $"{_baseUrl}/calendars/primary/events?supportsAttachments=true";
                     eventData["attachments"] = attachments;
+                    // Set supportsAttachments flag
+                    supportsAttachments = true;
                 }
 
                 if (!string.IsNullOrEmpty(visibility))

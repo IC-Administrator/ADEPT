@@ -458,26 +458,18 @@ namespace Adept.Services.Calendar
         /// <param name="startDateTime">The start date/time</param>
         /// <param name="endDateTime">The end date/time</param>
         /// <returns>True if successful, false otherwise</returns>
-        private bool TryGetLessonDateTime(LessonPlan lessonPlan, Class classInfo, out DateTime startDateTime, out DateTime endDateTime)
+        private bool TryGetLessonDateTime(LessonPlanInfo lessonPlan, ClassInfo classInfo, out DateTime startDateTime, out DateTime endDateTime)
         {
             startDateTime = DateTime.MinValue;
             endDateTime = DateTime.MinValue;
 
             try
             {
-                // Parse the lesson date
-                if (!DateTime.TryParse(lessonPlan.Date, out var lessonDate))
-                {
-                    _logger.LogWarning("Invalid date format for lesson plan {LessonPlanId}: {Date}", lessonPlan.Id, lessonPlan.Date);
-                    return false;
-                }
+                // Get the lesson date
+                var lessonDate = lessonPlan.Date;
 
-                // Parse the class start time
-                if (!TimeSpan.TryParse(classInfo.StartTime, out var startTime))
-                {
-                    _logger.LogWarning("Invalid start time format for class {ClassId}: {StartTime}", classInfo.Id, classInfo.StartTime);
-                    return false;
-                }
+                // Get the class start time
+                var startTime = classInfo.StartTime;
 
                 // Calculate the start and end date/time
                 startDateTime = lessonDate.Add(startTime);
@@ -497,7 +489,7 @@ namespace Adept.Services.Calendar
         /// </summary>
         /// <param name="lessonPlan">The lesson plan</param>
         /// <returns>The formatted description</returns>
-        private string FormatLessonDescription(LessonPlan lessonPlan)
+        private string FormatLessonDescription(LessonPlanInfo lessonPlan)
         {
             var description = new System.Text.StringBuilder();
 
