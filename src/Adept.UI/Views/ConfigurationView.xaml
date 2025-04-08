@@ -1,0 +1,218 @@
+<UserControl x:Class="Adept.UI.Views.ConfigurationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Adept.UI.Views"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Tab Selection -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
+            <RadioButton Content="General" IsChecked="{Binding SelectedTab, ConverterParameter=General, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" />
+            <RadioButton Content="API Keys" IsChecked="{Binding SelectedTab, ConverterParameter=API Keys, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" />
+            <RadioButton Content="Voice" IsChecked="{Binding SelectedTab, ConverterParameter=Voice, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" />
+            <RadioButton Content="MCP Server" IsChecked="{Binding SelectedTab, ConverterParameter=MCP Server, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" />
+            <RadioButton Content="About" IsChecked="{Binding SelectedTab, ConverterParameter=About, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" />
+        </StackPanel>
+
+        <!-- Content -->
+        <Grid Grid.Row="1" Margin="10">
+            <!-- General Settings -->
+            <Grid Visibility="{Binding SelectedTab, ConverterParameter=General, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Application Name:" VerticalAlignment="Center" Margin="0,5" />
+                <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AppName}" Margin="0,5"
+                         Style="{StaticResource StandardTextBoxStyle}" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Application Version:" VerticalAlignment="Center" Margin="0,5" />
+                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AppVersion}" Margin="0,5"
+                         Style="{StaticResource StandardTextBoxStyle}" IsReadOnly="True" />
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Data Directory:" VerticalAlignment="Center" Margin="0,5" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DataDirectory}" Margin="0,5"
+                         Style="{StaticResource StandardTextBoxStyle}" />
+                <Button Grid.Row="2" Grid.Column="2" Content="Browse..." Command="{Binding BrowseDataDirectoryCommand}"
+                        Margin="5,5,0,5" Style="{StaticResource SecondaryButtonStyle}" />
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="LLM Provider:" VerticalAlignment="Center" Margin="0,5" />
+                <ComboBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding LlmProviders}"
+                          SelectedItem="{Binding SelectedLlmProvider}" Margin="0,5"
+                          Style="{StaticResource StandardComboBoxStyle}" />
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="LLM Model:" VerticalAlignment="Center" Margin="0,5" />
+                <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding AvailableModels}"
+                          SelectedItem="{Binding SelectedLlmModel}" Margin="0,5"
+                          Style="{StaticResource StandardComboBoxStyle}" />
+
+                <Button Grid.Row="5" Grid.Column="1" Content="Save Settings" Command="{Binding SaveGeneralSettingsCommand}"
+                        HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5"
+                        Style="{StaticResource PrimaryButtonStyle}" />
+            </Grid>
+
+            <!-- API Keys -->
+            <Grid Visibility="{Binding SelectedTab, ConverterParameter=API Keys, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="OpenAI API Key:" VerticalAlignment="Center" Margin="0,5" />
+                <PasswordBox Grid.Row="0" Grid.Column="1" Margin="0,5" x:Name="OpenAiApiKeyBox" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Anthropic API Key:" VerticalAlignment="Center" Margin="0,5" />
+                <PasswordBox Grid.Row="1" Grid.Column="1" Margin="0,5" x:Name="AnthropicApiKeyBox" />
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Google API Key:" VerticalAlignment="Center" Margin="0,5" />
+                <PasswordBox Grid.Row="2" Grid.Column="1" Margin="0,5" x:Name="GoogleApiKeyBox" />
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Meta API Key:" VerticalAlignment="Center" Margin="0,5" />
+                <PasswordBox Grid.Row="3" Grid.Column="1" Margin="0,5" x:Name="MetaApiKeyBox" />
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="OpenRouter API Key:" VerticalAlignment="Center" Margin="0,5" />
+                <PasswordBox Grid.Row="4" Grid.Column="1" Margin="0,5" x:Name="OpenRouterApiKeyBox" />
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="DeepSeek API Key:" VerticalAlignment="Center" Margin="0,5" />
+                <PasswordBox Grid.Row="5" Grid.Column="1" Margin="0,5" x:Name="DeepSeekApiKeyBox" />
+
+                <Button Grid.Row="6" Grid.Column="1" Content="Save API Keys" Command="{Binding SaveApiKeysCommand}"
+                        HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5"
+                        Style="{StaticResource PrimaryButtonStyle}" />
+            </Grid>
+
+            <!-- Voice Settings -->
+            <Grid Visibility="{Binding SelectedTab, ConverterParameter=Voice, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Wake Word Provider:" VerticalAlignment="Center" Margin="0,5" />
+                <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding WakeWordProviders}"
+                          SelectedItem="{Binding SelectedWakeWordProvider}" Margin="0,5"
+                          Style="{StaticResource StandardComboBoxStyle}" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="STT Provider:" VerticalAlignment="Center" Margin="0,5" />
+                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding SttProviders}"
+                          SelectedItem="{Binding SelectedSttProvider}" Margin="0,5"
+                          Style="{StaticResource StandardComboBoxStyle}" />
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="TTS Provider:" VerticalAlignment="Center" Margin="0,5" />
+                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding TtsProviders}"
+                          SelectedItem="{Binding SelectedTtsProvider}" Margin="0,5"
+                          Style="{StaticResource StandardComboBoxStyle}" />
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="TTS Voice:" VerticalAlignment="Center" Margin="0,5" />
+                <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding TtsVoices}"
+                          SelectedItem="{Binding SelectedTtsVoice}" Margin="0,5"
+                          Style="{StaticResource StandardComboBoxStyle}" />
+
+                <Button Grid.Row="4" Grid.Column="1" Content="Save Voice Settings" Command="{Binding SaveVoiceSettingsCommand}"
+                        HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5"
+                        Style="{StaticResource PrimaryButtonStyle}" />
+            </Grid>
+
+            <!-- MCP Server -->
+            <Grid Visibility="{Binding SelectedTab, ConverterParameter=MCP Server, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Server Status:" VerticalAlignment="Center" Margin="0,5" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding McpServerRunning, Converter={StaticResource BooleanToStatusConverter}}"
+                           Foreground="{Binding McpServerRunning, Converter={StaticResource BooleanToColorConverter}}"
+                           FontWeight="Bold" VerticalAlignment="Center" Margin="0,5" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Server URL:" VerticalAlignment="Center" Margin="0,5" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding McpServerUrl}" IsReadOnly="True" Margin="0,5"
+                         Style="{StaticResource StandardTextBoxStyle}" />
+
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Content="Start Server" Command="{Binding StartMcpServerCommand}" Margin="0,0,5,0" Padding="10,5"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    <Button Content="Stop Server" Command="{Binding StopMcpServerCommand}" Margin="0,0,5,0" Padding="10,5"
+                            Style="{StaticResource SecondaryButtonStyle}" />
+                    <Button Content="Restart Server" Command="{Binding RestartMcpServerCommand}" Padding="10,5"
+                            Style="{StaticResource SecondaryButtonStyle}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- About -->
+            <Grid Visibility="{Binding SelectedTab, ConverterParameter=About, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                <Border Style="{StaticResource CardStyle}" Margin="20">
+                    <StackPanel>
+                        <TextBlock Text="ADEPT AI Teaching Assistant" Style="{StaticResource HeaderTextStyle}" />
+                        <TextBlock Text="Version 1.0.0" Margin="0,0,0,20" />
+                        <TextBlock Text="ADEPT (AI-Driven Education Planning Tool) is an AI teaching assistant designed to help science teachers with lesson planning, resource creation, and classroom instruction."
+                                   TextWrapping="Wrap" Margin="0,0,0,10" Style="{StaticResource BodyTextStyle}" />
+                        <TextBlock Text="Features:" FontWeight="SemiBold" Margin="0,10,0,5" />
+                        <StackPanel Margin="10,0,0,0">
+                            <TextBlock Text="• AI-powered lesson planning and resource generation" Style="{StaticResource BodyTextStyle}" />
+                            <TextBlock Text="• Class and student management" Style="{StaticResource BodyTextStyle}" />
+                            <TextBlock Text="• Voice interaction with wake word detection" Style="{StaticResource BodyTextStyle}" />
+                            <TextBlock Text="• Integration with multiple LLM providers" Style="{StaticResource BodyTextStyle}" />
+                            <TextBlock Text="• Excel import/export for class data" Style="{StaticResource BodyTextStyle}" />
+                        </StackPanel>
+                        <TextBlock Text="© 2024 Augment Code. All rights reserved." Margin="0,20,0,0" Style="{StaticResource CaptionTextStyle}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Busy Indicator -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
+                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0"
+                             Style="{StaticResource StandardProgressBarStyle}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

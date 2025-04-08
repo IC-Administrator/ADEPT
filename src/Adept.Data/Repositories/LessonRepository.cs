@@ -25,6 +25,47 @@ namespace Adept.Data.Repositories
         }
 
         /// <summary>
+        /// Validates a lesson plan entity
+        /// </summary>
+        /// <param name="lessonPlan">The lesson plan to validate</param>
+        /// <exception cref="ArgumentException">Thrown when validation fails</exception>
+        private void ValidateLesson(LessonPlan lessonPlan)
+        {
+            if (lessonPlan == null)
+            {
+                throw new ArgumentNullException(nameof(lessonPlan), "Lesson plan cannot be null");
+            }
+
+            if (string.IsNullOrWhiteSpace(lessonPlan.Title))
+            {
+                throw new ArgumentException("Lesson title cannot be empty", nameof(lessonPlan));
+            }
+
+            if (string.IsNullOrWhiteSpace(lessonPlan.Date))
+            {
+                throw new ArgumentException("Lesson date cannot be empty", nameof(lessonPlan));
+            }
+
+            if (string.IsNullOrWhiteSpace(lessonPlan.ClassId))
+            {
+                throw new ArgumentException("Class ID cannot be empty", nameof(lessonPlan));
+            }
+
+            if (lessonPlan.TimeSlot < 0 || lessonPlan.TimeSlot > 4)
+            {
+                throw new ArgumentException("Time slot must be between 0 and 4", nameof(lessonPlan));
+            }
+
+            // Validate date format (YYYY-MM-DD)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(lessonPlan.Date, @"^\d{4}-\d{2}-\d{2}$"))
+            {
+                throw new ArgumentException("Date must be in YYYY-MM-DD format", nameof(lessonPlan));
+            }
+
+            // Additional validation rules can be added here
+        }
+
+        /// <summary>
         /// Gets all lesson plans
         /// </summary>
         /// <returns>All lesson plans</returns>
@@ -33,18 +74,18 @@ namespace Adept.Data.Repositories
             try
             {
                 return await _databaseContext.QueryAsync<LessonPlan>(
-                    @"SELECT 
-                        lesson_id AS LessonId, 
-                        class_id AS ClassId, 
-                        date AS Date, 
-                        time_slot AS TimeSlot, 
-                        title AS Title, 
-                        learning_objectives AS LearningObjectives, 
-                        calendar_event_id AS CalendarEventId, 
-                        components_json AS ComponentsJson, 
-                        created_at AS CreatedAt, 
-                        updated_at AS UpdatedAt 
-                      FROM LessonPlans 
+                    @"SELECT
+                        lesson_id AS LessonId,
+                        class_id AS ClassId,
+                        date AS Date,
+                        time_slot AS TimeSlot,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        calendar_event_id AS CalendarEventId,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonPlans
                       ORDER BY date DESC, time_slot ASC");
             }
             catch (Exception ex)
@@ -64,18 +105,18 @@ namespace Adept.Data.Repositories
             try
             {
                 return await _databaseContext.QuerySingleOrDefaultAsync<LessonPlan>(
-                    @"SELECT 
-                        lesson_id AS LessonId, 
-                        class_id AS ClassId, 
-                        date AS Date, 
-                        time_slot AS TimeSlot, 
-                        title AS Title, 
-                        learning_objectives AS LearningObjectives, 
-                        calendar_event_id AS CalendarEventId, 
-                        components_json AS ComponentsJson, 
-                        created_at AS CreatedAt, 
-                        updated_at AS UpdatedAt 
-                      FROM LessonPlans 
+                    @"SELECT
+                        lesson_id AS LessonId,
+                        class_id AS ClassId,
+                        date AS Date,
+                        time_slot AS TimeSlot,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        calendar_event_id AS CalendarEventId,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonPlans
                       WHERE lesson_id = @LessonId",
                     new { LessonId = lessonId });
             }
@@ -96,19 +137,19 @@ namespace Adept.Data.Repositories
             try
             {
                 return await _databaseContext.QueryAsync<LessonPlan>(
-                    @"SELECT 
-                        lesson_id AS LessonId, 
-                        class_id AS ClassId, 
-                        date AS Date, 
-                        time_slot AS TimeSlot, 
-                        title AS Title, 
-                        learning_objectives AS LearningObjectives, 
-                        calendar_event_id AS CalendarEventId, 
-                        components_json AS ComponentsJson, 
-                        created_at AS CreatedAt, 
-                        updated_at AS UpdatedAt 
-                      FROM LessonPlans 
-                      WHERE class_id = @ClassId 
+                    @"SELECT
+                        lesson_id AS LessonId,
+                        class_id AS ClassId,
+                        date AS Date,
+                        time_slot AS TimeSlot,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        calendar_event_id AS CalendarEventId,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonPlans
+                      WHERE class_id = @ClassId
                       ORDER BY date DESC, time_slot ASC",
                     new { ClassId = classId });
             }
@@ -129,19 +170,19 @@ namespace Adept.Data.Repositories
             try
             {
                 return await _databaseContext.QueryAsync<LessonPlan>(
-                    @"SELECT 
-                        lesson_id AS LessonId, 
-                        class_id AS ClassId, 
-                        date AS Date, 
-                        time_slot AS TimeSlot, 
-                        title AS Title, 
-                        learning_objectives AS LearningObjectives, 
-                        calendar_event_id AS CalendarEventId, 
-                        components_json AS ComponentsJson, 
-                        created_at AS CreatedAt, 
-                        updated_at AS UpdatedAt 
-                      FROM LessonPlans 
-                      WHERE date = @Date 
+                    @"SELECT
+                        lesson_id AS LessonId,
+                        class_id AS ClassId,
+                        date AS Date,
+                        time_slot AS TimeSlot,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        calendar_event_id AS CalendarEventId,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonPlans
+                      WHERE date = @Date
                       ORDER BY time_slot ASC",
                     new { Date = date });
             }
@@ -164,18 +205,18 @@ namespace Adept.Data.Repositories
             try
             {
                 return await _databaseContext.QuerySingleOrDefaultAsync<LessonPlan>(
-                    @"SELECT 
-                        lesson_id AS LessonId, 
-                        class_id AS ClassId, 
-                        date AS Date, 
-                        time_slot AS TimeSlot, 
-                        title AS Title, 
-                        learning_objectives AS LearningObjectives, 
-                        calendar_event_id AS CalendarEventId, 
-                        components_json AS ComponentsJson, 
-                        created_at AS CreatedAt, 
-                        updated_at AS UpdatedAt 
-                      FROM LessonPlans 
+                    @"SELECT
+                        lesson_id AS LessonId,
+                        class_id AS ClassId,
+                        date AS Date,
+                        time_slot AS TimeSlot,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        calendar_event_id AS CalendarEventId,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonPlans
                       WHERE class_id = @ClassId AND date = @Date AND time_slot = @TimeSlot",
                     new { ClassId = classId, Date = date, TimeSlot = timeSlot });
             }
@@ -191,13 +232,41 @@ namespace Adept.Data.Repositories
         /// </summary>
         /// <param name="lessonPlan">The lesson plan to add</param>
         /// <returns>The ID of the added lesson plan</returns>
+        /// <exception cref="ArgumentException">Thrown when validation fails</exception>
+        /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task<string> AddLessonAsync(LessonPlan lessonPlan)
         {
             try
             {
+                // Validate the lesson plan
+                ValidateLesson(lessonPlan);
+
+                // Check if a lesson plan already exists for this class, date, and time slot
+                var existingLesson = await GetLessonByClassDateSlotAsync(lessonPlan.ClassId, lessonPlan.Date, lessonPlan.TimeSlot);
+                if (existingLesson != null)
+                {
+                    throw new InvalidOperationException($"A lesson plan already exists for class {lessonPlan.ClassId} on {lessonPlan.Date} at time slot {lessonPlan.TimeSlot}");
+                }
+
+                // Check if the class exists
+                var classExists = await _databaseContext.QuerySingleOrDefaultAsync<int>(
+                    "SELECT 1 FROM Classes WHERE class_id = @ClassId",
+                    new { ClassId = lessonPlan.ClassId });
+
+                if (classExists == 0)
+                {
+                    throw new InvalidOperationException($"Class with ID '{lessonPlan.ClassId}' not found");
+                }
+
                 if (string.IsNullOrEmpty(lessonPlan.LessonId))
                 {
                     lessonPlan.LessonId = Guid.NewGuid().ToString();
+                }
+
+                // Ensure components_json is not null
+                if (string.IsNullOrEmpty(lessonPlan.ComponentsJson))
+                {
+                    lessonPlan.ComponentsJson = "{}";
                 }
 
                 lessonPlan.CreatedAt = DateTime.UtcNow;
@@ -205,30 +274,32 @@ namespace Adept.Data.Repositories
 
                 await _databaseContext.ExecuteNonQueryAsync(
                     @"INSERT INTO LessonPlans (
-                        lesson_id, 
-                        class_id, 
-                        date, 
-                        time_slot, 
-                        title, 
-                        learning_objectives, 
-                        calendar_event_id, 
-                        components_json, 
-                        created_at, 
+                        lesson_id,
+                        class_id,
+                        date,
+                        time_slot,
+                        title,
+                        learning_objectives,
+                        calendar_event_id,
+                        components_json,
+                        created_at,
                         updated_at
                       ) VALUES (
-                        @LessonId, 
-                        @ClassId, 
-                        @Date, 
-                        @TimeSlot, 
-                        @Title, 
-                        @LearningObjectives, 
-                        @CalendarEventId, 
-                        @ComponentsJson, 
-                        @CreatedAt, 
+                        @LessonId,
+                        @ClassId,
+                        @Date,
+                        @TimeSlot,
+                        @Title,
+                        @LearningObjectives,
+                        @CalendarEventId,
+                        @ComponentsJson,
+                        @CreatedAt,
                         @UpdatedAt
                       )",
                     lessonPlan);
 
+                _logger.LogInformation("Added new lesson plan: {LessonId}, {Title}, {Date}, Slot {TimeSlot}",
+                    lessonPlan.LessonId, lessonPlan.Title, lessonPlan.Date, lessonPlan.TimeSlot);
                 return lessonPlan.LessonId;
             }
             catch (Exception ex)
@@ -242,24 +313,66 @@ namespace Adept.Data.Repositories
         /// Updates an existing lesson plan
         /// </summary>
         /// <param name="lessonPlan">The lesson plan to update</param>
+        /// <exception cref="ArgumentException">Thrown when validation fails</exception>
+        /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task UpdateLessonAsync(LessonPlan lessonPlan)
         {
             try
             {
+                // Validate the lesson plan
+                ValidateLesson(lessonPlan);
+
+                // Check if the lesson plan exists
+                var existingLesson = await GetLessonByIdAsync(lessonPlan.LessonId);
+                if (existingLesson == null)
+                {
+                    throw new InvalidOperationException($"Lesson plan with ID '{lessonPlan.LessonId}' not found");
+                }
+
+                // Check if the class exists
+                var classExists = await _databaseContext.QuerySingleOrDefaultAsync<int>(
+                    "SELECT 1 FROM Classes WHERE class_id = @ClassId",
+                    new { ClassId = lessonPlan.ClassId });
+
+                if (classExists == 0)
+                {
+                    throw new InvalidOperationException($"Class with ID '{lessonPlan.ClassId}' not found");
+                }
+
+                // If changing date/time slot, check for conflicts
+                if (existingLesson.Date != lessonPlan.Date || existingLesson.TimeSlot != lessonPlan.TimeSlot || existingLesson.ClassId != lessonPlan.ClassId)
+                {
+                    var conflictingLesson = await GetLessonByClassDateSlotAsync(lessonPlan.ClassId, lessonPlan.Date, lessonPlan.TimeSlot);
+                    if (conflictingLesson != null && conflictingLesson.LessonId != lessonPlan.LessonId)
+                    {
+                        throw new InvalidOperationException($"A lesson plan already exists for class {lessonPlan.ClassId} on {lessonPlan.Date} at time slot {lessonPlan.TimeSlot}");
+                    }
+                }
+
+                // Ensure components_json is not null
+                if (string.IsNullOrEmpty(lessonPlan.ComponentsJson))
+                {
+                    lessonPlan.ComponentsJson = "{}";
+                }
+
                 lessonPlan.UpdatedAt = DateTime.UtcNow;
+                lessonPlan.CreatedAt = existingLesson.CreatedAt; // Preserve the original creation date
 
                 await _databaseContext.ExecuteNonQueryAsync(
-                    @"UPDATE LessonPlans SET 
-                        class_id = @ClassId, 
-                        date = @Date, 
-                        time_slot = @TimeSlot, 
-                        title = @Title, 
-                        learning_objectives = @LearningObjectives, 
-                        calendar_event_id = @CalendarEventId, 
-                        components_json = @ComponentsJson, 
-                        updated_at = @UpdatedAt 
+                    @"UPDATE LessonPlans SET
+                        class_id = @ClassId,
+                        date = @Date,
+                        time_slot = @TimeSlot,
+                        title = @Title,
+                        learning_objectives = @LearningObjectives,
+                        calendar_event_id = @CalendarEventId,
+                        components_json = @ComponentsJson,
+                        updated_at = @UpdatedAt
                       WHERE lesson_id = @LessonId",
                     lessonPlan);
+
+                _logger.LogInformation("Updated lesson plan: {LessonId}, {Title}, {Date}, Slot {TimeSlot}",
+                    lessonPlan.LessonId, lessonPlan.Title, lessonPlan.Date, lessonPlan.TimeSlot);
             }
             catch (Exception ex)
             {
@@ -272,13 +385,43 @@ namespace Adept.Data.Repositories
         /// Deletes a lesson plan
         /// </summary>
         /// <param name="lessonId">The ID of the lesson plan to delete</param>
+        /// <exception cref="ArgumentException">Thrown when the lesson ID is invalid</exception>
+        /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task DeleteLessonAsync(string lessonId)
         {
             try
             {
-                await _databaseContext.ExecuteNonQueryAsync(
-                    "DELETE FROM LessonPlans WHERE lesson_id = @LessonId",
-                    new { LessonId = lessonId });
+                if (string.IsNullOrWhiteSpace(lessonId))
+                {
+                    throw new ArgumentException("Lesson ID cannot be empty", nameof(lessonId));
+                }
+
+                // Check if the lesson plan exists
+                var existingLesson = await GetLessonByIdAsync(lessonId);
+                if (existingLesson == null)
+                {
+                    throw new InvalidOperationException($"Lesson plan with ID '{lessonId}' not found");
+                }
+
+                // Begin a transaction to ensure data integrity
+                using var transaction = await _databaseContext.BeginTransactionAsync();
+                try
+                {
+                    // Delete the lesson plan
+                    await _databaseContext.ExecuteNonQueryAsync(
+                        "DELETE FROM LessonPlans WHERE lesson_id = @LessonId",
+                        new { LessonId = lessonId });
+
+                    await transaction.CommitAsync();
+                    _logger.LogInformation("Deleted lesson plan: {LessonId}, {Title}, {Date}, Slot {TimeSlot}",
+                        lessonId, existingLesson.Title, existingLesson.Date, existingLesson.TimeSlot);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Transaction rolled back while deleting lesson plan {LessonId}", lessonId);
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -297,9 +440,9 @@ namespace Adept.Data.Repositories
             try
             {
                 await _databaseContext.ExecuteNonQueryAsync(
-                    @"UPDATE LessonPlans SET 
-                        calendar_event_id = @CalendarEventId, 
-                        updated_at = CURRENT_TIMESTAMP 
+                    @"UPDATE LessonPlans SET
+                        calendar_event_id = @CalendarEventId,
+                        updated_at = CURRENT_TIMESTAMP
                       WHERE lesson_id = @LessonId",
                     new { LessonId = lessonId, CalendarEventId = calendarEventId });
             }

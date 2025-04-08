@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,83 @@ namespace Adept.Services.Llm.Providers
         /// Gets the name of the provider
         /// </summary>
         public string ProviderName => "OpenAI";
+
+        /// <summary>
+        /// Gets the name of the currently selected model
+        /// </summary>
+        public string ModelName => _currentModel.Id;
+
+        /// <summary>
+        /// Sends a list of messages to the LLM and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response</returns>
+        public async Task<LlmResponse> SendMessagesAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            CancellationToken cancellationToken = default)
+        {
+            // Convert LlmMessages to ChatMessages
+            var chatMessages = messages.Select(m => new ChatMessage
+            {
+                Role = m.Role.ToString().ToLowerInvariant(),
+                Content = m.Content
+            }).ToList();
+
+            return await SendMessagesAsync(chatMessages, systemPrompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends messages to the LLM with streaming and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            // Convert LlmMessages to ChatMessages
+            var chatMessages = messages.Select(m => new ChatMessage
+            {
+                Role = m.Role.ToString().ToLowerInvariant(),
+                Content = m.Content
+            }).ToList();
+
+            // TODO: Implement streaming
+            return await SendMessagesAsync(chatMessages, systemPrompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a response with tool calls
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response with tool calls</returns>
+        public async Task<LlmResponse> SendMessagesWithToolsAsync(
+            IEnumerable<LlmMessage> messages,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            CancellationToken cancellationToken = default)
+        {
+            // Convert LlmMessages to ChatMessages
+            var chatMessages = messages.Select(m => new ChatMessage
+            {
+                Role = m.Role.ToString().ToLowerInvariant(),
+                Content = m.Content
+            }).ToList();
+
+            // TODO: Implement tool calls
+            return await SendMessagesAsync(chatMessages, systemPrompt, cancellationToken);
+        }
 
         /// <summary>
         /// Gets the available models for this provider
@@ -76,9 +154,9 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
-            _availableModels.Add(new LlmModel("gpt-4o", "GPT-4o", "OpenAI's most advanced model with vision capabilities", 128000, true, true));
-            _availableModels.Add(new LlmModel("gpt-4-turbo", "GPT-4 Turbo", "OpenAI's high-performance model", 128000, true, false));
-            _availableModels.Add(new LlmModel("gpt-3.5-turbo", "GPT-3.5 Turbo", "OpenAI's efficient model", 16000, true, false));
+            _availableModels.Add(new LlmModel("gpt-4o", "GPT-4o", 128000, true, true));
+            _availableModels.Add(new LlmModel("gpt-4-turbo", "GPT-4 Turbo", 128000, true, false));
+            _availableModels.Add(new LlmModel("gpt-3.5-turbo", "GPT-3.5 Turbo", 16000, true, false));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -168,7 +246,7 @@ namespace Adept.Services.Llm.Providers
         /// <param name="systemPrompt">Optional system prompt to use</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The LLM response</returns>
-        public async Task<LlmResponse> SendMessagesAsync(IEnumerable<ChatMessage> messages, string? systemPrompt = null, CancellationToken cancellationToken = default)
+        private async Task<LlmResponse> SendMessagesAsync(IEnumerable<ChatMessage> messages, string? systemPrompt = null, CancellationToken cancellationToken = default)
         {
             if (!HasValidApiKey)
             {
@@ -249,8 +327,8 @@ namespace Adept.Services.Llm.Providers
                 var firstChoice = choices[0];
                 var messageObj = firstChoice.GetProperty("message");
                 var role = messageObj.GetProperty("role").GetString() ?? "assistant";
-                var content_text = messageObj.TryGetProperty("content", out var contentElement) 
-                    ? contentElement.GetString() ?? string.Empty 
+                var content_text = messageObj.TryGetProperty("content", out var contentElement)
+                    ? contentElement.GetString() ?? string.Empty
                     : string.Empty;
 
                 // Extract tool calls if present
@@ -261,13 +339,13 @@ namespace Adept.Services.Llm.Providers
                     {
                         var id = toolCall.GetProperty("id").GetString() ?? string.Empty;
                         var type = toolCall.GetProperty("type").GetString() ?? string.Empty;
-                        
+
                         if (type == "function")
                         {
                             var function = toolCall.GetProperty("function");
                             var name = function.GetProperty("name").GetString() ?? string.Empty;
                             var arguments = function.GetProperty("arguments").GetString() ?? string.Empty;
-                            
+
                             toolCalls.Add(new LlmToolCall
                             {
                                 Id = id,
@@ -281,9 +359,9 @@ namespace Adept.Services.Llm.Providers
                 // Create the response
                 var llmResponse = new LlmResponse
                 {
-                    Message = new ChatMessage
+                    Message = new LlmMessage
                     {
-                        Role = role,
+                        Role = role == "assistant" ? LlmRole.Assistant : LlmRole.User,
                         Content = content_text
                     },
                     ToolCalls = toolCalls,
@@ -360,7 +438,7 @@ namespace Adept.Services.Llm.Providers
 
                 while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
                 {
-                    var line = await reader.ReadLineAsync(cancellationToken);
+                    var line = await reader.ReadLineAsync();
                     if (string.IsNullOrEmpty(line) || !line.StartsWith("data: "))
                     {
                         continue;
@@ -408,9 +486,9 @@ namespace Adept.Services.Llm.Providers
                 // Create the response
                 var llmResponse = new LlmResponse
                 {
-                    Message = new ChatMessage
+                    Message = new LlmMessage
                     {
-                        Role = "assistant",
+                        Role = LlmRole.Assistant,
                         Content = fullContent.ToString()
                     },
                     ToolCalls = toolCalls,
@@ -509,9 +587,9 @@ namespace Adept.Services.Llm.Providers
                 // Create the response
                 var llmResponse = new LlmResponse
                 {
-                    Message = new ChatMessage
+                    Message = new LlmMessage
                     {
-                        Role = role,
+                        Role = role == "assistant" ? LlmRole.Assistant : LlmRole.User,
                         Content = content_text
                     },
                     ProviderName = ProviderName,

@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,83 @@ namespace Adept.Services.Llm.Providers
         /// Gets the name of the provider
         /// </summary>
         public string ProviderName => "Anthropic";
+
+        /// <summary>
+        /// Gets the name of the currently selected model
+        /// </summary>
+        public string ModelName => _currentModel.Id;
+
+        /// <summary>
+        /// Sends a list of messages to the LLM and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response</returns>
+        public async Task<LlmResponse> SendMessagesAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            CancellationToken cancellationToken = default)
+        {
+            // Convert LlmMessages to ChatMessages
+            var chatMessages = messages.Select(m => new ChatMessage
+            {
+                Role = m.Role.ToString().ToLowerInvariant(),
+                Content = m.Content
+            }).ToList();
+
+            return await SendMessagesAsync(chatMessages, systemPrompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends messages to the LLM with streaming and gets a response
+        /// </summary>
+        /// <param name="messages">The messages to send</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            // Convert LlmMessages to ChatMessages
+            var chatMessages = messages.Select(m => new ChatMessage
+            {
+                Role = m.Role.ToString().ToLowerInvariant(),
+                Content = m.Content
+            }).ToList();
+
+            // TODO: Implement streaming
+            return await SendMessagesAsync(chatMessages, systemPrompt, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a response with tool calls
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response with tool calls</returns>
+        public async Task<LlmResponse> SendMessagesWithToolsAsync(
+            IEnumerable<LlmMessage> messages,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            CancellationToken cancellationToken = default)
+        {
+            // Convert LlmMessages to ChatMessages
+            var chatMessages = messages.Select(m => new ChatMessage
+            {
+                Role = m.Role.ToString().ToLowerInvariant(),
+                Content = m.Content
+            }).ToList();
+
+            // TODO: Implement tool calls
+            return await SendMessagesAsync(chatMessages, systemPrompt, cancellationToken);
+        }
 
         /// <summary>
         /// Gets the available models for this provider
@@ -76,9 +154,9 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
-            _availableModels.Add(new LlmModel("claude-3-opus-20240229", "Claude 3 Opus", "Anthropic's most powerful model", 200000, true, true));
-            _availableModels.Add(new LlmModel("claude-3-sonnet-20240229", "Claude 3 Sonnet", "Anthropic's balanced model", 200000, true, true));
-            _availableModels.Add(new LlmModel("claude-3-haiku-20240307", "Claude 3 Haiku", "Anthropic's fastest model", 200000, true, true));
+            _availableModels.Add(new LlmModel("claude-3-opus-20240229", "Claude 3 Opus", 200000, true, true));
+            _availableModels.Add(new LlmModel("claude-3-sonnet-20240229", "Claude 3 Sonnet", 200000, true, true));
+            _availableModels.Add(new LlmModel("claude-3-haiku-20240307", "Claude 3 Haiku", 200000, true, true));
 
             // Set default model
             _currentModel = _availableModels.First(m => m.Id == "claude-3-sonnet-20240229");
@@ -246,7 +324,7 @@ namespace Adept.Services.Llm.Providers
                         var id = Guid.NewGuid().ToString(); // Anthropic doesn't provide IDs
                         var name = toolUse.GetProperty("name").GetString() ?? string.Empty;
                         var input = toolUse.GetProperty("input").ToString() ?? string.Empty;
-                        
+
                         toolCalls.Add(new LlmToolCall
                         {
                             Id = id,
@@ -259,9 +337,9 @@ namespace Adept.Services.Llm.Providers
                 // Create the response
                 var llmResponse = new LlmResponse
                 {
-                    Message = new ChatMessage
+                    Message = new LlmMessage
                     {
-                        Role = "assistant",
+                        Role = LlmRole.Assistant,
                         Content = content_text
                     },
                     ToolCalls = toolCalls,
@@ -332,7 +410,7 @@ namespace Adept.Services.Llm.Providers
 
                 while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
                 {
-                    var line = await reader.ReadLineAsync(cancellationToken);
+                    var line = await reader.ReadLineAsync();
                     if (string.IsNullOrEmpty(line) || !line.StartsWith("data: "))
                     {
                         continue;
@@ -349,7 +427,7 @@ namespace Adept.Services.Llm.Providers
                         var chunk = JsonSerializer.Deserialize<JsonElement>(data);
                         if (chunk.TryGetProperty("type", out var type) && type.GetString() == "content_block_delta")
                         {
-                            if (chunk.TryGetProperty("delta", out var delta) && 
+                            if (chunk.TryGetProperty("delta", out var delta) &&
                                 delta.TryGetProperty("text", out var text))
                             {
                                 var content_text = text.GetString();
@@ -375,9 +453,9 @@ namespace Adept.Services.Llm.Providers
                 // Create the response
                 var llmResponse = new LlmResponse
                 {
-                    Message = new ChatMessage
+                    Message = new LlmMessage
                     {
-                        Role = "assistant",
+                        Role = LlmRole.Assistant,
                         Content = fullContent.ToString()
                     },
                     ToolCalls = toolCalls,
@@ -468,9 +546,9 @@ namespace Adept.Services.Llm.Providers
                 // Create the response
                 var llmResponse = new LlmResponse
                 {
-                    Message = new ChatMessage
+                    Message = new LlmMessage
                     {
-                        Role = "assistant",
+                        Role = LlmRole.Assistant,
                         Content = content_text
                     },
                     ProviderName = ProviderName,

@@ -42,8 +42,15 @@ namespace Adept.Services.Configuration
                 await SetDefaultConfigurationValueAsync("speech_to_text_provider", "whisper");
                 await SetDefaultConfigurationValueAsync("text_to_speech_provider", "fishaudio");
 
-                // Set default voice settings
+                // Set default Fish Audio TTS settings
                 await SetDefaultConfigurationValueAsync("fish_audio_voice_id", "default");
+                await SetDefaultConfigurationValueAsync("fish_audio_model", "speech-1.6");
+                await SetDefaultConfigurationValueAsync("fish_audio_speed", "1.0");
+                await SetDefaultConfigurationValueAsync("fish_audio_volume", "0.0");
+                await SetDefaultConfigurationValueAsync("fish_audio_use_disk_cache", "true");
+                await SetDefaultConfigurationValueAsync("fish_audio_max_cache_items", "100");
+                await SetDefaultConfigurationValueAsync("fish_audio_max_retries", "3");
+                await SetDefaultConfigurationValueAsync("fish_audio_reconnect_delay_ms", "1000");
 
                 _logger.LogInformation("Default configuration values initialized");
             }

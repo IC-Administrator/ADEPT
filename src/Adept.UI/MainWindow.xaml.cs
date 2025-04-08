@@ -39,6 +39,7 @@ namespace Adept.UI
             DataContext = this;
 
             // Set the data context for the tabs
+            ChatTab.DataContext = MainViewModel;
             ClassesTab.DataContext = MainViewModel;
             LessonPlannerTab.DataContext = MainViewModel;
             ConfigurationTab.DataContext = MainViewModel;

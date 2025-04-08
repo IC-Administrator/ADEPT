@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

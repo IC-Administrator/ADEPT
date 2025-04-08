@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
@@ -57,7 +58,7 @@ namespace Adept.Services.Voice
             {
                 // Get the API key from secure storage
                 _apiKey = await _secureStorageService.RetrieveSecureValueAsync("openai_api_key") ?? string.Empty;
-                
+
                 if (string.IsNullOrEmpty(_apiKey))
                 {
                     _logger.LogWarning("OpenAI API key not found in secure storage");
@@ -121,7 +122,7 @@ namespace Adept.Services.Voice
 
                 // Get the audio data
                 var audioData = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                
+
                 _logger.LogInformation("Converted text to speech: {TextLength} characters", text.Length);
                 return audioData;
             }
@@ -143,17 +144,17 @@ namespace Adept.Services.Voice
             {
                 // Create a linked cancellation token source
                 _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                
+
                 // Convert the text to speech
                 var audioData = await ConvertTextToSpeechAsync(text, _cancellationTokenSource.Token);
-                
+
                 // Play the audio
                 using var audioStream = new MemoryStream(audioData);
                 using var reader = new Mp3FileReader(audioStream);
                 var sampleProvider = reader.ToSampleProvider();
-                
+
                 var completionSource = new TaskCompletionSource<bool>();
-                
+
                 _waveOut.Init(sampleProvider);
                 _waveOut.PlaybackStopped += (s, e) => completionSource.TrySetResult(true);
                 _waveOut.Play();
@@ -176,13 +177,13 @@ namespace Adept.Services.Voice
         /// <summary>
         /// Cancels any ongoing speech
         /// </summary>
-        public Task CancelAsync()
+        public Task CancelSpeechAsync()
         {
             try
             {
                 // Cancel the current speech
                 _cancellationTokenSource?.Cancel();
-                
+
                 // Stop the wave out
                 if (_waveOut.PlaybackState != PlaybackState.Stopped)
                 {
@@ -224,7 +225,7 @@ namespace Adept.Services.Voice
                 // Cancel any ongoing speech
                 _cancellationTokenSource?.Cancel();
                 _cancellationTokenSource?.Dispose();
-                
+
                 // Dispose the wave out
                 _waveOut.Dispose();
             }

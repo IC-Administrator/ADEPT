@@ -11,6 +11,11 @@ namespace Adept.Core.Interfaces
         string ProviderName { get; }
 
         /// <summary>
+        /// Gets the name of the currently selected model
+        /// </summary>
+        string ModelName { get; }
+
+        /// <summary>
         /// Gets the available models for this provider
         /// </summary>
         IEnumerable<LlmModel> AvailableModels { get; }

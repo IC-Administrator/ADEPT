@@ -1,0 +1,113 @@
+<UserControl x:Class="Adept.UI.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Adept.UI.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="10,10,10,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="ADEPT AI Teaching Assistant" Style="{StaticResource HeaderTextStyle}" />
+                    <TextBlock Text="Your AI-powered teaching companion" Style="{StaticResource CaptionTextStyle}" />
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Start Listening" 
+                            Command="{Binding StartListeningCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Visibility="{Binding IsListening, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"
+                            Margin="0,0,5,0" />
+                    
+                    <Button Content="Stop Listening" 
+                            Command="{Binding StopListeningCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Visibility="{Binding IsListening, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Chat Messages -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="10,5">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,5" Padding="15" CornerRadius="4"
+                                Background="{Binding Role, Converter={StaticResource RoleToBackgroundConverter}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" Text="{Binding Role}" FontWeight="Bold" Margin="0,0,0,5" />
+                                <TextBlock Grid.Row="1" Text="{Binding Content}" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="2" Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}"
+                                           Style="{StaticResource CaptionTextStyle}" 
+                                           HorizontalAlignment="Right" 
+                                           Margin="0,5,0,0" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Input Area -->
+        <Grid Grid.Row="2" Margin="10,5,10,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0" 
+                     Text="{Binding UserInput, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource TextBoxStyle}"
+                     AcceptsReturn="True" 
+                     TextWrapping="Wrap" 
+                     MinHeight="40" 
+                     MaxHeight="100"
+                     VerticalScrollBarVisibility="Auto" />
+
+            <Button Grid.Column="1" 
+                    Content="Send" 
+                    Command="{Binding SendMessageCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Margin="5,0,0,0" 
+                    MinWidth="80" />
+
+            <Button Grid.Column="2" 
+                    Content="Clear" 
+                    Command="{Binding ClearConversationCommand}"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Margin="5,0,0,0" 
+                    MinWidth="80" />
+        </Grid>
+
+        <!-- Busy Indicator -->
+        <Border Grid.Row="0" Grid.RowSpan="3" 
+                Background="#80000000" 
+                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Processing..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

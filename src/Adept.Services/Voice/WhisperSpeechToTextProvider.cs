@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
@@ -73,7 +74,7 @@ namespace Adept.Services.Voice
             {
                 // Get the API key from secure storage
                 _apiKey = await _secureStorageService.RetrieveSecureValueAsync("openai_api_key") ?? string.Empty;
-                
+
                 if (string.IsNullOrEmpty(_apiKey))
                 {
                     _logger.LogWarning("OpenAI API key not found in secure storage");
@@ -105,7 +106,7 @@ namespace Adept.Services.Voice
             {
                 // Reset the audio stream
                 _audioStream.SetLength(0);
-                
+
                 // Start audio capture
                 _waveIn.StartRecording();
                 _isListening = true;
@@ -142,7 +143,7 @@ namespace Adept.Services.Voice
 
                 // Get the audio data
                 var audioData = _audioStream.ToArray();
-                
+
                 if (audioData.Length == 0)
                 {
                     _logger.LogWarning("No audio data captured");
@@ -151,7 +152,7 @@ namespace Adept.Services.Voice
 
                 // Convert the audio to text
                 var result = await ConvertSpeechToTextAsync(audioData);
-                
+
                 _logger.LogInformation("Stopped listening for speech, recognized: {Text}", result.Text);
                 return result;
             }

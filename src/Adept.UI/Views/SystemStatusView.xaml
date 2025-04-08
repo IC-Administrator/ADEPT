@@ -1,0 +1,122 @@
+<UserControl x:Class="Adept.UI.Views.SystemStatusView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Adept.UI.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <ToolBar Grid.Row="0">
+            <Button Content="Refresh" Command="{Binding RefreshCommand}" Margin="2" 
+                    Style="{StaticResource PrimaryButtonStyle}" />
+            <Separator />
+            <Button Content="Clear Logs" Command="{Binding ClearLogsCommand}" Margin="2" 
+                    Style="{StaticResource SecondaryButtonStyle}" />
+        </ToolBar>
+
+        <!-- Content -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Service Status -->
+            <GroupBox Grid.Row="0" Header="Service Status" Margin="10" Style="{StaticResource StandardGroupBoxStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="MCP Server:" VerticalAlignment="Center" Margin="0,5" />
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="{Binding McpServerRunning, Converter={StaticResource BooleanToStatusConverter}}"
+                                   Foreground="{Binding McpServerRunning, Converter={StaticResource BooleanToColorConverter}}"
+                                   FontWeight="Bold" VerticalAlignment="Center" Margin="0,5,10,5" />
+                        <TextBlock Text="{Binding McpServerUrl}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Voice Service:" VerticalAlignment="Center" Margin="0,5" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VoiceServiceState}"
+                               VerticalAlignment="Center" Margin="0,5" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="LLM Provider:" VerticalAlignment="Center" Margin="0,5" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ActiveLlmProvider}"
+                               VerticalAlignment="Center" Margin="0,5" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="LLM Model:" VerticalAlignment="Center" Margin="0,5" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ActiveLlmModel}"
+                               VerticalAlignment="Center" Margin="0,5" />
+                </Grid>
+            </GroupBox>
+
+            <!-- System Performance -->
+            <GroupBox Grid.Row="1" Header="System Performance" Margin="10,0,10,10" Style="{StaticResource StandardGroupBoxStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU Usage:" VerticalAlignment="Center" Margin="0,5" />
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                        <ProgressBar Value="{Binding CpuUsage}" Width="200" Height="15" Margin="0,5" 
+                                     Style="{StaticResource StandardProgressBarStyle}" />
+                        <TextBlock Text="{Binding CpuUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Memory Usage:" VerticalAlignment="Center" Margin="0,5" />
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                        <ProgressBar Value="{Binding MemoryUsage}" Width="200" Height="15" Margin="0,5" 
+                                     Style="{StaticResource StandardProgressBarStyle}" />
+                        <TextBlock Text="{Binding MemoryUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Disk Usage:" VerticalAlignment="Center" Margin="0,5" />
+                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
+                        <ProgressBar Value="{Binding DiskUsage}" Width="200" Height="15" Margin="0,5" 
+                                     Style="{StaticResource StandardProgressBarStyle}" />
+                        <TextBlock Text="{Binding DiskUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+
+            <!-- Logs -->
+            <GroupBox Grid.Row="2" Header="System Logs" Margin="10,0,10,10" Style="{StaticResource StandardGroupBoxStyle}">
+                <TextBox Text="{Binding LogContent}" IsReadOnly="True"
+                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" 
+                         Style="{StaticResource StandardTextBoxStyle}" />
+            </GroupBox>
+        </Grid>
+
+        <!-- Busy Indicator -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
+                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" 
+                             Style="{StaticResource StandardProgressBarStyle}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

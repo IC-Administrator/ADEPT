@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Reflection;
 using System.Text.Json;
+using DbTransaction = Adept.Common.Interfaces.IDbTransaction;
 
 namespace Adept.Data.Database
 {
@@ -173,7 +174,7 @@ namespace Adept.Data.Database
         /// Begins a new transaction
         /// </summary>
         /// <returns>A transaction object</returns>
-        public async Task<IDbTransaction> BeginTransactionAsync()
+        public async Task<DbTransaction> BeginTransactionAsync()
         {
             try
             {
@@ -211,7 +212,8 @@ namespace Adept.Data.Database
                 }
 
                 // Get current version
-                var currentVersion = await ExecuteScalarAsync<long>("SELECT Version FROM DatabaseVersion ORDER BY Version DESC LIMIT 1") ?? 0;
+                var result = await ExecuteScalarAsync<long?>("SELECT Version FROM DatabaseVersion ORDER BY Version DESC LIMIT 1");
+                var currentVersion = result.HasValue ? result.Value : 0L;
 
                 // Apply migrations
                 await ApplyMigrationsAsync(currentVersion);
@@ -235,6 +237,7 @@ namespace Adept.Data.Database
                 {
                     1,
                     @"
+                    -- Configuration table for application settings
                     CREATE TABLE Configuration (
                         key TEXT PRIMARY KEY,
                         value TEXT NOT NULL,
@@ -242,6 +245,7 @@ namespace Adept.Data.Database
                         last_modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    -- Secure storage for API keys and sensitive data
                     CREATE TABLE SecureStorage (
                         key TEXT PRIMARY KEY,
                         encrypted_value BLOB NOT NULL,
@@ -249,23 +253,26 @@ namespace Adept.Data.Database
                         last_modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    -- Classes table for storing class information
                     CREATE TABLE Classes (
                         class_id TEXT PRIMARY KEY,
                         class_code TEXT NOT NULL,
                         education_level TEXT NOT NULL,
                         current_topic TEXT,
                         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT uq_class_code UNIQUE (class_code)
                     );
                     CREATE INDEX idx_classes_code ON Classes(class_code);
 
+                    -- Students table for storing student information
                     CREATE TABLE Students (
                         student_id TEXT PRIMARY KEY,
                         class_id TEXT NOT NULL,
                         name TEXT NOT NULL,
-                        fsm_status INTEGER,
-                        sen_status INTEGER,
-                        eal_status INTEGER,
+                        fsm_status INTEGER CHECK (fsm_status IN (0, 1) OR fsm_status IS NULL),
+                        sen_status INTEGER CHECK (sen_status IN (0, 1) OR sen_status IS NULL),
+                        eal_status INTEGER CHECK (eal_status IN (0, 1) OR eal_status IS NULL),
                         ability_level TEXT,
                         reading_age TEXT,
                         target_grade TEXT,
@@ -276,41 +283,44 @@ namespace Adept.Data.Database
                     );
                     CREATE INDEX idx_students_class ON Students(class_id);
 
+                    -- Teaching schedule table for storing weekly class schedules
                     CREATE TABLE TeachingSchedule (
                         schedule_id TEXT PRIMARY KEY,
-                        day_of_week INTEGER NOT NULL,
-                        time_slot INTEGER NOT NULL,
+                        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+                        time_slot INTEGER NOT NULL CHECK (time_slot BETWEEN 0 AND 4),
                         class_id TEXT,
                         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT uq_schedule_slot UNIQUE (day_of_week, time_slot),
                         FOREIGN KEY (class_id) REFERENCES Classes(class_id) ON DELETE SET NULL
                     );
-                    CREATE UNIQUE INDEX idx_schedule_slot ON TeachingSchedule(day_of_week, time_slot);
                     CREATE INDEX idx_schedule_class ON TeachingSchedule(class_id);
 
+                    -- Lesson plans table for storing lesson information
                     CREATE TABLE LessonPlans (
                         lesson_id TEXT PRIMARY KEY,
                         class_id TEXT NOT NULL,
                         date TEXT NOT NULL,
-                        time_slot INTEGER NOT NULL,
+                        time_slot INTEGER NOT NULL CHECK (time_slot BETWEEN 0 AND 4),
                         title TEXT NOT NULL,
                         learning_objectives TEXT,
                         calendar_event_id TEXT,
-                        components_json TEXT NOT NULL,
+                        components_json TEXT NOT NULL DEFAULT '{}',
                         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT uq_lesson_class_date_slot UNIQUE (class_id, date, time_slot),
                         FOREIGN KEY (class_id) REFERENCES Classes(class_id) ON DELETE CASCADE
                     );
-                    CREATE UNIQUE INDEX idx_lesson_class_date_slot ON LessonPlans(class_id, date, time_slot);
                     CREATE INDEX idx_lesson_date ON LessonPlans(date);
                     CREATE INDEX idx_lesson_calendar ON LessonPlans(calendar_event_id);
 
+                    -- Conversations table for storing chat history
                     CREATE TABLE Conversations (
                         conversation_id TEXT PRIMARY KEY,
                         class_id TEXT,
                         date TEXT NOT NULL,
-                        time_slot INTEGER,
-                        history_json TEXT NOT NULL,
+                        time_slot INTEGER CHECK (time_slot BETWEEN 0 AND 4),
+                        history_json TEXT NOT NULL DEFAULT '[]',
                         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (class_id) REFERENCES Classes(class_id) ON DELETE SET NULL
@@ -318,6 +328,7 @@ namespace Adept.Data.Database
                     CREATE INDEX idx_conversation_class ON Conversations(class_id);
                     CREATE INDEX idx_conversation_date ON Conversations(date);
 
+                    -- System prompts table for storing LLM system prompts
                     CREATE TABLE SystemPrompts (
                         prompt_id TEXT PRIMARY KEY,
                         name TEXT NOT NULL,
@@ -327,6 +338,96 @@ namespace Adept.Data.Database
                         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX idx_prompts_default ON SystemPrompts(is_default);
+
+                    -- Database version tracking table
+                    CREATE TABLE DatabaseVersion (
+                        Version INTEGER PRIMARY KEY,
+                        AppliedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    "
+                },
+                {
+                    2,
+                    @"
+                    -- Add validation triggers for Classes table
+                    CREATE TRIGGER IF NOT EXISTS validate_class_insert
+                    BEFORE INSERT ON Classes
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.class_code IS NULL OR trim(NEW.class_code) = ''
+                                THEN RAISE(ABORT, 'Class code cannot be empty')
+                            WHEN NEW.education_level IS NULL OR trim(NEW.education_level) = ''
+                                THEN RAISE(ABORT, 'Education level cannot be empty')
+                        END;
+                    END;
+
+                    CREATE TRIGGER IF NOT EXISTS validate_class_update
+                    BEFORE UPDATE ON Classes
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.class_code IS NULL OR trim(NEW.class_code) = ''
+                                THEN RAISE(ABORT, 'Class code cannot be empty')
+                            WHEN NEW.education_level IS NULL OR trim(NEW.education_level) = ''
+                                THEN RAISE(ABORT, 'Education level cannot be empty')
+                        END;
+                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
+                    END;
+
+                    -- Add validation triggers for Students table
+                    CREATE TRIGGER IF NOT EXISTS validate_student_insert
+                    BEFORE INSERT ON Students
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
+                                THEN RAISE(ABORT, 'Student name cannot be empty')
+                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
+                                THEN RAISE(ABORT, 'Referenced class does not exist')
+                        END;
+                    END;
+
+                    CREATE TRIGGER IF NOT EXISTS validate_student_update
+                    BEFORE UPDATE ON Students
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
+                                THEN RAISE(ABORT, 'Student name cannot be empty')
+                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
+                                THEN RAISE(ABORT, 'Referenced class does not exist')
+                        END;
+                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
+                    END;
+
+                    -- Add validation triggers for LessonPlans table
+                    CREATE TRIGGER IF NOT EXISTS validate_lesson_insert
+                    BEFORE INSERT ON LessonPlans
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.title IS NULL OR trim(NEW.title) = ''
+                                THEN RAISE(ABORT, 'Lesson title cannot be empty')
+                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
+                                THEN RAISE(ABORT, 'Lesson date cannot be empty')
+                            WHEN NEW.time_slot < 0 OR NEW.time_slot > 4
+                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
+                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
+                                THEN RAISE(ABORT, 'Referenced class does not exist')
+                        END;
+                    END;
+
+                    CREATE TRIGGER IF NOT EXISTS validate_lesson_update
+                    BEFORE UPDATE ON LessonPlans
+                    BEGIN
+                        SELECT CASE
+                            WHEN NEW.title IS NULL OR trim(NEW.title) = ''
+                                THEN RAISE(ABORT, 'Lesson title cannot be empty')
+                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
+                                THEN RAISE(ABORT, 'Lesson date cannot be empty')
+                            WHEN NEW.time_slot < 0 OR NEW.time_slot > 4
+                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
+                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
+                                THEN RAISE(ABORT, 'Referenced class does not exist')
+                        END;
+                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
+                    END;
                     "
                 }
                 // Add more migrations as needed
@@ -390,7 +491,7 @@ namespace Adept.Data.Database
             for (int i = 0; i < reader.FieldCount; i++)
             {
                 var columnName = reader.GetName(i);
-                var property = properties.FirstOrDefault(p => 
+                var property = properties.FirstOrDefault(p =>
                     string.Equals(p.Name, columnName, StringComparison.OrdinalIgnoreCase));
 
                 if (property != null && property.CanWrite)
@@ -446,7 +547,7 @@ namespace Adept.Data.Database
     /// <summary>
     /// SQLite implementation of the database transaction
     /// </summary>
-    public class SqliteDbTransaction : IDbTransaction
+    public class SqliteDbTransaction : DbTransaction
     {
         private readonly SqliteConnection _connection;
         private readonly SqliteTransaction _transaction;

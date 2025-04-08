@@ -1,4 +1,5 @@
 using Adept.Core.Interfaces;
+using Adept.UI.Commands;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -82,7 +83,7 @@ namespace Adept.UI.ViewModels
                 IsBusy = true;
                 Messages.Clear();
                 _currentConversationId = await _llmService.CreateConversationAsync();
-                
+
                 // Add a welcome message
                 Messages.Add(new ChatMessage
                 {
@@ -113,7 +114,7 @@ namespace Adept.UI.ViewModels
             try
             {
                 IsBusy = true;
-                
+
                 // Add the user message to the UI
                 var userMessage = new ChatMessage
                 {
@@ -143,7 +144,7 @@ namespace Adept.UI.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending message");
-                
+
                 // Add an error message to the UI
                 Messages.Add(new ChatMessage
                 {
@@ -197,7 +198,7 @@ namespace Adept.UI.ViewModels
         {
             // Set the recognized speech as the user input
             UserInput = e.Text;
-            
+
             // Send the message
             if (CanSendMessage())
             {
@@ -225,61 +226,5 @@ namespace Adept.UI.ViewModels
         /// Gets or sets the timestamp of the message
         /// </summary>
         public DateTime Timestamp { get; set; } = DateTime.Now;
-    }
-
-    /// <summary>
-    /// Simple implementation of ICommand
-    /// </summary>
-    public class RelayCommand : ICommand
-    {
-        private readonly Action _execute;
-        private readonly Func<bool>? _canExecute;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RelayCommand"/> class
-        /// </summary>
-        /// <param name="execute">The action to execute</param>
-        /// <param name="canExecute">Optional function to determine whether the command can execute</param>
-        public RelayCommand(Action execute, Func<bool>? canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
-
-        /// <summary>
-        /// Event raised when the ability to execute the command changes
-        /// </summary>
-        public event EventHandler? CanExecuteChanged
-        {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
-
-        /// <summary>
-        /// Determines whether the command can execute
-        /// </summary>
-        /// <param name="parameter">Command parameter (not used)</param>
-        /// <returns>True if the command can execute, false otherwise</returns>
-        public bool CanExecute(object? parameter)
-        {
-            return _canExecute?.Invoke() ?? true;
-        }
-
-        /// <summary>
-        /// Executes the command
-        /// </summary>
-        /// <param name="parameter">Command parameter (not used)</param>
-        public void Execute(object? parameter)
-        {
-            _execute();
-        }
-
-        /// <summary>
-        /// Raises the CanExecuteChanged event
-        /// </summary>
-        public void RaiseCanExecuteChanged()
-        {
-            CommandManager.InvalidateRequerySuggested();
-        }
     }
 }

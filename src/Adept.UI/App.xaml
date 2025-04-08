@@ -6,12 +6,15 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Add resource dictionaries here -->
+                <ResourceDictionary Source="/Styles/BaseStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Converters -->
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <converters:RoleToBackgroundConverter x:Key="RoleToBackgroundConverter" />
+            <converters:StringEqualityToVisibilityConverter x:Key="StringEqualityToVisibilityConverter" />
+            <converters:BooleanToStatusConverter x:Key="BooleanToStatusConverter" />
+            <converters:BooleanToColorConverter x:Key="BooleanToColorConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

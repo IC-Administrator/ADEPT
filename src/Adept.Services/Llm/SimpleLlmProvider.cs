@@ -21,6 +21,11 @@ namespace Adept.Services.Llm
         public string ProviderName => "Simple LLM Provider";
 
         /// <summary>
+        /// Gets the name of the currently selected model
+        /// </summary>
+        public string ModelName => _currentModel.Id;
+
+        /// <summary>
         /// Gets the available models for this provider
         /// </summary>
         public IEnumerable<LlmModel> AvailableModels => _models;
@@ -68,8 +73,8 @@ namespace Adept.Services.Llm
             // Define available models
             _models = new List<LlmModel>
             {
-                new LlmModel("simple-basic", "Simple Basic", "Basic model for testing", 4000, false, false),
-                new LlmModel("simple-advanced", "Simple Advanced", "Advanced model with tool and vision support", 8000, true, true)
+                new LlmModel("simple-basic", "Simple Basic", 4000, false, false),
+                new LlmModel("simple-advanced", "Simple Advanced", 8000, true, true)
             };
 
             // Set the default model
