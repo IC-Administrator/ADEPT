@@ -88,6 +88,10 @@ namespace Adept.UI
             services.AddSingleton<ILlmProvider, SimpleLlmProvider>();
             services.AddSingleton<ILlmProvider, OpenAiProvider>();
             services.AddSingleton<ILlmProvider, AnthropicProvider>();
+            services.AddSingleton<ILlmProvider, GoogleProvider>();
+            services.AddSingleton<ILlmProvider, MetaProvider>();
+            services.AddSingleton<ILlmProvider, OpenRouterProvider>();
+            services.AddSingleton<ILlmProvider, DeepSeekProvider>();
             services.AddSingleton<LlmToolIntegrationService>();
             services.AddSingleton<ILlmService, LlmService>();
 
