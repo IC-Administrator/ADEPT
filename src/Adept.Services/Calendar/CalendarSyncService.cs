@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Adept.Services.Calendar
@@ -19,6 +20,10 @@ namespace Adept.Services.Calendar
         private readonly IClassService _classService;
         private readonly ISecureStorageService _secureStorageService;
         private readonly ILogger<CalendarSyncService> _logger;
+        private Timer _syncTimer;
+        private readonly TimeSpan _syncInterval = TimeSpan.FromMinutes(15);
+        private readonly List<CalendarSyncHandler> _syncHandlers = new();
+        private bool _isSyncing;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CalendarSyncService"/> class
@@ -517,6 +522,137 @@ namespace Adept.Services.Calendar
             }
 
             return description.ToString();
+        }
+
+        /// <summary>
+        /// Starts the two-way synchronization service
+        /// </summary>
+        public async Task StartTwoWaySyncAsync()
+        {
+            _logger.LogInformation("Starting two-way calendar sync service");
+
+            // Initialize the calendar service
+            await _calendarService.InitializeAsync();
+
+            // Check if we're authenticated
+            var isAuthenticated = await _calendarService.IsAuthenticatedAsync();
+            if (!isAuthenticated)
+            {
+                _logger.LogWarning("Not authenticated with Google Calendar. Two-way sync service will not start.");
+                return;
+            }
+
+            // Start the sync timer
+            _syncTimer = new Timer(SyncCallback, null, TimeSpan.Zero, _syncInterval);
+
+            _logger.LogInformation("Two-way calendar sync service started");
+        }
+
+        /// <summary>
+        /// Stops the two-way synchronization service
+        /// </summary>
+        public Task StopTwoWaySyncAsync()
+        {
+            _logger.LogInformation("Stopping two-way calendar sync service");
+
+            // Stop the sync timer
+            _syncTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            _syncTimer?.Dispose();
+            _syncTimer = null;
+
+            _logger.LogInformation("Two-way calendar sync service stopped");
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Registers a sync handler for two-way synchronization
+        /// </summary>
+        /// <param name="handler">The handler to register</param>
+        public void RegisterSyncHandler(CalendarSyncHandler handler)
+        {
+            _syncHandlers.Add(handler);
+            _logger.LogInformation("Registered calendar sync handler");
+        }
+
+        /// <summary>
+        /// Unregisters a sync handler
+        /// </summary>
+        /// <param name="handler">The handler to unregister</param>
+        public void UnregisterSyncHandler(CalendarSyncHandler handler)
+        {
+            _syncHandlers.Remove(handler);
+            _logger.LogInformation("Unregistered calendar sync handler");
+        }
+
+        /// <summary>
+        /// Triggers a manual synchronization from Google Calendar to the application
+        /// </summary>
+        public async Task SyncFromGoogleAsync()
+        {
+            await SyncChangesFromGoogleAsync();
+        }
+
+        /// <summary>
+        /// Callback for the sync timer
+        /// </summary>
+        private async void SyncCallback(object state)
+        {
+            await SyncChangesFromGoogleAsync();
+        }
+
+        /// <summary>
+        /// Synchronizes changes from Google Calendar to the application
+        /// </summary>
+        private async Task SyncChangesFromGoogleAsync()
+        {
+            // Prevent concurrent syncs
+            if (_isSyncing)
+            {
+                _logger.LogInformation("Sync already in progress, skipping");
+                return;
+            }
+
+            _isSyncing = true;
+
+            try
+            {
+                _logger.LogInformation("Syncing changes from Google Calendar");
+
+                // Get events for the last 24 hours
+                var now = DateTime.UtcNow;
+                var yesterday = now.AddDays(-1);
+                var events = await _calendarService.GetEventsForDateRangeAsync(
+                    yesterday.ToString("yyyy-MM-dd"),
+                    now.ToString("yyyy-MM-dd"));
+
+                // Process the events
+                var changedEvents = events.ToList();
+                var deletedEventIds = new List<string>(); // We don't have a way to get deleted events directly
+
+                // Notify handlers of changes
+                foreach (var handler in _syncHandlers)
+                {
+                    try
+                    {
+                        await handler(changedEvents, deletedEventIds);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error in sync handler");
+                    }
+                }
+
+                _logger.LogInformation("Processed {ChangedCount} changed events", changedEvents.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing changes from Google Calendar");
+            }
+            finally
+            {
+                _isSyncing = false;
+            }
         }
     }
 }

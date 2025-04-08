@@ -396,3 +396,8 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# OAuth credentials
+credentials.json
+google_credentials.json
+*_credentials.json

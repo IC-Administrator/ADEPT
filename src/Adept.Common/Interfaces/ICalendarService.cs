@@ -39,8 +39,9 @@ namespace Adept.Common.Interfaces
         /// <param name="attendees">The attendees for the event</param>
         /// <param name="attachments">The attachments for the event</param>
         /// <param name="visibility">The visibility of the event (default, public, private, confidential)</param>
+        /// <param name="recurrence">The recurrence rules for the event</param>
         /// <returns>The ID of the created event</returns>
-        Task<string> CreateEventAsync(string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null);
+        Task<string> CreateEventAsync(string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null, List<string>? recurrence = null);
 
         /// <summary>
         /// Updates a calendar event
@@ -57,8 +58,9 @@ namespace Adept.Common.Interfaces
         /// <param name="attendees">The attendees for the event</param>
         /// <param name="attachments">The attachments for the event</param>
         /// <param name="visibility">The visibility of the event (default, public, private, confidential)</param>
+        /// <param name="recurrence">The recurrence rules for the event</param>
         /// <returns>True if the update was successful, false otherwise</returns>
-        Task<bool> UpdateEventAsync(string eventId, string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null);
+        Task<bool> UpdateEventAsync(string eventId, string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null, List<string>? recurrence = null);
 
         /// <summary>
         /// Deletes a calendar event
@@ -122,6 +124,12 @@ namespace Adept.Common.Interfaces
         /// <param name="mimeType">The MIME type</param>
         /// <returns>True if the attachment was added successfully, false otherwise</returns>
         Task<bool> AddAttachmentAsync(string eventId, string fileUrl, string title, string mimeType);
+
+        /// <summary>
+        /// Gets the current access token
+        /// </summary>
+        /// <returns>The access token</returns>
+        Task<string> GetAccessTokenAsync();
     }
 
     /// <summary>

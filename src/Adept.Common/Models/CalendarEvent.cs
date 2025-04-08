@@ -116,6 +116,24 @@ namespace Adept.Common.Models
         /// </summary>
         [JsonPropertyName("visibility")]
         public string? Visibility { get; set; }
+
+        /// <summary>
+        /// The recurrence rules for the event
+        /// </summary>
+        [JsonPropertyName("recurrence")]
+        public List<string>? RecurrenceRules { get; set; }
+
+        /// <summary>
+        /// The recurring event ID
+        /// </summary>
+        [JsonPropertyName("recurringEventId")]
+        public string? RecurringEventId { get; set; }
+
+        /// <summary>
+        /// The original start time for recurring event instances
+        /// </summary>
+        [JsonPropertyName("originalStartTime")]
+        public CalendarDateTime? OriginalStartTime { get; set; }
     }
 
     /// <summary>

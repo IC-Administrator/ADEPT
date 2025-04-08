@@ -112,8 +112,9 @@ namespace Adept.Services.Calendar
         /// <param name="attendees">The attendees for the event</param>
         /// <param name="attachments">The attachments for the event</param>
         /// <param name="visibility">The visibility of the event (default, public, private, confidential)</param>
+        /// <param name="recurrence">The recurrence rules for the event</param>
         /// <returns>The ID of the created event</returns>
-        public async Task<string> CreateEventAsync(string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null)
+        public async Task<string> CreateEventAsync(string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null, List<string>? recurrence = null)
         {
             try
             {
@@ -168,6 +169,11 @@ namespace Adept.Services.Calendar
                     eventData["visibility"] = visibility;
                 }
 
+                if (recurrence != null && recurrence.Count > 0)
+                {
+                    eventData["recurrence"] = recurrence;
+                }
+
                 // Create the request
                 var json = JsonSerializer.Serialize(eventData);
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
@@ -212,8 +218,9 @@ namespace Adept.Services.Calendar
         /// <param name="attendees">The attendees for the event</param>
         /// <param name="attachments">The attachments for the event</param>
         /// <param name="visibility">The visibility of the event (default, public, private, confidential)</param>
+        /// <param name="recurrence">The recurrence rules for the event</param>
         /// <returns>True if the update was successful, false otherwise</returns>
-        public async Task<bool> UpdateEventAsync(string eventId, string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null)
+        public async Task<bool> UpdateEventAsync(string eventId, string summary, string description, string location, DateTime startDateTime, DateTime endDateTime, string timeZone = "Europe/London", string? colorId = null, CalendarReminders? reminders = null, List<CalendarAttendee>? attendees = null, List<CalendarAttachment>? attachments = null, string? visibility = null, List<string>? recurrence = null)
         {
             try
             {
@@ -264,6 +271,11 @@ namespace Adept.Services.Calendar
                 if (!string.IsNullOrEmpty(visibility))
                 {
                     eventData["visibility"] = visibility;
+                }
+
+                if (recurrence != null && recurrence.Count > 0)
+                {
+                    eventData["recurrence"] = recurrence;
                 }
 
                 // Create the request
@@ -882,6 +894,30 @@ namespace Adept.Services.Calendar
             {
                 _logger.LogError(ex, "Error adding attachment to event {EventId}", eventId);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current access token
+        /// </summary>
+        /// <returns>The access token</returns>
+        public async Task<string> GetAccessTokenAsync()
+        {
+            try
+            {
+                var token = await _oauthService.GetValidTokenAsync();
+                if (token == null)
+                {
+                    _logger.LogError("Failed to get valid token");
+                    return string.Empty;
+                }
+
+                return token.AccessToken;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting access token");
+                return string.Empty;
             }
         }
     }
