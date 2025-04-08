@@ -17,6 +17,7 @@ namespace Adept.Services.Calendar
         private readonly ICalendarService _calendarService;
         private readonly ILessonPlanService _lessonPlanService;
         private readonly IClassService _classService;
+        private readonly ISecureStorageService _secureStorageService;
         private readonly ILogger<CalendarSyncService> _logger;
 
         /// <summary>
@@ -25,16 +26,19 @@ namespace Adept.Services.Calendar
         /// <param name="calendarService">The calendar service</param>
         /// <param name="lessonPlanService">The lesson plan service</param>
         /// <param name="classService">The class service</param>
+        /// <param name="secureStorageService">The secure storage service</param>
         /// <param name="logger">The logger</param>
         public CalendarSyncService(
             ICalendarService calendarService,
             ILessonPlanService lessonPlanService,
             IClassService classService,
+            ISecureStorageService secureStorageService,
             ILogger<CalendarSyncService> logger)
         {
             _calendarService = calendarService;
             _lessonPlanService = lessonPlanService;
             _classService = classService;
+            _secureStorageService = secureStorageService;
             _logger = logger;
         }
 
@@ -97,6 +101,57 @@ namespace Adept.Services.Calendar
                         var summary = $"{classInfo.Subject} - {lessonPlan.Title}";
                         var description = FormatLessonDescription(lessonPlan);
 
+                        // Get the settings from secure storage
+                        var colorId = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_color_id");
+                        var useDefaultRemindersStr = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_use_default_reminders");
+                        var reminderMinutesStr = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_reminder_minutes");
+                        var reminderMethod = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_reminder_method");
+                        var visibility = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_visibility");
+                        var attendeesJson = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_attendees");
+
+                        // Parse the settings
+                        bool useDefaultReminders = true;
+                        if (!string.IsNullOrEmpty(useDefaultRemindersStr) && bool.TryParse(useDefaultRemindersStr, out var parsedUseDefaultReminders))
+                        {
+                            useDefaultReminders = parsedUseDefaultReminders;
+                        }
+
+                        int reminderMinutes = 30;
+                        if (!string.IsNullOrEmpty(reminderMinutesStr) && int.TryParse(reminderMinutesStr, out var parsedReminderMinutes))
+                        {
+                            reminderMinutes = parsedReminderMinutes;
+                        }
+
+                        if (string.IsNullOrEmpty(reminderMethod))
+                        {
+                            reminderMethod = "popup";
+                        }
+
+                        // Create reminders if not using default
+                        CalendarReminders? reminders = null;
+                        if (!useDefaultReminders)
+                        {
+                            reminders = new CalendarReminders
+                            {
+                                UseDefault = false,
+                                Overrides = new List<CalendarReminder>
+                                {
+                                    new CalendarReminder
+                                    {
+                                        Method = reminderMethod,
+                                        Minutes = reminderMinutes
+                                    }
+                                }
+                            };
+                        }
+
+                        // Parse attendees
+                        List<CalendarAttendee>? attendees = null;
+                        if (!string.IsNullOrEmpty(attendeesJson))
+                        {
+                            attendees = System.Text.Json.JsonSerializer.Deserialize<List<CalendarAttendee>>(attendeesJson);
+                        }
+
                         // If the lesson plan already has a calendar event ID, update it
                         if (!string.IsNullOrEmpty(lessonPlan.CalendarEventId))
                         {
@@ -106,7 +161,13 @@ namespace Adept.Services.Calendar
                                 description,
                                 classInfo.Location,
                                 startDateTime,
-                                endDateTime);
+                                endDateTime,
+                                "Europe/London",
+                                colorId,
+                                reminders,
+                                attendees,
+                                null,
+                                visibility);
 
                             if (success)
                             {
@@ -126,7 +187,13 @@ namespace Adept.Services.Calendar
                                 description,
                                 classInfo.Location,
                                 startDateTime,
-                                endDateTime);
+                                endDateTime,
+                                "Europe/London",
+                                colorId,
+                                reminders,
+                                attendees,
+                                null,
+                                visibility);
 
                             if (!string.IsNullOrEmpty(eventId))
                             {
@@ -203,6 +270,57 @@ namespace Adept.Services.Calendar
                 var summary = $"{classInfo.Subject} - {lessonPlan.Title}";
                 var description = FormatLessonDescription(lessonPlan);
 
+                // Get the settings from secure storage
+                var colorId = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_color_id");
+                var useDefaultRemindersStr = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_use_default_reminders");
+                var reminderMinutesStr = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_reminder_minutes");
+                var reminderMethod = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_reminder_method");
+                var visibility = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_visibility");
+                var attendeesJson = await _secureStorageService.RetrieveSecureValueAsync("google_calendar_attendees");
+
+                // Parse the settings
+                bool useDefaultReminders = true;
+                if (!string.IsNullOrEmpty(useDefaultRemindersStr) && bool.TryParse(useDefaultRemindersStr, out var parsedUseDefaultReminders))
+                {
+                    useDefaultReminders = parsedUseDefaultReminders;
+                }
+
+                int reminderMinutes = 30;
+                if (!string.IsNullOrEmpty(reminderMinutesStr) && int.TryParse(reminderMinutesStr, out var parsedReminderMinutes))
+                {
+                    reminderMinutes = parsedReminderMinutes;
+                }
+
+                if (string.IsNullOrEmpty(reminderMethod))
+                {
+                    reminderMethod = "popup";
+                }
+
+                // Create reminders if not using default
+                CalendarReminders? reminders = null;
+                if (!useDefaultReminders)
+                {
+                    reminders = new CalendarReminders
+                    {
+                        UseDefault = false,
+                        Overrides = new List<CalendarReminder>
+                        {
+                            new CalendarReminder
+                            {
+                                Method = reminderMethod,
+                                Minutes = reminderMinutes
+                            }
+                        }
+                    };
+                }
+
+                // Parse attendees
+                List<CalendarAttendee>? attendees = null;
+                if (!string.IsNullOrEmpty(attendeesJson))
+                {
+                    attendees = System.Text.Json.JsonSerializer.Deserialize<List<CalendarAttendee>>(attendeesJson);
+                }
+
                 // If the lesson plan already has a calendar event ID, update it
                 if (!string.IsNullOrEmpty(lessonPlan.CalendarEventId))
                 {
@@ -212,7 +330,13 @@ namespace Adept.Services.Calendar
                         description,
                         classInfo.Location,
                         startDateTime,
-                        endDateTime);
+                        endDateTime,
+                        "Europe/London",
+                        colorId,
+                        reminders,
+                        attendees,
+                        null,
+                        visibility);
 
                     if (success)
                     {
@@ -233,7 +357,13 @@ namespace Adept.Services.Calendar
                         description,
                         classInfo.Location,
                         startDateTime,
-                        endDateTime);
+                        endDateTime,
+                        "Europe/London",
+                        colorId,
+                        reminders,
+                        attendees,
+                        null,
+                        visibility);
 
                     if (!string.IsNullOrEmpty(eventId))
                     {
@@ -365,7 +495,7 @@ namespace Adept.Services.Calendar
         private string FormatLessonDescription(LessonPlan lessonPlan)
         {
             var description = new System.Text.StringBuilder();
-            
+
             if (!string.IsNullOrEmpty(lessonPlan.LearningObjectives))
             {
                 description.AppendLine("Learning Objectives:");

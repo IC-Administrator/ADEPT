@@ -22,7 +22,28 @@ namespace GoogleCalendarTest
         {
             Console.WriteLine("Google Calendar Integration Test");
             Console.WriteLine("================================");
+            Console.WriteLine("1. Basic Calendar Test");
+            Console.WriteLine("2. Enhanced Calendar Test");
+            Console.Write("\nSelect a test to run: ");
+            var choice = Console.ReadLine();
 
+            switch (choice)
+            {
+                case "1":
+                    await RunBasicTestAsync();
+                    break;
+                case "2":
+                    await EnhancedCalendarTest.Main(args);
+                    break;
+                default:
+                    Console.WriteLine("Invalid choice. Running basic test by default.");
+                    await RunBasicTestAsync();
+                    break;
+            }
+        }
+
+        static async Task RunBasicTestAsync()
+        {
             // Initialize services
             InitializeServices();
 
@@ -67,26 +88,14 @@ namespace GoogleCalendarTest
             Console.ReadKey();
         }
 
-        private static void InitializeServices()
+        public static void ConfigureServices(IServiceCollection services)
         {
-            // Initialize configuration
+            // Add configuration
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
             _configuration = builder.Build();
-
-            // Configure services
-            var services = new ServiceCollection();
-
-            // Add logging
-            services.AddLogging(configure =>
-            {
-                configure.AddConsole();
-                configure.SetMinimumLevel(LogLevel.Information);
-            });
-
-            // Add configuration
             services.AddSingleton(_configuration);
 
             // Add HTTP clients
@@ -97,6 +106,22 @@ namespace GoogleCalendarTest
             services.AddSingleton<ISecureStorageService, SecureStorageService>();
             services.AddSingleton<IOAuthService, GoogleOAuthService>();
             services.AddSingleton<ICalendarService, GoogleCalendarService>();
+        }
+
+        private static void InitializeServices()
+        {
+            // Configure services
+            var services = new ServiceCollection();
+
+            // Add logging
+            services.AddLogging(configure =>
+            {
+                configure.AddConsole();
+                configure.SetMinimumLevel(LogLevel.Information);
+            });
+
+            // Configure services
+            ConfigureServices(services);
 
             _serviceProvider = services.BuildServiceProvider();
         }
