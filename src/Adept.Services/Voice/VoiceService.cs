@@ -8,12 +8,14 @@ namespace Adept.Services.Voice
     /// </summary>
     public class VoiceService : IVoiceService, IDisposable
     {
-        private readonly IWakeWordDetector _wakeWordDetector;
-        private readonly ISpeechToTextProvider _speechToTextProvider;
-        private readonly ITextToSpeechProvider _textToSpeechProvider;
+        private readonly IVoiceProviderFactory _voiceProviderFactory;
         private readonly ILogger<VoiceService> _logger;
+        private IWakeWordDetector? _wakeWordDetector;
+        private ISpeechToTextProvider? _speechToTextProvider;
+        private ITextToSpeechProvider? _textToSpeechProvider;
         private VoiceServiceState _state = VoiceServiceState.NotListening;
         private CancellationTokenSource? _speechCancellationTokenSource;
+        private bool _isInitialized;
         private bool _disposed;
 
         /// <summary>
@@ -34,26 +36,52 @@ namespace Adept.Services.Voice
         /// <summary>
         /// Initializes a new instance of the <see cref="VoiceService"/> class
         /// </summary>
-        /// <param name="wakeWordDetector">The wake word detector</param>
-        /// <param name="speechToTextProvider">The speech-to-text provider</param>
-        /// <param name="textToSpeechProvider">The text-to-speech provider</param>
+        /// <param name="voiceProviderFactory">The voice provider factory</param>
         /// <param name="logger">The logger</param>
         public VoiceService(
-            IWakeWordDetector wakeWordDetector,
-            ISpeechToTextProvider speechToTextProvider,
-            ITextToSpeechProvider textToSpeechProvider,
+            IVoiceProviderFactory voiceProviderFactory,
             ILogger<VoiceService> logger)
         {
-            _wakeWordDetector = wakeWordDetector;
-            _speechToTextProvider = speechToTextProvider;
-            _textToSpeechProvider = textToSpeechProvider;
+            _voiceProviderFactory = voiceProviderFactory;
             _logger = logger;
+        }
 
-            // Subscribe to wake word detection events
-            _wakeWordDetector.WakeWordDetected += OnWakeWordDetected;
+        /// <summary>
+        /// Initializes the service
+        /// </summary>
+        public async Task InitializeAsync()
+        {
+            if (_isInitialized)
+            {
+                return;
+            }
 
-            // Initialize the providers
-            InitializeProvidersAsync().ConfigureAwait(false);
+            try
+            {
+                // Create the providers
+                _wakeWordDetector = await _voiceProviderFactory.CreateWakeWordDetectorAsync();
+                _speechToTextProvider = await _voiceProviderFactory.CreateSpeechToTextProviderAsync();
+                _textToSpeechProvider = await _voiceProviderFactory.CreateTextToSpeechProviderAsync();
+
+                // Subscribe to the wake word detected event
+                _wakeWordDetector.WakeWordDetected += OnWakeWordDetected;
+
+                // Subscribe to the speech recognized event
+                if (_speechToTextProvider is ISpeechToTextProvider stt && stt.SpeechRecognized != null)
+                {
+                    stt.SpeechRecognized += OnSpeechRecognized;
+                }
+
+                _isInitialized = true;
+                _logger.LogInformation("Voice service initialized");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing voice service");
+                throw;
+            }
+
+
         }
 
         /// <summary>
@@ -79,6 +107,11 @@ namespace Adept.Services.Voice
         /// </summary>
         public async Task StartListeningForWakeWordAsync()
         {
+            if (!_isInitialized)
+            {
+                await InitializeAsync();
+            }
+
             if (_state != VoiceServiceState.NotListening)
             {
                 _logger.LogWarning("Cannot start listening for wake word while in state {State}", _state);
@@ -87,6 +120,11 @@ namespace Adept.Services.Voice
 
             try
             {
+                if (_wakeWordDetector == null)
+                {
+                    throw new InvalidOperationException("Wake word detector not initialized");
+                }
+
                 await _wakeWordDetector.StartListeningAsync();
                 SetState(VoiceServiceState.ListeningForWakeWord);
                 _logger.LogInformation("Started listening for wake word");
@@ -102,6 +140,11 @@ namespace Adept.Services.Voice
         /// </summary>
         public async Task StopListeningForWakeWordAsync()
         {
+            if (!_isInitialized)
+            {
+                await InitializeAsync();
+            }
+
             if (_state != VoiceServiceState.ListeningForWakeWord)
             {
                 _logger.LogWarning("Cannot stop listening for wake word while in state {State}", _state);
@@ -110,6 +153,11 @@ namespace Adept.Services.Voice
 
             try
             {
+                if (_wakeWordDetector == null)
+                {
+                    throw new InvalidOperationException("Wake word detector not initialized");
+                }
+
                 await _wakeWordDetector.StopListeningAsync();
                 SetState(VoiceServiceState.NotListening);
                 _logger.LogInformation("Stopped listening for wake word");
@@ -125,6 +173,11 @@ namespace Adept.Services.Voice
         /// </summary>
         public async Task StartListeningForSpeechAsync()
         {
+            if (!_isInitialized)
+            {
+                await InitializeAsync();
+            }
+
             if (_state != VoiceServiceState.NotListening && _state != VoiceServiceState.ListeningForWakeWord)
             {
                 _logger.LogWarning("Cannot start listening for speech while in state {State}", _state);
@@ -133,6 +186,11 @@ namespace Adept.Services.Voice
 
             try
             {
+                if (_wakeWordDetector == null || _speechToTextProvider == null)
+                {
+                    throw new InvalidOperationException("Voice providers not initialized");
+                }
+
                 // If we were listening for the wake word, stop that first
                 if (_state == VoiceServiceState.ListeningForWakeWord)
                 {
@@ -163,6 +221,11 @@ namespace Adept.Services.Voice
         /// </summary>
         public async Task StopListeningForSpeechAsync()
         {
+            if (!_isInitialized)
+            {
+                await InitializeAsync();
+            }
+
             if (_state != VoiceServiceState.ListeningForSpeech)
             {
                 _logger.LogWarning("Cannot stop listening for speech while in state {State}", _state);
@@ -171,9 +234,14 @@ namespace Adept.Services.Voice
 
             try
             {
+                if (_speechToTextProvider == null)
+                {
+                    throw new InvalidOperationException("Speech-to-text provider not initialized");
+                }
+
                 SetState(VoiceServiceState.ProcessingSpeech);
                 var (text, confidence) = await _speechToTextProvider.StopListeningAsync();
-                
+
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     _logger.LogInformation("Speech recognized: {Text} (Confidence: {Confidence})", text, confidence);
@@ -201,6 +269,11 @@ namespace Adept.Services.Voice
         /// <param name="cancellationToken">Cancellation token</param>
         public async Task SpeakAsync(string text, CancellationToken cancellationToken = default)
         {
+            if (!_isInitialized)
+            {
+                await InitializeAsync();
+            }
+
             if (string.IsNullOrWhiteSpace(text))
             {
                 return;
@@ -208,12 +281,17 @@ namespace Adept.Services.Voice
 
             try
             {
+                if (_textToSpeechProvider == null)
+                {
+                    throw new InvalidOperationException("Text-to-speech provider not initialized");
+                }
+
                 // Cancel any ongoing speech
                 await CancelSpeechAsync();
 
                 // Create a new cancellation token source
                 _speechCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                
+
                 // Set the state to speaking
                 var previousState = _state;
                 SetState(VoiceServiceState.Speaking);
@@ -256,10 +334,20 @@ namespace Adept.Services.Voice
         /// </summary>
         public async Task CancelSpeechAsync()
         {
+            if (!_isInitialized)
+            {
+                await InitializeAsync();
+            }
+
             if (_state == VoiceServiceState.Speaking && _speechCancellationTokenSource != null)
             {
                 try
                 {
+                    if (_textToSpeechProvider == null)
+                    {
+                        throw new InvalidOperationException("Text-to-speech provider not initialized");
+                    }
+
                     _speechCancellationTokenSource.Cancel();
                     await _textToSpeechProvider.CancelSpeechAsync();
                     _logger.LogInformation("Speech cancelled");
@@ -300,6 +388,19 @@ namespace Adept.Services.Voice
         }
 
         /// <summary>
+        /// Handles speech recognition
+        /// </summary>
+        /// <param name="sender">The sender</param>
+        /// <param name="e">The event arguments</param>
+        private void OnSpeechRecognized(object? sender, SpeechRecognizedEventArgs e)
+        {
+            _logger.LogInformation("Speech recognized: {Text} (Confidence: {Confidence})", e.Text, e.Confidence);
+
+            // Forward the event to subscribers
+            SpeechRecognized?.Invoke(this, e);
+        }
+
+        /// <summary>
         /// Disposes the voice service
         /// </summary>
         public void Dispose()
@@ -319,7 +420,28 @@ namespace Adept.Services.Voice
                 if (disposing)
                 {
                     // Unsubscribe from events
-                    _wakeWordDetector.WakeWordDetected -= OnWakeWordDetected;
+                    if (_wakeWordDetector != null)
+                    {
+                        _wakeWordDetector.WakeWordDetected -= OnWakeWordDetected;
+
+                        // Dispose the wake word detector if it's disposable
+                        if (_wakeWordDetector is IDisposable disposableWakeWordDetector)
+                        {
+                            disposableWakeWordDetector.Dispose();
+                        }
+                    }
+
+                    // Dispose the speech-to-text provider if it's disposable
+                    if (_speechToTextProvider is IDisposable disposableSpeechToTextProvider)
+                    {
+                        disposableSpeechToTextProvider.Dispose();
+                    }
+
+                    // Dispose the text-to-speech provider if it's disposable
+                    if (_textToSpeechProvider is IDisposable disposableTextToSpeechProvider)
+                    {
+                        disposableTextToSpeechProvider.Dispose();
+                    }
 
                     // Cancel any ongoing speech
                     _speechCancellationTokenSource?.Cancel();

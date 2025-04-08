@@ -11,6 +11,11 @@ namespace Adept.Core.Interfaces
         string ProviderName { get; }
 
         /// <summary>
+        /// Event raised when speech is recognized
+        /// </summary>
+        event EventHandler<SpeechRecognizedEventArgs>? SpeechRecognized;
+
+        /// <summary>
         /// Initializes the provider
         /// </summary>
         Task InitializeAsync();

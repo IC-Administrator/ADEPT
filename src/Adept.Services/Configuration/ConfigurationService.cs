@@ -21,6 +21,61 @@ namespace Adept.Services.Configuration
         {
             _databaseContext = databaseContext;
             _logger = logger;
+
+            // Initialize default configuration values
+            InitializeDefaultConfigurationAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Initializes default configuration values
+        /// </summary>
+        private async Task InitializeDefaultConfigurationAsync()
+        {
+            try
+            {
+                // Create the configuration table if it doesn't exist
+                await _databaseContext.ExecuteNonQueryAsync(
+                    "CREATE TABLE IF NOT EXISTS Configuration (key TEXT PRIMARY KEY, value TEXT)");
+
+                // Set default voice providers
+                await SetDefaultConfigurationValueAsync("wake_word_detector", "vosk");
+                await SetDefaultConfigurationValueAsync("speech_to_text_provider", "whisper");
+                await SetDefaultConfigurationValueAsync("text_to_speech_provider", "fishaudio");
+
+                // Set default voice settings
+                await SetDefaultConfigurationValueAsync("fish_audio_voice_id", "default");
+
+                _logger.LogInformation("Default configuration values initialized");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initializing default configuration values");
+            }
+        }
+
+        /// <summary>
+        /// Sets a configuration value if it doesn't already exist
+        /// </summary>
+        /// <param name="key">The configuration key</param>
+        /// <param name="value">The configuration value</param>
+        private async Task SetDefaultConfigurationValueAsync(string key, string value)
+        {
+            try
+            {
+                // Check if the key already exists
+                var existingValue = await GetConfigurationValueAsync(key);
+
+                if (string.IsNullOrEmpty(existingValue))
+                {
+                    // Set the default value
+                    await SetConfigurationValueAsync(key, value);
+                    _logger.LogInformation("Set default configuration value for {Key}: {Value}", key, value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting default configuration value for key {Key}", key);
+            }
         }
 
         /// <summary>
@@ -56,10 +111,10 @@ namespace Adept.Services.Configuration
             try
             {
                 await _databaseContext.ExecuteNonQueryAsync(
-                    @"INSERT INTO Configuration (key, value, last_modified) 
+                    @"INSERT INTO Configuration (key, value, last_modified)
                       VALUES (@Key, @Value, CURRENT_TIMESTAMP)
-                      ON CONFLICT(key) DO UPDATE SET 
-                      value = @Value, 
+                      ON CONFLICT(key) DO UPDATE SET
+                      value = @Value,
                       last_modified = CURRENT_TIMESTAMP",
                     new { Key = key, Value = value });
             }

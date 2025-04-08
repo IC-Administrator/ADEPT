@@ -21,6 +21,11 @@ namespace Adept.Core.Interfaces
         event EventHandler<SpeechRecognizedEventArgs>? SpeechRecognized;
 
         /// <summary>
+        /// Initializes the voice service
+        /// </summary>
+        Task InitializeAsync();
+
+        /// <summary>
         /// Starts listening for the wake word
         /// </summary>
         Task StartListeningForWakeWordAsync();

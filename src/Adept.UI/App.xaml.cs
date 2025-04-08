@@ -78,9 +78,16 @@ namespace Adept.UI
             services.AddSingleton<IConversationRepository, ConversationRepository>();
 
             // Register Voice Services
-            services.AddSingleton<IWakeWordDetector, SimpleWakeWordDetector>();
-            services.AddSingleton<ISpeechToTextProvider, SimpleSpeechToTextProvider>();
-            services.AddSingleton<ITextToSpeechProvider, SimpleTextToSpeechProvider>();
+            services.AddSingleton<SimpleWakeWordDetector>();
+            services.AddSingleton<VoskWakeWordDetector>();
+            services.AddSingleton<SimpleSpeechToTextProvider>();
+            services.AddSingleton<WhisperSpeechToTextProvider>();
+            services.AddSingleton<GoogleSpeechToTextProvider>();
+            services.AddSingleton<SimpleTextToSpeechProvider>();
+            services.AddSingleton<FishAudioTextToSpeechProvider>();
+            services.AddSingleton<OpenAiTextToSpeechProvider>();
+            services.AddSingleton<GoogleTextToSpeechProvider>();
+            services.AddSingleton<IVoiceProviderFactory, VoiceProviderFactory>();
             services.AddSingleton<IVoiceService, VoiceService>();
 
             // Register LLM Services

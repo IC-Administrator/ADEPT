@@ -22,6 +22,11 @@ namespace Adept.Services.Voice
         public string ProviderName => "Simple STT Provider";
 
         /// <summary>
+        /// Event raised when speech is recognized
+        /// </summary>
+        public event EventHandler<SpeechRecognizedEventArgs>? SpeechRecognized;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="SimpleSpeechToTextProvider"/> class
         /// </summary>
         /// <param name="logger">The logger</param>
@@ -101,11 +106,19 @@ namespace Adept.Services.Voice
 
                 // Combine all audio buffers
                 var combinedBuffer = CombineAudioBuffers();
-                
+
                 // Process the audio
                 if (combinedBuffer.Length > 0)
                 {
-                    return await ConvertSpeechToTextAsync(combinedBuffer);
+                    var result = await ConvertSpeechToTextAsync(combinedBuffer);
+
+                    // Raise the speech recognized event
+                    if (!string.IsNullOrEmpty(result.Text))
+                    {
+                        SpeechRecognized?.Invoke(this, new SpeechRecognizedEventArgs(result.Text, result.Confidence));
+                    }
+
+                    return result;
                 }
 
                 return (string.Empty, 0);
@@ -131,10 +144,10 @@ namespace Adept.Services.Voice
             {
                 _waveIn?.Stop();
                 _isListening = false;
-                
+
                 // Clear any existing audio buffers
                 while (_audioBuffers.TryDequeue(out _)) { }
-                
+
                 _logger.LogInformation("Speech-to-text provider cancelled");
                 return Task.CompletedTask;
             }
@@ -158,7 +171,7 @@ namespace Adept.Services.Voice
                 // or OpenAI Whisper. For now, we'll just return a placeholder.
                 var text = "This is a simulated speech recognition result.";
                 var confidence = 0.95f;
-                
+
                 _logger.LogInformation("Converted speech to text: {Text} (Confidence: {Confidence})", text, confidence);
                 return Task.FromResult((text, confidence));
             }
@@ -214,7 +227,7 @@ namespace Adept.Services.Voice
                 // Copy the audio data to a new buffer
                 var buffer = new byte[e.BytesRecorded];
                 Buffer.BlockCopy(e.Buffer, 0, buffer, 0, e.BytesRecorded);
-                
+
                 // Add the buffer to the queue
                 _audioBuffers.Enqueue(buffer);
             }
