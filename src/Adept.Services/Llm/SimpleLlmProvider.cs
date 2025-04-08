@@ -43,17 +43,17 @@ namespace Adept.Services.Llm
         /// <summary>
         /// Gets whether the provider supports streaming
         /// </summary>
-        public bool SupportsStreaming => false;
+        public bool SupportsStreaming => true;
 
         /// <summary>
         /// Gets whether the provider supports tool calls
         /// </summary>
-        public bool SupportsToolCalls => false;
+        public bool SupportsToolCalls => _currentModel.SupportsToolCalls;
 
         /// <summary>
         /// Gets whether the provider supports vision
         /// </summary>
-        public bool SupportsVision => false;
+        public bool SupportsVision => _currentModel.SupportsVision;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SimpleLlmProvider"/> class
@@ -68,8 +68,8 @@ namespace Adept.Services.Llm
             // Define available models
             _models = new List<LlmModel>
             {
-                new LlmModel("simple-basic", "Simple Basic", 4000),
-                new LlmModel("simple-advanced", "Simple Advanced", 8000, true, false)
+                new LlmModel("simple-basic", "Simple Basic", "Basic model for testing", 4000, false, false),
+                new LlmModel("simple-advanced", "Simple Advanced", "Advanced model with tool and vision support", 8000, true, true)
             };
 
             // Set the default model
@@ -170,7 +170,7 @@ namespace Adept.Services.Llm
                 // In a real implementation, this would call an API like OpenAI or Anthropic
                 // For now, we'll just return a simulated response
                 var lastUserMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "No user message";
-                
+
                 var response = $"This is a simulated response from {ProviderName} using {_currentModel.Name}. " +
                                $"You said: \"{lastUserMessage}\". " +
                                $"In a real implementation, this would be a response from an actual LLM API.";
@@ -211,9 +211,38 @@ namespace Adept.Services.Llm
         {
             try
             {
-                // This provider doesn't support streaming, so we'll just call the non-streaming method
-                _logger.LogWarning("Streaming not supported by {ProviderName}, falling back to non-streaming", ProviderName);
-                return await SendMessagesAsync(messages, systemPrompt, cancellationToken);
+                // In a real implementation, this would stream responses from an API
+                // For now, we'll simulate streaming by sending chunks of the response
+                var lastUserMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "No user message";
+
+                var fullResponse = $"This is a simulated streaming response from {ProviderName} using {_currentModel.Name}. " +
+                                  $"You said: \"{lastUserMessage}\". " +
+                                  $"In a real implementation, this would be a streaming response from an actual LLM API.";
+
+                // Split the response into chunks to simulate streaming
+                var chunks = SplitIntoChunks(fullResponse, 10);
+
+                foreach (var chunk in chunks)
+                {
+                    // Simulate network delay
+                    await Task.Delay(100, cancellationToken);
+
+                    // Call the callback with the chunk
+                    onPartialResponse?.Invoke(chunk);
+                }
+
+                var llmResponse = new LlmResponse(fullResponse, ProviderName, _currentModel.Name)
+                {
+                    Usage = new LlmUsage
+                    {
+                        PromptTokens = 100,
+                        CompletionTokens = 50,
+                        TotalTokens = 150
+                    }
+                };
+
+                _logger.LogInformation("Sent streaming message to {ProviderName} using {ModelName}", ProviderName, _currentModel.Name);
+                return llmResponse;
             }
             catch (Exception ex)
             {
@@ -238,14 +267,124 @@ namespace Adept.Services.Llm
         {
             try
             {
-                // This provider doesn't support tool calls, so we'll just call the non-tool method
-                _logger.LogWarning("Tool calls not supported by {ProviderName}, falling back to non-tool", ProviderName);
-                return await SendMessagesAsync(messages, systemPrompt, cancellationToken);
+                if (!_currentModel.SupportsToolCalls)
+                {
+                    _logger.LogWarning("Tool calls not supported by model {ModelName}, falling back to non-tool", _currentModel.Name);
+                    return await SendMessagesAsync(messages, systemPrompt, cancellationToken);
+                }
+
+                // In a real implementation, this would call an API with tool definitions
+                // For now, we'll simulate a response with a tool call
+                var lastUserMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "No user message";
+
+                var response = $"I'll help you with that. Let me check the weather for you.";
+
+                // Create a simulated tool call
+                var toolCalls = new List<LlmToolCall>
+                {
+                    new LlmToolCall
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        ToolName = "get_current_weather",
+                        Arguments = "{\"location\": \"New York\", \"unit\": \"celsius\"}"
+                    }
+                };
+
+                var llmResponse = new LlmResponse
+                {
+                    Message = new LlmMessage
+                    {
+                        Role = LlmRole.Assistant,
+                        Content = response
+                    },
+                    ToolCalls = toolCalls,
+                    ProviderName = ProviderName,
+                    ModelName = _currentModel.Name,
+                    Usage = new LlmUsage
+                    {
+                        PromptTokens = 100,
+                        CompletionTokens = 50,
+                        TotalTokens = 150
+                    }
+                };
+
+                _logger.LogInformation("Sent message with tools to {ProviderName} using {ModelName}", ProviderName, _currentModel.Name);
+                return llmResponse;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending message with tools to {ProviderName}", ProviderName);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Sends a message with an image to the LLM and gets a response
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="imageData">The image data</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response</returns>
+        public Task<LlmResponse> SendMessageWithImageAsync(
+            string message,
+            byte[] imageData,
+            string? systemPrompt = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!_currentModel.SupportsVision)
+                {
+                    _logger.LogWarning("Vision not supported by model {ModelName}", _currentModel.Name);
+                    throw new InvalidOperationException($"Model {_currentModel.Name} does not support vision");
+                }
+
+                // In a real implementation, this would call an API with the image
+                // For now, we'll simulate a response describing the image
+                var response = $"This is a simulated vision response from {ProviderName} using {_currentModel.Name}. " +
+                               $"I can see an image that is {imageData.Length} bytes in size. " +
+                               $"Your message was: \"{message}\". " +
+                               $"In a real implementation, this would be a response from an actual vision model.";
+
+                var llmResponse = new LlmResponse
+                {
+                    Message = new LlmMessage
+                    {
+                        Role = LlmRole.Assistant,
+                        Content = response
+                    },
+                    ProviderName = ProviderName,
+                    ModelName = _currentModel.Name,
+                    Usage = new LlmUsage
+                    {
+                        PromptTokens = 100,
+                        CompletionTokens = 50,
+                        TotalTokens = 150
+                    }
+                };
+
+                _logger.LogInformation("Sent message with image to {ProviderName} using {ModelName}", ProviderName, _currentModel.Name);
+                return Task.FromResult(llmResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending message with image to {ProviderName}", ProviderName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Splits a string into chunks of approximately the specified size
+        /// </summary>
+        /// <param name="text">The text to split</param>
+        /// <param name="chunkSize">The approximate size of each chunk</param>
+        /// <returns>The chunks</returns>
+        private IEnumerable<string> SplitIntoChunks(string text, int chunkSize)
+        {
+            for (int i = 0; i < text.Length; i += chunkSize)
+            {
+                yield return text.Substring(i, Math.Min(chunkSize, text.Length - i));
             }
         }
     }

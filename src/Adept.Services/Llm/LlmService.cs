@@ -341,5 +341,166 @@ namespace Adept.Services.Llm
                 throw;
             }
         }
+
+        /// <summary>
+        /// Sends a message with conversation history to the LLM and gets a streaming response
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="onChunk">Callback for each chunk of the response</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        public async Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            Action<string> onChunk,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!ActiveProvider.SupportsStreaming)
+                {
+                    _logger.LogWarning("Active provider {ProviderName} does not support streaming", ActiveProvider.ProviderName);
+                    return await SendMessagesAsync(messages, systemPrompt, conversationId, cancellationToken);
+                }
+
+                // Get or create the conversation
+                Conversation? conversation = null;
+                if (!string.IsNullOrEmpty(conversationId))
+                {
+                    conversation = await _conversationRepository.GetConversationByIdAsync(conversationId);
+                    if (conversation == null)
+                    {
+                        _logger.LogWarning("Conversation not found: {ConversationId}", conversationId);
+                        conversation = new Conversation();
+                    }
+                }
+                else
+                {
+                    conversation = new Conversation();
+                }
+
+                // Replace the conversation history with the provided messages
+                conversation!.History = messages.ToList();
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Get the system prompt if not provided
+                if (string.IsNullOrEmpty(systemPrompt))
+                {
+                    systemPrompt = await _systemPromptService.GetSystemPromptAsync();
+                }
+
+                // Send the messages to the LLM with streaming
+                var response = await ActiveProvider.SendMessagesStreamingAsync(
+                    messages,
+                    onChunk,
+                    systemPrompt,
+                    cancellationToken);
+
+                // Process any tool calls in the response
+                if (response.ToolCalls.Count > 0)
+                {
+                    response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                }
+                else
+                {
+                    // Check for tool calls in the message text
+                    var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
+                    if (processedContent != response.Message.Content)
+                    {
+                        response.Message.Content = processedContent;
+                    }
+                }
+
+                // Add the assistant response to the conversation
+                conversation.AddAssistantMessage(response.Message.Content);
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Set the conversation ID in the response
+                response.ConversationId = conversationId;
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending streaming messages to LLM");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Sends a message with an image to the LLM and gets a response
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="imageData">The image data</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response</returns>
+        public async Task<LlmResponse> SendMessageWithImageAsync(
+            string message,
+            byte[] imageData,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!ActiveProvider.SupportsVision)
+                {
+                    _logger.LogWarning("Active provider {ProviderName} does not support vision", ActiveProvider.ProviderName);
+                    throw new InvalidOperationException($"Provider {ActiveProvider.ProviderName} does not support vision");
+                }
+
+                // Get or create the conversation
+                Conversation? conversation = null;
+                if (!string.IsNullOrEmpty(conversationId))
+                {
+                    conversation = await _conversationRepository.GetConversationByIdAsync(conversationId);
+                    if (conversation == null)
+                    {
+                        _logger.LogWarning("Conversation not found: {ConversationId}", conversationId);
+                        conversation = new Conversation();
+                    }
+                }
+                else
+                {
+                    conversation = new Conversation();
+                }
+
+                // Add the user message to the conversation
+                conversation!.AddUserMessage(message + " [Image attached]");
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Get the system prompt if not provided
+                if (string.IsNullOrEmpty(systemPrompt))
+                {
+                    systemPrompt = await _systemPromptService.GetSystemPromptAsync();
+                }
+
+                // Send the message with image to the LLM
+                var response = await ActiveProvider.SendMessageWithImageAsync(
+                    message,
+                    imageData,
+                    systemPrompt,
+                    cancellationToken);
+
+                // Add the assistant response to the conversation
+                conversation.AddAssistantMessage(response.Message.Content);
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Set the conversation ID in the response
+                response.ConversationId = conversationId;
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending message with image to LLM");
+                throw;
+            }
+        }
     }
 }

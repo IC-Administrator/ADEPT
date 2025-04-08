@@ -3,6 +3,8 @@ using Adept.Core.Interfaces;
 using Adept.Data.Database;
 using Adept.Data.Repositories;
 using Adept.Services.Configuration;
+using Adept.Services.Llm;
+using Adept.Services.Llm.Providers;
 using Adept.Services.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,7 +84,10 @@ namespace Adept.UI
             services.AddSingleton<IVoiceService, VoiceService>();
 
             // Register LLM Services
+            services.AddHttpClient();
             services.AddSingleton<ILlmProvider, SimpleLlmProvider>();
+            services.AddSingleton<ILlmProvider, OpenAiProvider>();
+            services.AddSingleton<ILlmProvider, AnthropicProvider>();
             services.AddSingleton<LlmToolIntegrationService>();
             services.AddSingleton<ILlmService, LlmService>();
 

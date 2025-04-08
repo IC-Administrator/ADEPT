@@ -58,6 +58,38 @@ namespace Adept.Core.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Sends a message with conversation history to the LLM and gets a streaming response
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="onChunk">Callback for each chunk of the response</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response</returns>
+        Task<LlmResponse> SendMessagesStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            Action<string> onChunk,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sends a message with an image to the LLM and gets a response
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="imageData">The image data</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response</returns>
+        Task<LlmResponse> SendMessageWithImageAsync(
+            string message,
+            byte[] imageData,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets the conversation history for a conversation
         /// </summary>
         /// <param name="conversationId">The conversation ID</param>
