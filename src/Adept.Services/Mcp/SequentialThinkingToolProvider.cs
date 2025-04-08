@@ -194,7 +194,7 @@ namespace Adept.Services.Mcp
                 }
 
                 // Create the prompt
-                var prompt = $@"I need you to solve the following problem using step-by-step reasoning. 
+                var prompt = $@"I need you to solve the following problem using step-by-step reasoning.
 Break down your thinking into exactly {numSteps} clear steps, and then provide a final answer.
 
 Problem: {problem}
@@ -210,7 +210,7 @@ Final Answer: [Your final answer]
 Make sure to be thorough and clear in your reasoning.";
 
                 // Send the prompt to the LLM
-                var response = await _llmService.SendMessageAsync(prompt, model: model);
+                var response = await _llmService.SendMessageAsync(prompt);
                 var responseText = response.Message.Content;
 
                 // Parse the response
@@ -383,7 +383,7 @@ Integration Strategy: [How to integrate the solutions to the sub-problems]
 Make sure your decomposition is comprehensive and addresses all aspects of the original problem.";
 
                 // Send the prompt to the LLM
-                var response = await _llmService.SendMessageAsync(prompt, model: model);
+                var response = await _llmService.SendMessageAsync(prompt);
                 var responseText = response.Message.Content;
 
                 // Parse the response
@@ -574,7 +574,7 @@ Make sure your decomposition is comprehensive and addresses all aspects of the o
 
                 // Create the prompt
                 var contextSection = string.IsNullOrWhiteSpace(context) ? "" : $"\nContext/Requirements: {context}";
-                var prompt = $@"I need you to critically evaluate the following solution or approach. 
+                var prompt = $@"I need you to critically evaluate the following solution or approach.
 Identify potential issues, weaknesses, and areas for improvement.{contextSection}
 
 Solution/Approach: {solution}
@@ -607,7 +607,7 @@ Overall Assessment: [Your overall assessment of the solution]
 Be thorough, balanced, and constructive in your critique.";
 
                 // Send the prompt to the LLM
-                var response = await _llmService.SendMessageAsync(prompt, model: model);
+                var response = await _llmService.SendMessageAsync(prompt);
                 var responseText = response.Message.Content;
 
                 // Parse the response
@@ -662,7 +662,7 @@ Be thorough, balanced, and constructive in your critique.";
                     {
                         assessment += " " + line.Trim();
                     }
-                    else if (currentSection == "strengths" || currentSection == "weaknesses" || 
+                    else if (currentSection == "strengths" || currentSection == "weaknesses" ||
                              currentSection == "issues" || currentSection == "improvements")
                     {
                         var trimmedLine = line.Trim();

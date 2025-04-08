@@ -2,11 +2,14 @@ using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Data.Database;
 using Adept.Data.Repositories;
+using Adept.Services.Calendar;
 using Adept.Services.Configuration;
 using Adept.Services.Database;
+using Adept.Services.Extensions;
 using Adept.Services.Llm;
 using Adept.Services.Llm.Providers;
 using Adept.Services.Mcp;
+using Adept.Services.OAuth;
 using Adept.Services.Security;
 using Adept.Services.Voice;
 using Microsoft.Extensions.Configuration;
@@ -115,6 +118,9 @@ namespace Adept.UI
             services.AddSingleton<LlmToolIntegrationService>();
             services.AddSingleton<ILlmService, LlmService>();
 
+            // Register Calendar Services
+            services.AddCalendarServices();
+
             // Register MCP Services
             services.AddSingleton<IMcpServerManager, McpServerManager>();
             services.AddSingleton<IMcpToolProvider, FileSystemToolProvider>();
@@ -135,6 +141,7 @@ namespace Adept.UI
             services.AddSingleton<ViewModels.LessonPlannerViewModel>();
             services.AddSingleton<ViewModels.ConfigurationViewModel>();
             services.AddSingleton<ViewModels.SystemStatusViewModel>();
+            services.AddSingleton<ViewModels.CalendarSettingsViewModel>();
             services.AddSingleton<ViewModels.MainViewModel>();
 
             // Register MainWindow

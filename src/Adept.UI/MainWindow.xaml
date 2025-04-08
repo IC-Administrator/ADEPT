@@ -337,6 +337,7 @@
                         <RadioButton Content="General" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=General, Mode=TwoWay}" Margin="5" />
                         <RadioButton Content="API Keys" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=API Keys, Mode=TwoWay}" Margin="5" />
                         <RadioButton Content="MCP Server" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=MCP Server, Mode=TwoWay}" Margin="5" />
+                        <RadioButton Content="Calendar" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=Calendar, Mode=TwoWay}" Margin="5" />
                         <RadioButton Content="About" IsChecked="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=About, Mode=TwoWay}" Margin="5" />
                     </StackPanel>
 
@@ -431,6 +432,11 @@
                                 <Button Content="Stop Server" Command="{Binding ConfigurationViewModel.StopMcpServerCommand}" Margin="0,0,5,0" Padding="10,5" />
                                 <Button Content="Restart Server" Command="{Binding ConfigurationViewModel.RestartMcpServerCommand}" Padding="10,5" />
                             </StackPanel>
+                        </Grid>
+
+                        <!-- Calendar Settings -->
+                        <Grid Visibility="{Binding ConfigurationViewModel.SelectedTab, ConverterParameter=Calendar, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                            <views:CalendarSettingsView DataContext="{Binding CalendarSettingsViewModel}" />
                         </Grid>
 
                         <!-- About -->

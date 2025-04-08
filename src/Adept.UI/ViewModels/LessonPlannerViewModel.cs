@@ -1,3 +1,4 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Adept.UI.Commands;
@@ -15,6 +16,7 @@ namespace Adept.UI.ViewModels
         private readonly IClassRepository _classRepository;
         private readonly ILessonRepository _lessonRepository;
         private readonly ILlmService _llmService;
+        private readonly ICalendarSyncService _calendarSyncService;
         private readonly ILogger<LessonPlannerViewModel> _logger;
         private bool _isBusy;
         private Class? _selectedClass;
@@ -227,16 +229,19 @@ namespace Adept.UI.ViewModels
         /// <param name="classRepository">The class repository</param>
         /// <param name="lessonRepository">The lesson repository</param>
         /// <param name="llmService">The LLM service</param>
+        /// <param name="calendarSyncService">The calendar sync service</param>
         /// <param name="logger">The logger</param>
         public LessonPlannerViewModel(
             IClassRepository classRepository,
             ILessonRepository lessonRepository,
             ILlmService llmService,
+            ICalendarSyncService calendarSyncService,
             ILogger<LessonPlannerViewModel> logger)
         {
             _classRepository = classRepository;
             _lessonRepository = lessonRepository;
             _llmService = llmService;
+            _calendarSyncService = calendarSyncService;
             _logger = logger;
             _currentDate = DateTime.Today.ToString("yyyy-MM-dd");
 
@@ -422,6 +427,15 @@ namespace Adept.UI.ViewModels
                 var lessonToDelete = SelectedLesson;
 
                 IsBusy = true;
+
+                // Delete the calendar event if it exists
+                if (!string.IsNullOrEmpty(lessonToDelete.CalendarEventId))
+                {
+                    await _calendarSyncService.DeleteCalendarEventAsync(lessonToDelete.LessonId);
+                    _logger.LogInformation("Deleted calendar event for lesson: {LessonTitle}", lessonToDelete.Title);
+                }
+
+                // Delete the lesson
                 await _lessonRepository.DeleteLessonAsync(lessonToDelete.LessonId);
                 Lessons.Remove(lessonToDelete);
                 SelectedLesson = null;
@@ -520,6 +534,13 @@ namespace Adept.UI.ViewModels
                 IsBusy = true;
                 await _lessonRepository.UpdateLessonAsync(SelectedLesson);
 
+                // Update the calendar event if it exists
+                if (!string.IsNullOrEmpty(SelectedLesson.CalendarEventId))
+                {
+                    await _calendarSyncService.SynchronizeLessonPlanAsync(SelectedLesson.Id);
+                    _logger.LogInformation("Updated calendar event for lesson: {LessonTitle}", SelectedLesson.Title);
+                }
+
                 _logger.LogInformation("Saved lesson: {LessonTitle}", SelectedLesson.Title);
             }
             catch (Exception ex)
@@ -615,14 +636,29 @@ namespace Adept.UI.ViewModels
 
             try
             {
-                await Task.Run(() => {
-                    // In a real implementation, this would use the Calendar Tool Provider
-                    _logger.LogInformation("Calendar integration not yet implemented");
-                });
+                IsBusy = true;
+
+                // Synchronize the lesson with the calendar
+                var success = await _calendarSyncService.SynchronizeLessonPlanAsync(SelectedLesson.Id);
+
+                if (success)
+                {
+                    // Refresh the lesson to get the updated calendar event ID
+                    await LoadLessonAsync(SelectedLesson.Id);
+                    _logger.LogInformation("Lesson {LessonId} synchronized with calendar", SelectedLesson.Id);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to synchronize lesson {LessonId} with calendar", SelectedLesson.Id);
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding lesson to calendar");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
     }

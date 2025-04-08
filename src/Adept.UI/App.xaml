@@ -15,6 +15,7 @@
             <converters:StringEqualityToVisibilityConverter x:Key="StringEqualityToVisibilityConverter" />
             <converters:BooleanToStatusConverter x:Key="BooleanToStatusConverter" />
             <converters:BooleanToColorConverter x:Key="BooleanToColorConverter" />
+            <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

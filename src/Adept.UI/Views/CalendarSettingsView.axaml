@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Adept.UI.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Adept.UI.Views.CalendarSettingsView"
+             x:DataType="vm:CalendarSettingsViewModel">
+  <Design.DataContext>
+    <vm:CalendarSettingsViewModel />
+  </Design.DataContext>
+
+  <ScrollViewer>
+    <StackPanel Margin="20" Spacing="10">
+      <TextBlock Text="Google Calendar Settings" FontSize="24" FontWeight="Bold" Margin="0,0,0,10" />
+
+      <TextBlock Text="To use Google Calendar integration, you need to set up OAuth credentials:" />
+      <TextBlock Text="1. Go to the Google Cloud Console (https://console.cloud.google.com)" />
+      <TextBlock Text="2. Create a new project or select an existing one" />
+      <TextBlock Text="3. Enable the Google Calendar API" />
+      <TextBlock Text="4. Create OAuth 2.0 credentials (Web application type)" />
+      <TextBlock Text="5. Add http://localhost:8080 as an authorized redirect URI" />
+      <TextBlock Text="6. Copy the Client ID and Client Secret below" />
+
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,10,0,0">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Client ID:" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ClientId}" Watermark="Enter your Client ID" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Client Secret:" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ClientSecret}" Watermark="Enter your Client Secret" PasswordChar="•" />
+      </Grid>
+
+      <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+        <Button Content="Save Credentials" Command="{Binding SaveCredentialsCommand}" />
+        <Button Content="Authenticate" Command="{Binding AuthenticateCommand}" IsEnabled="{Binding !IsAuthenticating}" />
+        <Button Content="Revoke Authentication" Command="{Binding RevokeAuthenticationCommand}" IsEnabled="{Binding IsAuthenticated}" />
+      </StackPanel>
+
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsAuthenticating}" Margin="0,10,0,0" />
+
+      <Border BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="0,10,0,0">
+        <StackPanel Spacing="5">
+          <TextBlock Text="Status:" FontWeight="Bold" />
+          <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+          <TextBlock Text="Authentication Status:" FontWeight="Bold" Margin="0,10,0,0" />
+          <TextBlock Text="{Binding IsAuthenticated, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Authenticated|Not Authenticated'}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
