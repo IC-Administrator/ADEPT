@@ -133,7 +133,7 @@ namespace Adept.UI.Services
         public NotificationService(ILogger<NotificationService> logger)
         {
             _logger = logger;
-            _dispatcher = Application.Current.Dispatcher;
+            _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         }
 
         /// <summary>
