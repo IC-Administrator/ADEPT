@@ -5,372 +5,408 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:Adept.UI.Views"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="800">
-    <Grid>
+             d:DesignHeight="600" d:DesignWidth="800"
+             AutomationProperties.Name="Configuration View"
+             AutomationProperties.AutomationId="ConfigurationView">
+    <Grid Style="{StaticResource ResponsiveGridContainerStyle}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!-- Tab Selection -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
-            <RadioButton Content="General" IsChecked="{Binding SelectedTab, ConverterParameter=General, Mode=TwoWay}"
-                         Margin="5" GroupName="ConfigTabs" />
-            <RadioButton Content="API Keys" IsChecked="{Binding SelectedTab, ConverterParameter=API Keys, Mode=TwoWay}"
-                         Margin="5" GroupName="ConfigTabs" />
-            <RadioButton Content="Voice" IsChecked="{Binding SelectedTab, ConverterParameter=Voice, Mode=TwoWay}"
-                         Margin="5" GroupName="ConfigTabs" />
-            <RadioButton Content="MCP Server" IsChecked="{Binding SelectedTab, ConverterParameter=MCP Server, Mode=TwoWay}"
-                         Margin="5" GroupName="ConfigTabs" />
-            <RadioButton Content="Database" IsChecked="{Binding SelectedTab, ConverterParameter=Database, Mode=TwoWay}"
-                         Margin="5" GroupName="ConfigTabs" />
-            <RadioButton Content="About" IsChecked="{Binding SelectedTab, ConverterParameter=About, Mode=TwoWay}"
-                         Margin="5" GroupName="ConfigTabs" />
-        </StackPanel>
+        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="10,10,10,5">
+            <StackPanel Orientation="Horizontal" Style="{StaticResource ResponsiveStackPanelContainerStyle}">
+                <RadioButton Content="General" IsChecked="{Binding SelectedTab, ConverterParameter=General, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" 
+                         AutomationProperties.Name="General Tab"
+                         ToolTip="General application settings" />
+                <RadioButton Content="API Keys" IsChecked="{Binding SelectedTab, ConverterParameter=API Keys, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" 
+                         AutomationProperties.Name="API Keys Tab"
+                         ToolTip="Configure API keys for external services" />
+                <RadioButton Content="Voice" IsChecked="{Binding SelectedTab, ConverterParameter=Voice, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" 
+                         AutomationProperties.Name="Voice Tab"
+                         ToolTip="Voice recognition and synthesis settings" />
+                <RadioButton Content="MCP Server" IsChecked="{Binding SelectedTab, ConverterParameter=MCP Server, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" 
+                         AutomationProperties.Name="MCP Server Tab"
+                         ToolTip="MCP Server configuration" />
+                <RadioButton Content="Database" IsChecked="{Binding SelectedTab, ConverterParameter=Database, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" 
+                         AutomationProperties.Name="Database Tab"
+                         ToolTip="Database settings and maintenance" />
+                <RadioButton Content="About" IsChecked="{Binding SelectedTab, ConverterParameter=About, Mode=TwoWay}"
+                         Margin="5" GroupName="ConfigTabs" 
+                         AutomationProperties.Name="About Tab"
+                         ToolTip="About ADEPT AI Teaching Assistant" />
+            </StackPanel>
+        </Border>
 
         <!-- Content -->
-        <Grid Grid.Row="1" Margin="10">
-            <!-- General Settings -->
-            <Grid Visibility="{Binding SelectedTab, ConverterParameter=General, Converter={StaticResource StringEqualityToVisibilityConverter}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="10,5,10,10">
+            <Grid>
+                <!-- General Settings -->
+                <Grid Visibility="{Binding SelectedTab, ConverterParameter=General, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Application Name:" VerticalAlignment="Center" Margin="0,5" />
-                <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AppName}" Margin="0,5"
-                         Style="{StaticResource StandardTextBoxStyle}" />
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Application Name:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AppName}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Application Name"
+                             AutomationProperties.HelpText="Enter the application name" />
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Application Version:" VerticalAlignment="Center" Margin="0,5" />
-                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AppVersion}" Margin="0,5"
-                         Style="{StaticResource StandardTextBoxStyle}" IsReadOnly="True" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Theme:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Themes}" 
+                              SelectedItem="{Binding SelectedTheme}" Margin="0,5"
+                              Style="{StaticResource ComboBoxStyle}"
+                              AutomationProperties.Name="Theme Selection" />
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Data Directory:" VerticalAlignment="Center" Margin="0,5" />
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DataDirectory}" Margin="0,5"
-                         Style="{StaticResource StandardTextBoxStyle}" />
-                <Button Grid.Row="2" Grid.Column="2" Content="Browse..." Command="{Binding BrowseDataDirectoryCommand}"
-                        Margin="5,5,0,5" Style="{StaticResource SecondaryButtonStyle}" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Language:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Languages}" 
+                              SelectedItem="{Binding SelectedLanguage}" Margin="0,5"
+                              Style="{StaticResource ComboBoxStyle}"
+                              AutomationProperties.Name="Language Selection" />
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="LLM Provider:" VerticalAlignment="Center" Margin="0,5" />
-                <ComboBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding LlmProviders}"
-                          SelectedItem="{Binding SelectedLlmProvider}" Margin="0,5"
-                          Style="{StaticResource StandardComboBoxStyle}" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Auto-Start:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding AutoStart}" Margin="0,5"
+                              Content="Start application automatically on system startup"
+                              AutomationProperties.Name="Auto-Start Checkbox" />
 
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="LLM Model:" VerticalAlignment="Center" Margin="0,5" />
-                <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding AvailableModels}"
-                          SelectedItem="{Binding SelectedLlmModel}" Margin="0,5"
-                          Style="{StaticResource StandardComboBoxStyle}" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Data Directory:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding DataDirectory}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Data Directory" />
+                    <Button Grid.Row="4" Grid.Column="2" Content="Browse..." Margin="5,5,0,5"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding BrowseDataDirectoryCommand}"
+                            AutomationProperties.Name="Browse Data Directory Button" />
 
-                <Button Grid.Row="5" Grid.Column="1" Content="Save Settings" Command="{Binding SaveGeneralSettingsCommand}"
-                        HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5"
-                        Style="{StaticResource PrimaryButtonStyle}" />
-            </Grid>
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Log Level:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <ComboBox Grid.Row="5" Grid.Column="1" ItemsSource="{Binding LogLevels}" 
+                              SelectedItem="{Binding SelectedLogLevel}" Margin="0,5"
+                              Style="{StaticResource ComboBoxStyle}"
+                              AutomationProperties.Name="Log Level Selection" />
+                </Grid>
 
-            <!-- API Keys -->
-            <Grid Visibility="{Binding SelectedTab, ConverterParameter=API Keys, Converter={StaticResource StringEqualityToVisibilityConverter}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+                <!-- API Keys Settings -->
+                <Grid Visibility="{Binding SelectedTab, ConverterParameter=API Keys, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="OpenAI API Key:" VerticalAlignment="Center" Margin="0,5" />
-                <PasswordBox Grid.Row="0" Grid.Column="1" Margin="0,5" x:Name="OpenAiApiKeyBox" />
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="OpenAI API Key:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OpenAiApiKey}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="OpenAI API Key" />
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Anthropic API Key:" VerticalAlignment="Center" Margin="0,5" />
-                <PasswordBox Grid.Row="1" Grid.Column="1" Margin="0,5" x:Name="AnthropicApiKeyBox" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Anthropic API Key:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AnthropicApiKey}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Anthropic API Key" />
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Google API Key:" VerticalAlignment="Center" Margin="0,5" />
-                <PasswordBox Grid.Row="2" Grid.Column="1" Margin="0,5" x:Name="GoogleApiKeyBox" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Google API Key:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding GoogleApiKey}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Google API Key" />
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Meta API Key:" VerticalAlignment="Center" Margin="0,5" />
-                <PasswordBox Grid.Row="3" Grid.Column="1" Margin="0,5" x:Name="MetaApiKeyBox" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Meta API Key:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding MetaApiKey}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Meta API Key" />
 
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="OpenRouter API Key:" VerticalAlignment="Center" Margin="0,5" />
-                <PasswordBox Grid.Row="4" Grid.Column="1" Margin="0,5" x:Name="OpenRouterApiKeyBox" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="OpenRouter API Key:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding OpenRouterApiKey}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="OpenRouter API Key" />
 
-                <TextBlock Grid.Row="5" Grid.Column="0" Text="DeepSeek API Key:" VerticalAlignment="Center" Margin="0,5" />
-                <PasswordBox Grid.Row="5" Grid.Column="1" Margin="0,5" x:Name="DeepSeekApiKeyBox" />
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="DeepSeek API Key:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding DeepSeekApiKey}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="DeepSeek API Key" />
+                </Grid>
 
-                <Button Grid.Row="6" Grid.Column="1" Content="Save API Keys" Command="{Binding SaveApiKeysCommand}"
-                        HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5"
-                        Style="{StaticResource PrimaryButtonStyle}" />
-            </Grid>
+                <!-- Voice Settings -->
+                <Grid Visibility="{Binding SelectedTab, ConverterParameter=Voice, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-            <!-- Voice Settings -->
-            <Grid Visibility="{Binding SelectedTab, ConverterParameter=Voice, Converter={StaticResource StringEqualityToVisibilityConverter}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Speech Recognition:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding SpeechRecognitionProviders}" 
+                              SelectedItem="{Binding SelectedSpeechRecognitionProvider}" Margin="0,5"
+                              Style="{StaticResource ComboBoxStyle}"
+                              AutomationProperties.Name="Speech Recognition Provider Selection" />
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Wake Word Provider:" VerticalAlignment="Center" Margin="0,5" />
-                <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding WakeWordProviders}"
-                          SelectedItem="{Binding SelectedWakeWordProvider}" Margin="0,5"
-                          Style="{StaticResource StandardComboBoxStyle}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Text-to-Speech:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TextToSpeechProviders}" 
+                              SelectedItem="{Binding SelectedTextToSpeechProvider}" Margin="0,5"
+                              Style="{StaticResource ComboBoxStyle}"
+                              AutomationProperties.Name="Text-to-Speech Provider Selection" />
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="STT Provider:" VerticalAlignment="Center" Margin="0,5" />
-                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding SttProviders}"
-                          SelectedItem="{Binding SelectedSttProvider}" Margin="0,5"
-                          Style="{StaticResource StandardComboBoxStyle}" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Voice:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Voices}" 
+                              SelectedItem="{Binding SelectedVoice}" Margin="0,5"
+                              Style="{StaticResource ComboBoxStyle}"
+                              AutomationProperties.Name="Voice Selection" />
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="TTS Provider:" VerticalAlignment="Center" Margin="0,5" />
-                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding TtsProviders}"
-                          SelectedItem="{Binding SelectedTtsProvider}" Margin="0,5"
-                          Style="{StaticResource StandardComboBoxStyle}" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Wake Word:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding WakeWord}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Wake Word" />
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="TTS Voice:" VerticalAlignment="Center" Margin="0,5" />
-                <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding TtsVoices}"
-                          SelectedItem="{Binding SelectedTtsVoice}" Margin="0,5"
-                          Style="{StaticResource StandardComboBoxStyle}" />
-
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="Speech Speed:" VerticalAlignment="Center" Margin="0,5" />
-                <Slider Grid.Row="4" Grid.Column="1" Minimum="0.5" Maximum="2.0" Value="{Binding TtsSpeed}"
-                        TickFrequency="0.1" TickPlacement="BottomRight" IsSnapToTickEnabled="True"
-                        Margin="0,5" />
-
-                <TextBlock Grid.Row="5" Grid.Column="0" Text="Speech Volume:" VerticalAlignment="Center" Margin="0,5" />
-                <Slider Grid.Row="5" Grid.Column="1" Minimum="-20" Maximum="20" Value="{Binding TtsVolume}"
-                        TickFrequency="1" TickPlacement="BottomRight" IsSnapToTickEnabled="True"
-                        Margin="0,5" />
-
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="Speech Clarity:" VerticalAlignment="Center" Margin="0,5" />
-                <Slider Grid.Row="6" Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding TtsClarity}"
-                        TickFrequency="0.1" TickPlacement="BottomRight" IsSnapToTickEnabled="True"
-                        Margin="0,5" />
-
-                <TextBlock Grid.Row="7" Grid.Column="0" Text="Speech Emotion:" VerticalAlignment="Center" Margin="0,5" />
-                <Slider Grid.Row="7" Grid.Column="1" Minimum="-1" Maximum="1" Value="{Binding TtsEmotion}"
-                        TickFrequency="0.1" TickPlacement="BottomRight" IsSnapToTickEnabled="True"
-                        Margin="0,5" />
-
-                <TextBlock Grid.Row="8" Grid.Column="0" Text="Use Disk Cache:" VerticalAlignment="Center" Margin="0,5" />
-                <CheckBox Grid.Row="8" Grid.Column="1" IsChecked="{Binding UseDiskCache}" Margin="0,5" />
-
-                <TextBlock Grid.Row="9" Grid.Column="0" Text="Max Cache Items:" VerticalAlignment="Center" Margin="0,5" />
-                <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding MaxCacheItems}" Margin="0,5" />
-
-                <Button Grid.Row="10" Grid.Column="1" Content="Save Voice Settings" Command="{Binding SaveVoiceSettingsCommand}"
-                        HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,5"
-                        Style="{StaticResource PrimaryButtonStyle}" />
-            </Grid>
-
-            <!-- MCP Server -->
-            <Grid Visibility="{Binding SelectedTab, ConverterParameter=MCP Server, Converter={StaticResource StringEqualityToVisibilityConverter}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Server Status:" VerticalAlignment="Center" Margin="0,5" />
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding McpServerRunning, Converter={StaticResource BooleanToStatusConverter}}"
-                           Foreground="{Binding McpServerRunning, Converter={StaticResource BooleanToColorConverter}}"
-                           FontWeight="Bold" VerticalAlignment="Center" Margin="0,5" />
-
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Server URL:" VerticalAlignment="Center" Margin="0,5" />
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding McpServerUrl}" IsReadOnly="True" Margin="0,5"
-                         Style="{StaticResource StandardTextBoxStyle}" />
-
-                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,10,0,0">
-                    <Button Content="Start Server" Command="{Binding StartMcpServerCommand}" Margin="0,0,5,0" Padding="10,5"
-                            Style="{StaticResource PrimaryButtonStyle}" />
-                    <Button Content="Stop Server" Command="{Binding StopMcpServerCommand}" Margin="0,0,5,0" Padding="10,5"
-                            Style="{StaticResource SecondaryButtonStyle}" />
-                    <Button Content="Restart Server" Command="{Binding RestartMcpServerCommand}" Padding="10,5"
-                            Style="{StaticResource SecondaryButtonStyle}" />
-                </StackPanel>
-            </Grid>
-
-            <!-- Database Management -->
-            <Grid Visibility="{Binding SelectedTab, ConverterParameter=Database, Converter={StaticResource StringEqualityToVisibilityConverter}}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <!-- Backup Section -->
-                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardStyle}" Margin="5">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Text="Create Database Backup" Style="{StaticResource SubheaderTextStyle}" Margin="0,0,0,10" />
-
-                        <Grid Grid.Row="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0" Text="Backup Name:" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <TextBox Grid.Column="1" Text="{Binding BackupName}" Margin="0,0,10,0"
-                                     Style="{StaticResource StandardTextBoxStyle}" />
-                            <Button Grid.Column="2" Content="Create Backup" Command="{Binding CreateBackupCommand}"
-                                    IsEnabled="{Binding IsBackupInProgress, Converter={StaticResource InverseBooleanConverter}}"
-                                    Style="{StaticResource PrimaryButtonStyle}" />
-                        </Grid>
-
-                        <TextBlock Grid.Row="2" Text="Optional: Provide a name for the backup or leave blank for timestamp-based naming"
-                                   Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" TextWrapping="Wrap" />
-                    </Grid>
-                </Border>
-
-                <!-- Maintenance Section -->
-                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="5">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Text="Database Maintenance" Style="{StaticResource SubheaderTextStyle}" Margin="0,0,0,10" />
-
-                        <StackPanel Grid.Row="1" Orientation="Horizontal">
-                            <Button Content="Verify Integrity" Command="{Binding VerifyDatabaseCommand}"
-                                    IsEnabled="{Binding IsMaintenanceInProgress, Converter={StaticResource InverseBooleanConverter}}"
-                                    Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,0" />
-                            <Button Content="Perform Maintenance" Command="{Binding PerformMaintenanceCommand}"
-                                    IsEnabled="{Binding IsMaintenanceInProgress, Converter={StaticResource InverseBooleanConverter}}"
-                                    Style="{StaticResource SecondaryButtonStyle}" />
-                        </StackPanel>
-
-                        <TextBlock Grid.Row="2" Text="Database Status:" Style="{StaticResource BodyTextStyle}" Margin="0,10,0,0" />
-                        <TextBlock Grid.Row="2" Text="{Binding DatabaseStatus}" Style="{StaticResource BodyTextStyle}"
-                                   Margin="120,10,0,0" TextWrapping="Wrap" />
-                    </Grid>
-                </Border>
-
-                <!-- Backup List -->
-                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource CardStyle}" Margin="5">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0" Text="Available Backups" Style="{StaticResource SubheaderTextStyle}" />
-                            <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshBackupsCommand}"
-                                    Style="{StaticResource SecondaryButtonStyle}" />
-                        </Grid>
-
-                        <ListView Grid.Row="1" ItemsSource="{Binding AvailableBackups}" Margin="0,10,0,0"
-                                  SelectedValue="{Binding SelectedBackupPath}" SelectedValuePath="FilePath">
-                            <ListView.View>
-                                <GridView>
-                                    <GridViewColumn Header="Backup Name" Width="200">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding FileName}" />
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-                                    <GridViewColumn Header="Created" Width="150">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm:ss}" />
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-                                    <GridViewColumn Header="Size" Width="100">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding FormattedSize}" />
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-                                </GridView>
-                            </ListView.View>
-                        </ListView>
-
-                        <Button Grid.Row="2" Content="Restore Selected Backup" Command="{Binding RestoreBackupCommand}"
-                                CommandParameter="{Binding SelectedBackupPath}" HorizontalAlignment="Right" Margin="0,10,0,0"
-                                IsEnabled="{Binding IsRestoreInProgress, Converter={StaticResource InverseBooleanConverter}}"
-                                Style="{StaticResource PrimaryButtonStyle}" />
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- About -->
-            <Grid Visibility="{Binding SelectedTab, ConverterParameter=About, Converter={StaticResource StringEqualityToVisibilityConverter}}">
-                <Border Style="{StaticResource CardStyle}" Margin="20">
-                    <StackPanel>
-                        <TextBlock Text="ADEPT AI Teaching Assistant" Style="{StaticResource HeaderTextStyle}" />
-                        <TextBlock Text="Version 1.0.0" Margin="0,0,0,20" />
-                        <TextBlock Text="ADEPT (AI-Driven Education Planning Tool) is an AI teaching assistant designed to help science teachers with lesson planning, resource creation, and classroom instruction."
-                                   TextWrapping="Wrap" Margin="0,0,0,10" Style="{StaticResource BodyTextStyle}" />
-                        <TextBlock Text="Features:" FontWeight="SemiBold" Margin="0,10,0,5" />
-                        <StackPanel Margin="10,0,0,0">
-                            <TextBlock Text="• AI-powered lesson planning and resource generation" Style="{StaticResource BodyTextStyle}" />
-                            <TextBlock Text="• Class and student management" Style="{StaticResource BodyTextStyle}" />
-                            <TextBlock Text="• Voice interaction with wake word detection" Style="{StaticResource BodyTextStyle}" />
-                            <TextBlock Text="• Integration with multiple LLM providers" Style="{StaticResource BodyTextStyle}" />
-                            <TextBlock Text="• Excel import/export for class data" Style="{StaticResource BodyTextStyle}" />
-                        </StackPanel>
-                        <TextBlock Text="© 2024 Augment Code. All rights reserved." Margin="0,20,0,0" Style="{StaticResource CaptionTextStyle}" />
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Voice Settings:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Vertical" Margin="0,5">
+                        <CheckBox Content="Enable Voice Input" IsChecked="{Binding EnableVoiceInput}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Voice Input Checkbox" />
+                        <CheckBox Content="Enable Voice Output" IsChecked="{Binding EnableVoiceOutput}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Voice Output Checkbox" />
+                        <CheckBox Content="Enable Wake Word Detection" IsChecked="{Binding EnableWakeWordDetection}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Wake Word Detection Checkbox" />
                     </StackPanel>
-                </Border>
+                </Grid>
+
+                <!-- MCP Server Settings -->
+                <Grid Visibility="{Binding SelectedTab, ConverterParameter=MCP Server, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="MCP Server URL:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding McpServerUrl}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="MCP Server URL" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="MCP Server Status:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding McpServerStatus}" Margin="0,5"
+                               Style="{StaticResource HighlightTextStyle}"
+                               AutomationProperties.Name="MCP Server Status" />
+                    <Button Grid.Row="1" Grid.Column="2" Content="Check" Margin="5,5,0,5"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding CheckMcpServerStatusCommand}"
+                            AutomationProperties.Name="Check MCP Server Status Button" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Enabled Tools:" VerticalAlignment="Top" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Vertical" Margin="0,5">
+                        <CheckBox Content="File System" IsChecked="{Binding EnableFileSystemTool}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable File System Tool Checkbox" />
+                        <CheckBox Content="Google Calendar" IsChecked="{Binding EnableGoogleCalendarTool}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Google Calendar Tool Checkbox" />
+                        <CheckBox Content="Brave Search" IsChecked="{Binding EnableBraveSearchTool}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Brave Search Tool Checkbox" />
+                        <CheckBox Content="Excel" IsChecked="{Binding EnableExcelTool}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Excel Tool Checkbox" />
+                        <CheckBox Content="Fetch" IsChecked="{Binding EnableFetchTool}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Fetch Tool Checkbox" />
+                        <CheckBox Content="Sequential Thinking" IsChecked="{Binding EnableSequentialThinkingTool}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Sequential Thinking Tool Checkbox" />
+                        <CheckBox Content="Puppeteer" IsChecked="{Binding EnablePuppeteerTool}" Margin="0,0,0,5"
+                                  AutomationProperties.Name="Enable Puppeteer Tool Checkbox" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="MCP Server Path:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding McpServerPath}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="MCP Server Path" />
+                    <Button Grid.Row="3" Grid.Column="2" Content="Browse..." Margin="5,5,0,5"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding BrowseMcpServerPathCommand}"
+                            AutomationProperties.Name="Browse MCP Server Path Button" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="MCP Server Control:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5">
+                        <Button Content="Start Server" Margin="0,0,5,0"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding StartMcpServerCommand}"
+                                AutomationProperties.Name="Start MCP Server Button" />
+                        <Button Content="Stop Server" Margin="0,0,5,0"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding StopMcpServerCommand}"
+                                AutomationProperties.Name="Stop MCP Server Button" />
+                        <Button Content="Restart Server"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding RestartMcpServerCommand}"
+                                AutomationProperties.Name="Restart MCP Server Button" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Database Settings -->
+                <Grid Visibility="{Binding SelectedTab, ConverterParameter=Database, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Database Type:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <ComboBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding DatabaseTypes}" 
+                              SelectedItem="{Binding SelectedDatabaseType}" Margin="0,5"
+                              Style="{StaticResource ComboBoxStyle}"
+                              AutomationProperties.Name="Database Type Selection" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Connection String:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ConnectionString}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Connection String" />
+                    <Button Grid.Row="1" Grid.Column="2" Content="Test" Margin="5,5,0,5"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding TestConnectionCommand}"
+                            AutomationProperties.Name="Test Connection Button" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Database Status:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding DatabaseStatus}" Margin="0,5"
+                               Style="{StaticResource HighlightTextStyle}"
+                               AutomationProperties.Name="Database Status" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Database Maintenance:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5">
+                        <Button Content="Backup" Margin="0,0,5,0"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding BackupDatabaseCommand}"
+                                AutomationProperties.Name="Backup Database Button" />
+                        <Button Content="Restore" Margin="0,0,5,0"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding RestoreDatabaseCommand}"
+                                AutomationProperties.Name="Restore Database Button" />
+                        <Button Content="Migrate"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding MigrateDatabaseCommand}"
+                                AutomationProperties.Name="Migrate Database Button" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Database Path:" VerticalAlignment="Center" Margin="0,5" 
+                               Style="{StaticResource BodyTextStyle}" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding DatabasePath}" Margin="0,5"
+                             Style="{StaticResource TextBoxStyle}"
+                             AutomationProperties.Name="Database Path" />
+                    <Button Grid.Row="4" Grid.Column="2" Content="Browse..." Margin="5,5,0,5"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding BrowseDatabasePathCommand}"
+                            AutomationProperties.Name="Browse Database Path Button" />
+                </Grid>
+
+                <!-- About -->
+                <Grid Visibility="{Binding SelectedTab, ConverterParameter=About, Converter={StaticResource StringEqualityToVisibilityConverter}}">
+                    <Border Style="{StaticResource CardStyle}" Margin="10">
+                        <StackPanel>
+                            <TextBlock Text="ADEPT AI Teaching Assistant" Style="{StaticResource HeaderTextStyle}" />
+                            <TextBlock Text="Version 1.0.0" Style="{StaticResource SubHeaderTextStyle}" Margin="0,5,0,15" />
+                            
+                            <TextBlock Style="{StaticResource BodyTextStyle}" Margin="0,0,0,10">
+                                ADEPT (AI-Driven Education and Planning Tool) is a comprehensive teaching assistant designed to help educators create, manage, and deliver effective lessons.
+                            </TextBlock>
+                            
+                            <TextBlock Style="{StaticResource BodyTextStyle}" Margin="0,0,0,10">
+                                Features:
+                            </TextBlock>
+                            
+                            <StackPanel Margin="20,0,0,15">
+                                <TextBlock Text="• AI-powered lesson planning and generation" Style="{StaticResource BodyTextStyle}" Margin="0,0,0,5" />
+                                <TextBlock Text="• Class and student management" Style="{StaticResource BodyTextStyle}" Margin="0,0,0,5" />
+                                <TextBlock Text="• Calendar integration" Style="{StaticResource BodyTextStyle}" Margin="0,0,0,5" />
+                                <TextBlock Text="• Voice recognition and synthesis" Style="{StaticResource BodyTextStyle}" Margin="0,0,0,5" />
+                                <TextBlock Text="• External tool integration via MCP Server" Style="{StaticResource BodyTextStyle}" Margin="0,0,0,5" />
+                            </StackPanel>
+                            
+                            <TextBlock Text="© 2024 Augment Code. All rights reserved." Margin="0,20,0,0" Style="{StaticResource CaptionTextStyle}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Grid>
-        </Grid>
+        </Border>
 
         <!-- Busy Indicator -->
         <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
-                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                AutomationProperties.Name="Processing Indicator">
+            <Border.Triggers>
+                <EventTrigger RoutedEvent="Border.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                            From="0" To="1"
+                                            Duration="{StaticResource StandardAnimationDuration}" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Border.Triggers>
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+                <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center"
+                           Style="{StaticResource HighlightTextStyle}" />
                 <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0"
-                             Style="{StaticResource StandardProgressBarStyle}" />
+                             Style="{StaticResource ProgressBarStyle}" />
             </StackPanel>
         </Border>
     </Grid>

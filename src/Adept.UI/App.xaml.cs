@@ -13,6 +13,8 @@ using Adept.Services.Mcp;
 using Adept.Services.OAuth;
 using Adept.Services.Security;
 using Adept.Services.Voice;
+using Adept.UI.Controls;
+using Adept.UI.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -143,6 +145,10 @@ namespace Adept.UI
             // Register Database Initialization
             services.AddSingleton<DatabaseBackupInitializer>();
 
+            // Register UI Services
+            services.AddSingleton<INotificationService, NotificationService>();
+            services.AddSingleton<NotificationControl>();
+
             // Register ViewModels
             services.AddSingleton<ViewModels.HomeViewModel>();
             services.AddSingleton<ViewModels.ChatViewModel>();
@@ -151,6 +157,7 @@ namespace Adept.UI
             services.AddSingleton<ViewModels.ConfigurationViewModel>();
             services.AddSingleton<ViewModels.SystemStatusViewModel>();
             services.AddSingleton<ViewModels.CalendarSettingsViewModel>();
+            services.AddSingleton<ViewModels.NotificationsViewModel>();
             services.AddSingleton<ViewModels.MainViewModel>();
 
             // Register MainWindow

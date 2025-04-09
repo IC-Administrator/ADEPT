@@ -6,13 +6,17 @@
         xmlns:local="clr-namespace:Adept.UI"
         xmlns:views="clr-namespace:Adept.UI.Views"
         xmlns:viewmodels="clr-namespace:Adept.UI.ViewModels"
+        xmlns:controls="clr-namespace:Adept.UI.Controls"
         mc:Ignorable="d"
         Title="Adept AI Teaching Assistant"
         MinHeight="600" MinWidth="800"
         Height="720" Width="1024"
         Loaded="Window_Loaded"
-        Closing="Window_Closing">
-    <Grid>
+        Closing="Window_Closing"
+        AutomationProperties.Name="Adept AI Teaching Assistant"
+        AutomationProperties.AutomationId="MainWindow"
+        Style="{StaticResource WindowEnterTransitionStyle}">
+    <Grid Style="{StaticResource ResponsiveGridContainerStyle}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -21,10 +25,12 @@
 
         <!-- Main Tab Control -->
         <TabControl Grid.Row="1"
-                    SelectedIndex="{Binding SelectedTabIndex}">
+                    SelectedIndex="{Binding SelectedTabIndex}"
+                    Style="{StaticResource AnimatedTabControlStyle}"
+                    AutomationProperties.Name="Main Navigation">
             <!-- Bind to MainViewModel for all tabs except Home -->
 
-            <TabItem Header="Home" x:Name="HomeTab">
+            <TabItem Header="Home" x:Name="HomeTab" Style="{StaticResource MainTabItemStyle}" AutomationProperties.Name="Home Tab">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
@@ -37,7 +43,8 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Margin="5" Padding="10" CornerRadius="5"
-                                            Background="{Binding Role, Converter={StaticResource RoleToBackgroundConverter}}">
+                                            Background="{Binding Role, Converter={StaticResource RoleToBackgroundConverter}}"
+                                            Style="{StaticResource AnimatedCardStyle}">
                                         <StackPanel>
                                             <TextBlock Text="{Binding Role}" FontWeight="Bold" />
                                             <TextBlock Text="{Binding Content}" TextWrapping="Wrap" />
@@ -59,50 +66,87 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBox Grid.Column="0" Text="{Binding HomeViewModel.UserInput, UpdateSourceTrigger=PropertyChanged}"
-                                 Padding="5" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" MaxHeight="100"
-                                 VerticalScrollBarVisibility="Auto" />
+                                 Style="{StaticResource TextBoxStyle}"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" MaxHeight="100"
+                                 VerticalScrollBarVisibility="Auto"
+                                 AutomationProperties.Name="Message Input"
+                                 AutomationProperties.HelpText="Type your message here" />
 
-                        <Button Grid.Column="1" Content="Send" Margin="5,0,0,0" Padding="10,5" MinWidth="80"
-                                Command="{Binding HomeViewModel.SendMessageCommand}" />
+                        <Button Grid.Column="1" Content="Send" Margin="5,0,0,0" MinWidth="80"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding HomeViewModel.SendMessageCommand}"
+                                AutomationProperties.Name="Send Message Button" />
 
-                        <Button Grid.Column="2" Content="Clear" Margin="5,0,0,0" Padding="10,5" MinWidth="80"
-                                Command="{Binding HomeViewModel.ClearConversationCommand}" />
+                        <Button Grid.Column="2" Content="Clear" Margin="5,0,0,0" MinWidth="80"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding HomeViewModel.ClearConversationCommand}"
+                                AutomationProperties.Name="Clear Conversation Button" />
                     </Grid>
 
                     <!-- Busy Indicator -->
-                    <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000" Visibility="{Binding HomeViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
+                            Visibility="{Binding HomeViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            AutomationProperties.Name="Processing Indicator">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="Border.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                        From="0" To="1"
+                                                        Duration="{StaticResource StandardAnimationDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="Processing..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
-                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                            <TextBlock Text="Processing..." Foreground="White" FontSize="16" HorizontalAlignment="Center"
+                                       Style="{StaticResource HighlightTextStyle}" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0"
+                                         Style="{StaticResource ProgressBarStyle}" />
                         </StackPanel>
                     </Border>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Chat" x:Name="ChatTab">
+            <TabItem Header="Chat" x:Name="ChatTab" Style="{StaticResource MainTabItemStyle}" AutomationProperties.Name="Chat Tab">
                 <views:ChatView DataContext="{Binding ChatViewModel}" />
             </TabItem>
 
-            <TabItem Header="Classes" x:Name="ClassesTab">
-                <Grid>
+            <TabItem Header="Classes" x:Name="ClassesTab" Style="{StaticResource MainTabItemStyle}" AutomationProperties.Name="Classes Tab">
+                <Grid Style="{StaticResource PageTransitionStyle}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <!-- Toolbar -->
-                    <ToolBar Grid.Row="0">
-                        <Button Content="Add Class" Command="{Binding ClassViewModel.AddClassCommand}" Margin="2" />
-                        <Button Content="Edit Class" Command="{Binding ClassViewModel.EditClassCommand}" Margin="2" />
-                        <Button Content="Delete Class" Command="{Binding ClassViewModel.DeleteClassCommand}" Margin="2" />
+                    <ToolBar Grid.Row="0" Style="{StaticResource ToolBarStyle}">
+                        <Button Content="Add Class" Command="{Binding ClassViewModel.AddClassCommand}" Margin="2"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                AutomationProperties.Name="Add Class Button" />
+                        <Button Content="Edit Class" Command="{Binding ClassViewModel.EditClassCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Edit Class Button" />
+                        <Button Content="Delete Class" Command="{Binding ClassViewModel.DeleteClassCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Delete Class Button" />
                         <Separator />
-                        <Button Content="Refresh" Command="{Binding ClassViewModel.RefreshCommand}" Margin="2" />
+                        <Button Content="Refresh" Command="{Binding ClassViewModel.RefreshCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Refresh Classes Button" />
                         <Separator />
-                        <Button Content="Import" Command="{Binding ClassViewModel.ImportCommand}" Margin="2" />
-                        <Button Content="Export" Command="{Binding ClassViewModel.ExportCommand}" Margin="2" />
+                        <Button Content="Import" Command="{Binding ClassViewModel.ImportCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Import Classes Button" />
+                        <Button Content="Export" Command="{Binding ClassViewModel.ExportCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Export Classes Button" />
                         <Separator />
-                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="5,0" />
-                        <TextBox Text="{Binding ClassViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" Width="150" Margin="2" />
+                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="5,0"
+                                   Style="{StaticResource BodyTextStyle}" />
+                        <TextBox Text="{Binding ClassViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" Width="150" Margin="2"
+                                 Style="{StaticResource TextBoxStyle}"
+                                 AutomationProperties.Name="Search Classes TextBox" />
                     </ToolBar>
 
                     <!-- Content -->
@@ -120,10 +164,12 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Classes" FontWeight="Bold" Margin="5" />
+                            <TextBlock Grid.Row="0" Text="Classes" Margin="5" Style="{StaticResource SubHeaderTextStyle}" />
 
                             <ListView Grid.Row="1" ItemsSource="{Binding ClassViewModel.Classes}"
-                                      SelectedItem="{Binding ClassViewModel.SelectedClass}" Margin="5">
+                                      SelectedItem="{Binding ClassViewModel.SelectedClass}" Margin="5"
+                                      Style="{StaticResource ListViewStyle}"
+                                      AutomationProperties.Name="Classes List">
                                 <ListView.View>
                                     <GridView>
                                         <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150" />
@@ -146,16 +192,24 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Students" FontWeight="Bold" Margin="5" />
+                            <TextBlock Grid.Row="0" Text="Students" Margin="5" Style="{StaticResource SubHeaderTextStyle}" />
 
                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
-                                <Button Content="Add Student" Command="{Binding ClassViewModel.AddStudentCommand}" Margin="0,0,5,0" />
-                                <Button Content="Edit Student" Command="{Binding ClassViewModel.EditStudentCommand}" Margin="0,0,5,0" />
-                                <Button Content="Delete Student" Command="{Binding ClassViewModel.DeleteStudentCommand}" />
+                                <Button Content="Add Student" Command="{Binding ClassViewModel.AddStudentCommand}" Margin="0,0,5,0"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        AutomationProperties.Name="Add Student Button" />
+                                <Button Content="Edit Student" Command="{Binding ClassViewModel.EditStudentCommand}" Margin="0,0,5,0"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        AutomationProperties.Name="Edit Student Button" />
+                                <Button Content="Delete Student" Command="{Binding ClassViewModel.DeleteStudentCommand}"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        AutomationProperties.Name="Delete Student Button" />
                             </StackPanel>
 
                             <ListView Grid.Row="2" ItemsSource="{Binding ClassViewModel.Students}"
-                                      SelectedItem="{Binding ClassViewModel.SelectedStudent}" Margin="5">
+                                      SelectedItem="{Binding ClassViewModel.SelectedStudent}" Margin="5"
+                                      Style="{StaticResource ListViewStyle}"
+                                      AutomationProperties.Name="Students List">
                                 <ListView.View>
                                     <GridView>
                                         <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150" />
@@ -172,17 +226,31 @@
 
                     <!-- Busy Indicator -->
                     <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
-                            Visibility="{Binding ClassViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding ClassViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            AutomationProperties.Name="Processing Indicator">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="Border.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                        From="0" To="1"
+                                                        Duration="{StaticResource StandardAnimationDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
-                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center"
+                                       Style="{StaticResource HighlightTextStyle}" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0"
+                                         Style="{StaticResource ProgressBarStyle}" />
                         </StackPanel>
                     </Border>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Lesson Planner" x:Name="LessonPlannerTab">
-                <Grid>
+            <TabItem Header="Lesson Planner" x:Name="LessonPlannerTab" Style="{StaticResource MainTabItemStyle}" AutomationProperties.Name="Lesson Planner Tab">
+                <Grid Style="{StaticResource PageTransitionStyle}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -190,19 +258,32 @@
                     </Grid.RowDefinitions>
 
                     <!-- Toolbar -->
-                    <ToolBar Grid.Row="0">
-                        <Button Content="Add Lesson" Command="{Binding LessonPlannerViewModel.AddLessonCommand}" Margin="2" />
-                        <Button Content="Generate Lesson" Command="{Binding LessonPlannerViewModel.GenerateLessonCommand}" Margin="2" />
-                        <Button Content="Save" Command="{Binding LessonPlannerViewModel.SaveLessonCommand}" Margin="2" />
-                        <Button Content="Delete Lesson" Command="{Binding LessonPlannerViewModel.DeleteLessonCommand}" Margin="2" />
+                    <ToolBar Grid.Row="0" Style="{StaticResource ToolBarStyle}">
+                        <Button Content="Add Lesson" Command="{Binding LessonPlannerViewModel.AddLessonCommand}" Margin="2"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                AutomationProperties.Name="Add Lesson Button" />
+                        <Button Content="Generate Lesson" Command="{Binding LessonPlannerViewModel.GenerateLessonCommand}" Margin="2"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                AutomationProperties.Name="Generate Lesson Button" />
+                        <Button Content="Save" Command="{Binding LessonPlannerViewModel.SaveLessonCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Save Lesson Button" />
+                        <Button Content="Delete Lesson" Command="{Binding LessonPlannerViewModel.DeleteLessonCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Delete Lesson Button" />
                         <Separator />
-                        <Button Content="Add to Calendar" Command="{Binding LessonPlannerViewModel.AddToCalendarCommand}" Margin="2" />
+                        <Button Content="Add to Calendar" Command="{Binding LessonPlannerViewModel.AddToCalendarCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Add to Calendar Button" />
                         <Separator />
-                        <Button Content="Refresh" Command="{Binding LessonPlannerViewModel.RefreshCommand}" Margin="2" />
+                        <Button Content="Refresh" Command="{Binding LessonPlannerViewModel.RefreshCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Refresh Lessons Button" />
                     </ToolBar>
 
                     <!-- Date and Class Selection -->
-                    <Grid Grid.Row="1" Margin="10">
+                    <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="10">
+                        <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -213,24 +294,34 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0" Text="Class:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <TextBlock Grid.Column="0" Text="Class:" VerticalAlignment="Center" Margin="0,0,5,0"
+                                   Style="{StaticResource BodyTextStyle}" />
                         <ComboBox Grid.Column="1" ItemsSource="{Binding LessonPlannerViewModel.Classes}"
                                   SelectedItem="{Binding LessonPlannerViewModel.SelectedClass}"
-                                  DisplayMemberPath="Name" Margin="0,0,10,0" />
+                                  DisplayMemberPath="Name" Margin="0,0,10,0"
+                                  Style="{StaticResource ComboBoxStyle}"
+                                  AutomationProperties.Name="Class Selection" />
 
-                        <TextBlock Grid.Column="2" Text="Date:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <TextBlock Grid.Column="2" Text="Date:" VerticalAlignment="Center" Margin="0,0,5,0"
+                                   Style="{StaticResource BodyTextStyle}" />
                         <Button Grid.Column="3" Content="&lt;" Command="{Binding LessonPlannerViewModel.PreviousDayCommand}"
-                                Width="30" Margin="0,0,5,0" />
+                                Width="30" Margin="0,0,5,0" Style="{StaticResource IconButtonStyle}"
+                                AutomationProperties.Name="Previous Day Button" />
                         <TextBox Grid.Column="4" Text="{Binding LessonPlannerViewModel.CurrentDate}"
-                                 Width="100" Margin="0,0,5,0" />
+                                 Width="100" Margin="0,0,5,0" Style="{StaticResource TextBoxStyle}"
+                                 AutomationProperties.Name="Current Date" />
                         <Button Grid.Column="5" Content="&gt;" Command="{Binding LessonPlannerViewModel.NextDayCommand}"
-                                Width="30" Margin="0,0,10,0" />
+                                Width="30" Margin="0,0,10,0" Style="{StaticResource IconButtonStyle}"
+                                AutomationProperties.Name="Next Day Button" />
 
-                        <TextBlock Grid.Column="6" Text="Time Slot:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                        <TextBlock Grid.Column="6" Text="Time Slot:" VerticalAlignment="Center" Margin="0,0,5,0"
+                                   Style="{StaticResource BodyTextStyle}" />
                         <ComboBox Grid.Column="7" ItemsSource="{Binding LessonPlannerViewModel.TimeSlots}"
                                   SelectedIndex="{Binding LessonPlannerViewModel.SelectedTimeSlot}"
-                                  Width="150" />
-                    </Grid>
+                                  Width="150" Style="{StaticResource ComboBoxStyle}"
+                                  AutomationProperties.Name="Time Slot Selection" />
+                        </Grid>
+                    </Border>
 
                     <!-- Content -->
                     <Grid Grid.Row="2">
@@ -247,10 +338,12 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Lessons" FontWeight="Bold" Margin="5" />
+                            <TextBlock Grid.Row="0" Text="Lessons" Margin="5" Style="{StaticResource SubHeaderTextStyle}" />
 
                             <ListView Grid.Row="1" ItemsSource="{Binding LessonPlannerViewModel.Lessons}"
-                                      SelectedItem="{Binding LessonPlannerViewModel.SelectedLesson}" Margin="5">
+                                      SelectedItem="{Binding LessonPlannerViewModel.SelectedLesson}" Margin="5"
+                                      Style="{StaticResource ListViewStyle}"
+                                      AutomationProperties.Name="Lessons List">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel>
@@ -277,7 +370,7 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="Lesson Details" FontWeight="Bold" Margin="0,0,0,5" />
+                            <TextBlock Grid.Row="0" Text="Lesson Details" Margin="0,0,0,5" Style="{StaticResource SubHeaderTextStyle}" />
 
                             <Grid Grid.Row="1">
                                 <Grid.ColumnDefinitions>
@@ -285,9 +378,11 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0" Text="Title:" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                <TextBlock Grid.Column="0" Text="Title:" VerticalAlignment="Center" Margin="0,0,5,0"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <TextBox Grid.Column="1" Text="{Binding LessonPlannerViewModel.LessonTitle, UpdateSourceTrigger=PropertyChanged}"
-                                         Margin="0,0,0,5" />
+                                         Margin="0,0,0,5" Style="{StaticResource TextBoxStyle}"
+                                         AutomationProperties.Name="Lesson Title" />
                             </Grid>
 
                             <Grid Grid.Row="2">
@@ -296,9 +391,12 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0" Text="Learning Objectives:" VerticalAlignment="Top" Margin="0,5,5,0" />
+                                <TextBlock Grid.Column="0" Text="Learning Objectives:" VerticalAlignment="Top" Margin="0,5,5,0"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <TextBox Grid.Column="1" Text="{Binding LessonPlannerViewModel.LearningObjectives, UpdateSourceTrigger=PropertyChanged}"
-                                         TextWrapping="Wrap" AcceptsReturn="True" Height="60" Margin="0,5,0,5" />
+                                         TextWrapping="Wrap" AcceptsReturn="True" Height="60" Margin="0,5,0,5"
+                                         Style="{StaticResource TextBoxStyle}"
+                                         AutomationProperties.Name="Learning Objectives" />
                             </Grid>
 
                             <Grid Grid.Row="3">
@@ -307,25 +405,42 @@
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="Lesson Components:" Margin="0,5,0,5" />
+                                <TextBlock Grid.Row="0" Text="Lesson Components:" Margin="0,5,0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <TextBox Grid.Row="1" Text="{Binding LessonPlannerViewModel.LessonComponents, UpdateSourceTrigger=PropertyChanged}"
-                                         TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                                         TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                         Style="{StaticResource TextBoxStyle}"
+                                         AutomationProperties.Name="Lesson Components" />
                             </Grid>
                         </Grid>
                     </Grid>
 
                     <!-- Busy Indicator -->
                     <Border Grid.Row="0" Grid.RowSpan="3" Background="#80000000"
-                            Visibility="{Binding LessonPlannerViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding LessonPlannerViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            AutomationProperties.Name="Processing Indicator">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="Border.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                        From="0" To="1"
+                                                        Duration="{StaticResource StandardAnimationDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
-                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center"
+                                       Style="{StaticResource HighlightTextStyle}" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0"
+                                         Style="{StaticResource ProgressBarStyle}" />
                         </StackPanel>
                     </Border>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Configuration" x:Name="ConfigurationTab">
+            <TabItem Header="Configuration" x:Name="ConfigurationTab" Style="{StaticResource MainTabItemStyle}" AutomationProperties.Name="Configuration Tab">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -462,7 +577,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="System Status" x:Name="SystemStatusTab">
+            <TabItem Header="System Status" x:Name="SystemStatusTab" Style="{StaticResource MainTabItemStyle}" AutomationProperties.Name="System Status Tab">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -470,10 +585,14 @@
                     </Grid.RowDefinitions>
 
                     <!-- Toolbar -->
-                    <ToolBar Grid.Row="0">
-                        <Button Content="Refresh" Command="{Binding SystemStatusViewModel.RefreshCommand}" Margin="2" />
+                    <ToolBar Grid.Row="0" Style="{StaticResource ToolBarStyle}">
+                        <Button Content="Refresh" Command="{Binding SystemStatusViewModel.RefreshCommand}" Margin="2"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                AutomationProperties.Name="Refresh Status Button" />
                         <Separator />
-                        <Button Content="Clear Logs" Command="{Binding SystemStatusViewModel.ClearLogsCommand}" Margin="2" />
+                        <Button Content="Clear Logs" Command="{Binding SystemStatusViewModel.ClearLogsCommand}" Margin="2"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                AutomationProperties.Name="Clear Logs Button" />
                     </ToolBar>
 
                     <!-- Content -->
@@ -485,7 +604,8 @@
                         </Grid.RowDefinitions>
 
                         <!-- Service Status -->
-                        <GroupBox Grid.Row="0" Header="Service Status" Margin="10">
+                        <GroupBox Grid.Row="0" Header="Service Status" Margin="10" Style="{StaticResource GroupBoxStyle}"
+                                  AutomationProperties.Name="Service Status Group">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -498,7 +618,8 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="MCP Server:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="MCP Server:" VerticalAlignment="Center" Margin="0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
                                     <TextBlock Text="{Binding SystemStatusViewModel.McpServerRunning, Converter={StaticResource BooleanToStatusConverter}}"
                                                Foreground="{Binding SystemStatusViewModel.McpServerRunning, Converter={StaticResource BooleanToColorConverter}}"
@@ -506,22 +627,26 @@
                                     <TextBlock Text="{Binding SystemStatusViewModel.McpServerUrl}" VerticalAlignment="Center" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Voice Service:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Voice Service:" VerticalAlignment="Center" Margin="0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SystemStatusViewModel.VoiceServiceState}"
                                            VerticalAlignment="Center" Margin="0,5" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="LLM Provider:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="LLM Provider:" VerticalAlignment="Center" Margin="0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SystemStatusViewModel.ActiveLlmProvider}"
                                            VerticalAlignment="Center" Margin="0,5" />
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="LLM Model:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="LLM Model:" VerticalAlignment="Center" Margin="0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SystemStatusViewModel.ActiveLlmModel}"
                                            VerticalAlignment="Center" Margin="0,5" />
                             </Grid>
                         </GroupBox>
 
                         <!-- System Performance -->
-                        <GroupBox Grid.Row="1" Header="System Performance" Margin="10,0,10,10">
+                        <GroupBox Grid.Row="1" Header="System Performance" Margin="10,0,10,10" Style="{StaticResource GroupBoxStyle}"
+                                  AutomationProperties.Name="System Performance Group">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -533,19 +658,22 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU Usage:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU Usage:" VerticalAlignment="Center" Margin="0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
                                     <ProgressBar Value="{Binding SystemStatusViewModel.CpuUsage}" Width="200" Height="15" Margin="0,5" />
                                     <TextBlock Text="{Binding SystemStatusViewModel.CpuUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Memory Usage:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Memory Usage:" VerticalAlignment="Center" Margin="0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
                                     <ProgressBar Value="{Binding SystemStatusViewModel.MemoryUsage}" Width="200" Height="15" Margin="0,5" />
                                     <TextBlock Text="{Binding SystemStatusViewModel.MemoryUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Disk Usage:" VerticalAlignment="Center" Margin="0,5" />
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Disk Usage:" VerticalAlignment="Center" Margin="0,5"
+                                           Style="{StaticResource BodyTextStyle}" />
                                 <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
                                     <ProgressBar Value="{Binding SystemStatusViewModel.DiskUsage}" Width="200" Height="15" Margin="0,5" />
                                     <TextBlock Text="{Binding SystemStatusViewModel.DiskUsage, StringFormat={}{0}%}" VerticalAlignment="Center" Margin="10,5" />
@@ -554,26 +682,51 @@
                         </GroupBox>
 
                         <!-- Logs -->
-                        <GroupBox Grid.Row="2" Header="System Logs" Margin="10,0,10,10">
+                        <GroupBox Grid.Row="2" Header="System Logs" Margin="10,0,10,10" Style="{StaticResource GroupBoxStyle}"
+                                  AutomationProperties.Name="System Logs Group">
                             <TextBox Text="{Binding SystemStatusViewModel.LogContent}" IsReadOnly="True"
-                                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                     Style="{StaticResource TextBoxStyle}"
+                                     AutomationProperties.Name="System Logs Content" />
                         </GroupBox>
                     </Grid>
 
                     <!-- Busy Indicator -->
                     <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
-                            Visibility="{Binding SystemStatusViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding SystemStatusViewModel.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            AutomationProperties.Name="Processing Indicator">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="Border.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                        From="0" To="1"
+                                                        Duration="{StaticResource StandardAnimationDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center" />
-                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0" />
+                            <TextBlock Text="Loading..." Foreground="White" FontSize="16" HorizontalAlignment="Center"
+                                       Style="{StaticResource HighlightTextStyle}" />
+                            <ProgressBar IsIndeterminate="True" Width="200" Height="20" Margin="0,10,0,0"
+                                         Style="{StaticResource ProgressBarStyle}" />
                         </StackPanel>
                     </Border>
                 </Grid>
             </TabItem>
+
+            <TabItem Header="Notifications" x:Name="NotificationsTab" Style="{StaticResource MainTabItemStyle}" AutomationProperties.Name="Notifications Tab">
+                <views:NotificationsView DataContext="{Binding NotificationsViewModel}" />
+            </TabItem>
         </TabControl>
 
+        <!-- Notification Control -->
+        <ContentControl Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="100"
+                        Content="{Binding NotificationControl}" />
+
         <!-- Status Bar -->
-        <StatusBar Grid.Row="2" Height="28">
+        <StatusBar Grid.Row="2" Height="28" Style="{StaticResource StatusBarStyle}">
             <StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
                     <Grid>
@@ -588,13 +741,15 @@
 
             <StatusBarItem Grid.Column="0">
                 <StackPanel Orientation="Horizontal">
-                    <Ellipse x:Name="StatusEllipse" Width="12" Height="12" Margin="5,0" Fill="Gray" />
-                    <TextBlock x:Name="StatusText" Text="Not Listening" />
+                    <Ellipse x:Name="StatusEllipse" Width="12" Height="12" Margin="5,0" Fill="Gray"
+                             AutomationProperties.Name="Voice Status Indicator" />
+                    <TextBlock x:Name="StatusText" Text="Not Listening" Foreground="White"
+                               AutomationProperties.Name="Voice Status Text" />
                 </StackPanel>
             </StatusBarItem>
 
             <StatusBarItem Grid.Column="2">
-                <TextBlock>
+                <TextBlock Foreground="White" AutomationProperties.Name="Current Lesson Information">
                     <Run Text="Current Lesson: " />
                     <Run Text="None" FontWeight="SemiBold" />
                 </TextBlock>

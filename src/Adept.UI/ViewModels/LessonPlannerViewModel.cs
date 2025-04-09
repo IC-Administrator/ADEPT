@@ -431,7 +431,7 @@ namespace Adept.UI.ViewModels
                 // Delete the calendar event if it exists
                 if (!string.IsNullOrEmpty(lessonToDelete.CalendarEventId))
                 {
-                    await _calendarSyncService.DeleteCalendarEventAsync(lessonToDelete.LessonId);
+                    await _calendarSyncService.DeleteCalendarEventAsync(int.Parse(lessonToDelete.LessonId));
                     _logger.LogInformation("Deleted calendar event for lesson: {LessonTitle}", lessonToDelete.Title);
                 }
 
@@ -537,7 +537,7 @@ namespace Adept.UI.ViewModels
                 // Update the calendar event if it exists
                 if (!string.IsNullOrEmpty(SelectedLesson.CalendarEventId))
                 {
-                    await _calendarSyncService.SynchronizeLessonPlanAsync(SelectedLesson.Id);
+                    await _calendarSyncService.SynchronizeLessonPlanAsync(int.Parse(SelectedLesson.LessonId));
                     _logger.LogInformation("Updated calendar event for lesson: {LessonTitle}", SelectedLesson.Title);
                 }
 
@@ -639,17 +639,21 @@ namespace Adept.UI.ViewModels
                 IsBusy = true;
 
                 // Synchronize the lesson with the calendar
-                var success = await _calendarSyncService.SynchronizeLessonPlanAsync(SelectedLesson.Id);
+                var success = await _calendarSyncService.SynchronizeLessonPlanAsync(int.Parse(SelectedLesson.LessonId));
 
                 if (success)
                 {
                     // Refresh the lesson to get the updated calendar event ID
-                    await LoadLessonAsync(SelectedLesson.Id);
-                    _logger.LogInformation("Lesson {LessonId} synchronized with calendar", SelectedLesson.Id);
+                    var updatedLesson = await _lessonRepository.GetLessonByIdAsync(SelectedLesson.LessonId);
+                    if (updatedLesson != null)
+                    {
+                        SelectedLesson = updatedLesson;
+                    }
+                    _logger.LogInformation("Lesson {LessonId} synchronized with calendar", SelectedLesson.LessonId);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to synchronize lesson {LessonId} with calendar", SelectedLesson.Id);
+                    _logger.LogWarning("Failed to synchronize lesson {LessonId} with calendar", SelectedLesson.LessonId);
                 }
             }
             catch (Exception ex)

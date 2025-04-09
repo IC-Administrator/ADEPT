@@ -7,6 +7,10 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/BaseStyles.xaml" />
+                <ResourceDictionary Source="/Styles/ResponsiveStyles.xaml" />
+                <ResourceDictionary Source="/Styles/AccessibilityStyles.xaml" />
+                <ResourceDictionary Source="/Styles/AnimationStyles.xaml" />
+                <ResourceDictionary Source="/Styles/TransitionStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Converters -->

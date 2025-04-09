@@ -1,4 +1,6 @@
 using Adept.Core.Interfaces;
+using Adept.UI.Controls;
+using Adept.UI.Services;
 using Adept.UI.ViewModels;
 using Microsoft.Extensions.Logging;
 using System.Windows;
@@ -26,12 +28,18 @@ namespace Adept.UI
         /// </summary>
         public int SelectedTabIndex { get; set; }
 
-        public MainWindow(ILogger<MainWindow> logger, IVoiceService voiceService, MainViewModel mainViewModel, HomeViewModel homeViewModel)
+        /// <summary>
+        /// Gets the notification control
+        /// </summary>
+        public NotificationControl NotificationControl { get; }
+
+        public MainWindow(ILogger<MainWindow> logger, IVoiceService voiceService, MainViewModel mainViewModel, HomeViewModel homeViewModel, NotificationControl notificationControl, INotificationService notificationService)
         {
             _logger = logger;
             _voiceService = voiceService;
             MainViewModel = mainViewModel;
             HomeViewModel = homeViewModel;
+            NotificationControl = notificationControl;
 
             InitializeComponent();
 
@@ -44,11 +52,15 @@ namespace Adept.UI
             LessonPlannerTab.DataContext = MainViewModel;
             ConfigurationTab.DataContext = MainViewModel;
             SystemStatusTab.DataContext = MainViewModel;
+            NotificationsTab.DataContext = MainViewModel;
 
             // Subscribe to voice service events
             _voiceService.StateChanged += OnVoiceServiceStateChanged;
 
             _logger.LogInformation("MainWindow initialized");
+
+            // Show welcome notification
+            notificationService.ShowInformation("Welcome to ADEPT AI Teaching Assistant", 5);
         }
 
         /// <summary>

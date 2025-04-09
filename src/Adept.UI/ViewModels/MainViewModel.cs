@@ -45,6 +45,11 @@ namespace Adept.UI.ViewModels
         public CalendarSettingsViewModel CalendarSettingsViewModel { get; }
 
         /// <summary>
+        /// Gets the notifications view model
+        /// </summary>
+        public NotificationsViewModel NotificationsViewModel { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="MainViewModel"/> class
         /// </summary>
         /// <param name="homeViewModel">The home view model</param>
@@ -54,6 +59,7 @@ namespace Adept.UI.ViewModels
         /// <param name="configurationViewModel">The configuration view model</param>
         /// <param name="systemStatusViewModel">The system status view model</param>
         /// <param name="calendarSettingsViewModel">The calendar settings view model</param>
+        /// <param name="notificationsViewModel">The notifications view model</param>
         /// <param name="logger">The logger</param>
         public MainViewModel(
             HomeViewModel homeViewModel,
@@ -63,6 +69,7 @@ namespace Adept.UI.ViewModels
             ConfigurationViewModel configurationViewModel,
             SystemStatusViewModel systemStatusViewModel,
             CalendarSettingsViewModel calendarSettingsViewModel,
+            NotificationsViewModel notificationsViewModel,
             ILogger<MainViewModel> logger)
         {
             HomeViewModel = homeViewModel;
@@ -72,6 +79,7 @@ namespace Adept.UI.ViewModels
             ConfigurationViewModel = configurationViewModel;
             SystemStatusViewModel = systemStatusViewModel;
             CalendarSettingsViewModel = calendarSettingsViewModel;
+            NotificationsViewModel = notificationsViewModel;
             _logger = logger;
 
             _logger.LogInformation("MainViewModel initialized");
