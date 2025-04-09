@@ -18,17 +18,17 @@ namespace Adept.UI.ViewModels
     /// </summary>
     public class CalendarSettingsViewModel : ViewModelBase
     {
-        private readonly ICalendarService _calendarService;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<CalendarSettingsViewModel> _logger;
+        private readonly ICalendarService? _calendarService;
+        private readonly IConfiguration? _configuration;
+        private readonly ILogger<CalendarSettingsViewModel>? _logger;
 
-        private string _clientId;
-        private string _clientSecret;
-        private string _statusMessage;
+        private string _clientId = string.Empty;
+        private string _clientSecret = string.Empty;
+        private string _statusMessage = "Ready";
         private bool _isAuthenticated;
         private bool _isAuthenticating;
-        private ObservableCollection<CalendarInfo> _calendars;
-        private CalendarInfo _selectedCalendar;
+        private ObservableCollection<CalendarInfo> _calendars = new();
+        private CalendarInfo? _selectedCalendar;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CalendarSettingsViewModel"/> class.
@@ -43,8 +43,6 @@ namespace Adept.UI.ViewModels
             _logger = logger;
 
             // Initialize properties
-            _calendars = new ObservableCollection<CalendarInfo>();
-            _statusMessage = "Ready";
             _isAuthenticated = false;
             _isAuthenticating = false;
 
@@ -56,10 +54,10 @@ namespace Adept.UI.ViewModels
             }
 
             // Initialize commands
-            SaveCredentialsCommand = new RelayCommand(() => SaveCredentials());
-            AuthenticateCommand = new RelayCommand(() => Authenticate());
-            RevokeAuthenticationCommand = new RelayCommand(() => RevokeAuthentication());
-            SynchronizeAllLessonsCommand = new RelayCommand(() => SynchronizeAllLessons());
+            SaveCredentialsCommand = new RelayCommand(SaveCredentialsAsync);
+            AuthenticateCommand = new RelayCommand(AuthenticateAsync);
+            RevokeAuthenticationCommand = new RelayCommand(RevokeAuthenticationAsync);
+            SynchronizeAllLessonsCommand = new RelayCommand(SynchronizeAllLessonsAsync);
         }
 
         /// <summary>
@@ -143,7 +141,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Gets or sets the selected calendar.
         /// </summary>
-        public CalendarInfo SelectedCalendar
+        public CalendarInfo? SelectedCalendar
         {
             get => _selectedCalendar;
             set
@@ -176,7 +174,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Saves the credentials.
         /// </summary>
-        private async Task SaveCredentials()
+        private void SaveCredentialsAsync()
         {
             try
             {
@@ -208,7 +206,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Authenticates with Google Calendar.
         /// </summary>
-        private async Task Authenticate()
+        private async void AuthenticateAsync()
         {
             try
             {
@@ -230,7 +228,7 @@ namespace Adept.UI.ViewModels
                     StatusMessage = "Authentication successful.";
 
                     // Load calendars
-                    await LoadCalendars();
+                    await LoadCalendarsAsync();
                 }
                 else
                 {
@@ -251,7 +249,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Revokes authentication with Google Calendar.
         /// </summary>
-        private async Task RevokeAuthentication()
+        private async void RevokeAuthenticationAsync()
         {
             try
             {
@@ -279,7 +277,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Loads calendars from Google Calendar.
         /// </summary>
-        private async Task LoadCalendars()
+        private async Task LoadCalendarsAsync()
         {
             try
             {
@@ -307,7 +305,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Synchronizes all lessons with Google Calendar.
         /// </summary>
-        private async Task SynchronizeAllLessons()
+        private async void SynchronizeAllLessonsAsync()
         {
             try
             {
