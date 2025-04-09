@@ -27,8 +27,8 @@ namespace Adept.UI.Converters
                     return boolValue ? parts[0] : parts[1];
                 }
             }
-            
-            return value?.ToString();
+
+            return value?.ToString() ?? string.Empty;
         }
 
         /// <summary>

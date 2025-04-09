@@ -36,7 +36,7 @@ namespace Adept.UI.ViewModels
         /// <param name="calendarService">The calendar service.</param>
         /// <param name="configuration">The configuration.</param>
         /// <param name="logger">The logger.</param>
-        public CalendarSettingsViewModel(ICalendarService calendarService = null, IConfiguration configuration = null, ILogger<CalendarSettingsViewModel> logger = null)
+        public CalendarSettingsViewModel(ICalendarService? calendarService = null, IConfiguration? configuration = null, ILogger<CalendarSettingsViewModel>? logger = null)
         {
             _calendarService = calendarService;
             _configuration = configuration;
@@ -49,8 +49,8 @@ namespace Adept.UI.ViewModels
             // Load credentials from configuration if available
             if (_configuration != null)
             {
-                _clientId = _configuration["GoogleCalendar:ClientId"];
-                _clientSecret = _configuration["GoogleCalendar:ClientSecret"];
+                _clientId = _configuration["GoogleCalendar:ClientId"] ?? string.Empty;
+                _clientSecret = _configuration["GoogleCalendar:ClientSecret"] ?? string.Empty;
             }
 
             // Initialize commands
@@ -285,6 +285,7 @@ namespace Adept.UI.ViewModels
                 {
                     // In a real application, we would load calendars from the calendar service here
                     // For now, just add some sample calendars
+                    await Task.Delay(100); // Add a small delay to make this truly async
                     Calendars.Clear();
                     Calendars.Add(new CalendarInfo { Id = "1", Name = "Primary Calendar", Description = "Your primary calendar" });
                     Calendars.Add(new CalendarInfo { Id = "2", Name = "Work Calendar", Description = "Calendar for work events" });
