@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Adept.Data.Database
@@ -36,5 +37,24 @@ namespace Adept.Data.Database
         /// Gets the database file path
         /// </summary>
         string DatabasePath { get; }
+
+        /// <summary>
+        /// Gets the current database version
+        /// </summary>
+        /// <returns>The current database version</returns>
+        Task<long> GetCurrentVersionAsync();
+
+        /// <summary>
+        /// Gets the list of applied migrations
+        /// </summary>
+        /// <returns>A list of applied migrations with timestamps</returns>
+        Task<IEnumerable<DatabaseMigrationInfo>> GetAppliedMigrationsAsync();
+
+        /// <summary>
+        /// Executes a SQL script directly
+        /// </summary>
+        /// <param name="sql">The SQL script to execute</param>
+        /// <returns>A task representing the asynchronous operation</returns>
+        Task ExecuteSqlScriptAsync(string sql);
     }
 }

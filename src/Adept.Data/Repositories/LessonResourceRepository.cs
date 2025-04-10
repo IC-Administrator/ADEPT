@@ -1,11 +1,10 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
-using Adept.Data.Database;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Adept.Data.Repositories
@@ -13,278 +12,231 @@ namespace Adept.Data.Repositories
     /// <summary>
     /// Repository for lesson resources
     /// </summary>
-    public class LessonResourceRepository : ILessonResourceRepository
+    public class LessonResourceRepository : BaseRepository<LessonResource>, ILessonResourceRepository
     {
-        private readonly IDatabaseProvider _databaseProvider;
-        private readonly ILogger<LessonResourceRepository> _logger;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="LessonResourceRepository"/> class
         /// </summary>
-        /// <param name="databaseProvider">The database provider</param>
+        /// <param name="databaseContext">The database context</param>
         /// <param name="logger">The logger</param>
-        public LessonResourceRepository(IDatabaseProvider databaseProvider, ILogger<LessonResourceRepository> logger)
+        public LessonResourceRepository(IDatabaseContext databaseContext, ILogger<LessonResourceRepository> logger)
+            : base(databaseContext, logger)
         {
-            _databaseProvider = databaseProvider;
-            _logger = logger;
         }
 
         /// <inheritdoc/>
         public async Task<IEnumerable<LessonResource>> GetResourcesByLessonIdAsync(Guid lessonId)
         {
-            var resources = new List<LessonResource>();
-
-            try
+            if (lessonId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                        SELECT ResourceId, LessonId, Name, Type, Path, CreatedAt, UpdatedAt
-                        FROM LessonResources
-                        WHERE LessonId = @LessonId
-                        ORDER BY Name";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@LessonId", lessonId.ToString());
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                resources.Add(MapResourceFromReader(reader));
-                            }
-                        }
-                    }
-                    }
-                }
-
-                _logger.LogInformation("Retrieved {Count} resources for lesson {LessonId}", resources.Count, lessonId);
-                return resources;
+                throw new ArgumentException("Lesson ID cannot be empty", nameof(lessonId));
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving resources for lesson {LessonId}", lessonId);
-                throw;
-            }
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QueryAsync<LessonResource>(
+                    @"SELECT
+                        resource_id AS ResourceId,
+                        lesson_id AS LessonId,
+                        name AS Name,
+                        type AS Type,
+                        path AS Path,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonResources
+                      WHERE lesson_id = @LessonId
+                      ORDER BY name",
+                    new { LessonId = lessonId.ToString() }),
+                $"Error retrieving resources for lesson {lessonId}",
+                Enumerable.Empty<LessonResource>());
         }
 
         /// <inheritdoc/>
         public async Task<LessonResource> GetResourceByIdAsync(Guid resourceId)
         {
-            try
+            if (resourceId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                        SELECT ResourceId, LessonId, Name, Type, Path, CreatedAt, UpdatedAt
-                        FROM LessonResources
-                        WHERE ResourceId = @ResourceId";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@ResourceId", resourceId.ToString());
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            if (await reader.ReadAsync())
-                            {
-                                var resource = MapResourceFromReader(reader);
-                                _logger.LogInformation("Retrieved resource {ResourceId}", resourceId);
-                                return resource;
-                            }
-                        }
-                    }
-                    }
-                }
-
-                _logger.LogWarning("Resource {ResourceId} not found", resourceId);
-                return null;
+                throw new ArgumentException("Resource ID cannot be empty", nameof(resourceId));
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving resource {ResourceId}", resourceId);
-                throw;
-            }
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QuerySingleOrDefaultAsync<LessonResource>(
+                    @"SELECT
+                        resource_id AS ResourceId,
+                        lesson_id AS LessonId,
+                        name AS Name,
+                        type AS Type,
+                        path AS Path,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonResources
+                      WHERE resource_id = @ResourceId",
+                    new { ResourceId = resourceId.ToString() }),
+                $"Error retrieving resource {resourceId}");
         }
 
         /// <inheritdoc/>
         public async Task<LessonResource> AddResourceAsync(LessonResource resource)
         {
-            try
+            ValidateEntityNotNull(resource, nameof(resource));
+
+            if (resource.ResourceId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
+                resource.ResourceId = Guid.NewGuid();
+            }
+
+            if (resource.LessonId == Guid.Empty)
+            {
+                throw new ArgumentException("Lesson ID cannot be empty", nameof(resource));
+            }
+
+            ValidateStringNotNullOrEmpty(resource.Name, "Name");
+            ValidateStringNotNullOrEmpty(resource.Path, "Path");
+
+            return await ExecuteWithErrorHandlingAndThrowAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
+                    resource.CreatedAt = DateTime.UtcNow;
+                    resource.UpdatedAt = DateTime.UtcNow;
 
-                    string sql = @"
-                        INSERT INTO LessonResources (ResourceId, LessonId, Name, Type, Path, CreatedAt, UpdatedAt)
-                        VALUES (@ResourceId, @LessonId, @Name, @Type, @Path, @CreatedAt, @UpdatedAt)";
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        @"INSERT INTO LessonResources (
+                            resource_id,
+                            lesson_id,
+                            name,
+                            type,
+                            path,
+                            created_at,
+                            updated_at
+                          ) VALUES (
+                            @ResourceId,
+                            @LessonId,
+                            @Name,
+                            @Type,
+                            @Path,
+                            @CreatedAt,
+                            @UpdatedAt
+                          )",
+                        new
+                        {
+                            ResourceId = resource.ResourceId.ToString(),
+                            LessonId = resource.LessonId.ToString(),
+                            Name = resource.Name,
+                            Type = (int)resource.Type,
+                            Path = resource.Path,
+                            CreatedAt = resource.CreatedAt.ToString("o"),
+                            UpdatedAt = resource.UpdatedAt.ToString("o")
+                        });
 
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@ResourceId", resource.ResourceId.ToString());
-                        command.Parameters.AddWithValue("@LessonId", resource.LessonId.ToString());
-                        command.Parameters.AddWithValue("@Name", resource.Name);
-                        command.Parameters.AddWithValue("@Type", (int)resource.Type);
-                        command.Parameters.AddWithValue("@Path", resource.Path);
-                        command.Parameters.AddWithValue("@CreatedAt", resource.CreatedAt.ToString("o"));
-                        command.Parameters.AddWithValue("@UpdatedAt", resource.UpdatedAt.ToString("o"));
-
-                        await command.ExecuteNonQueryAsync();
-                    }
-                    }
-                }
-
-                _logger.LogInformation("Added resource {ResourceId} for lesson {LessonId}", resource.ResourceId, resource.LessonId);
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding resource for lesson {LessonId}", resource.LessonId);
-                throw;
-            }
+                    Logger.LogInformation("Added resource {ResourceId} for lesson {LessonId}", resource.ResourceId, resource.LessonId);
+                    return resource;
+                },
+                $"Error adding resource for lesson {resource.LessonId}");
         }
 
         /// <inheritdoc/>
         public async Task<LessonResource> UpdateResourceAsync(LessonResource resource)
         {
-            try
+            ValidateEntityNotNull(resource, nameof(resource));
+
+            if (resource.ResourceId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
+                throw new ArgumentException("Resource ID cannot be empty", nameof(resource));
+            }
+
+            ValidateStringNotNullOrEmpty(resource.Name, "Name");
+            ValidateStringNotNullOrEmpty(resource.Path, "Path");
+
+            return await ExecuteWithErrorHandlingAndThrowAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                        UPDATE LessonResources
-                        SET Name = @Name, Type = @Type, Path = @Path, UpdatedAt = @UpdatedAt
-                        WHERE ResourceId = @ResourceId";
-
-                    using (var command = connection.CreateCommand())
+                    // Check if resource exists
+                    var existingResource = await GetResourceByIdAsync(resource.ResourceId);
+                    if (existingResource == null)
                     {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@ResourceId", resource.ResourceId.ToString());
-                        command.Parameters.AddWithValue("@Name", resource.Name);
-                        command.Parameters.AddWithValue("@Type", (int)resource.Type);
-                        command.Parameters.AddWithValue("@Path", resource.Path);
-                        command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow.ToString("o"));
+                        throw new InvalidOperationException($"Resource with ID {resource.ResourceId} not found");
+                    }
 
-                        int rowsAffected = await command.ExecuteNonQueryAsync();
-                        if (rowsAffected == 0)
+                    resource.CreatedAt = existingResource.CreatedAt; // Preserve original creation date
+                    resource.UpdatedAt = DateTime.UtcNow;
+
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        @"UPDATE LessonResources
+                          SET
+                            name = @Name,
+                            type = @Type,
+                            path = @Path,
+                            updated_at = @UpdatedAt
+                          WHERE resource_id = @ResourceId",
+                        new
                         {
-                            _logger.LogWarning("Resource {ResourceId} not found for update", resource.ResourceId);
-                            return null;
-                        }
-                    }
-                    }
-                }
+                            ResourceId = resource.ResourceId.ToString(),
+                            Name = resource.Name,
+                            Type = (int)resource.Type,
+                            Path = resource.Path,
+                            UpdatedAt = resource.UpdatedAt.ToString("o")
+                        });
 
-                _logger.LogInformation("Updated resource {ResourceId}", resource.ResourceId);
-                return resource;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating resource {ResourceId}", resource.ResourceId);
-                throw;
-            }
+                    Logger.LogInformation("Updated resource {ResourceId}", resource.ResourceId);
+                    return resource;
+                },
+                $"Error updating resource {resource.ResourceId}");
         }
 
         /// <inheritdoc/>
         public async Task<bool> DeleteResourceAsync(Guid resourceId)
         {
-            try
+            if (resourceId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
+                throw new ArgumentException("Resource ID cannot be empty", nameof(resourceId));
+            }
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
-
-                    string sql = "DELETE FROM LessonResources WHERE ResourceId = @ResourceId";
-
-                    using (var command = connection.CreateCommand())
+                    // Check if resource exists
+                    var existingResource = await GetResourceByIdAsync(resourceId);
+                    if (existingResource == null)
                     {
-                        command.CommandText = sql;
+                        Logger.LogWarning("Resource {ResourceId} not found for deletion", resourceId);
+                        return false;
+                    }
+
+                    int rowsAffected = await DatabaseContext.ExecuteNonQueryAsync(
+                        "DELETE FROM LessonResources WHERE resource_id = @ResourceId",
+                        new { ResourceId = resourceId.ToString() });
+
+                    if (rowsAffected > 0)
                     {
-                        command.Parameters.AddWithValue("@ResourceId", resourceId.ToString());
-
-                        int rowsAffected = await command.ExecuteNonQueryAsync();
-                        if (rowsAffected == 0)
-                        {
-                            _logger.LogWarning("Resource {ResourceId} not found for deletion", resourceId);
-                            return false;
-                        }
+                        Logger.LogInformation("Deleted resource {ResourceId}", resourceId);
+                        return true;
                     }
-                    }
-                }
 
-                _logger.LogInformation("Deleted resource {ResourceId}", resourceId);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting resource {ResourceId}", resourceId);
-                throw;
-            }
+                    return false;
+                },
+                $"Error deleting resource {resourceId}",
+                false);
         }
 
         /// <inheritdoc/>
         public async Task<bool> DeleteResourcesByLessonIdAsync(Guid lessonId)
         {
-            try
+            if (lessonId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
+                throw new ArgumentException("Lesson ID cannot be empty", nameof(lessonId));
+            }
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
+                    int rowsAffected = await DatabaseContext.ExecuteNonQueryAsync(
+                        "DELETE FROM LessonResources WHERE lesson_id = @LessonId",
+                        new { LessonId = lessonId.ToString() });
 
-                    string sql = "DELETE FROM LessonResources WHERE LessonId = @LessonId";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@LessonId", lessonId.ToString());
-
-                        int rowsAffected = await command.ExecuteNonQueryAsync();
-                        _logger.LogInformation("Deleted {Count} resources for lesson {LessonId}", rowsAffected, lessonId);
-                        return true;
-                    }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting resources for lesson {LessonId}", lessonId);
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Maps a resource from a data reader
-        /// </summary>
-        /// <param name="reader">The data reader</param>
-        /// <returns>The mapped resource</returns>
-        private LessonResource MapResourceFromReader(IDataReader reader)
-        {
-            return new LessonResource
-            {
-                ResourceId = Guid.Parse(reader["ResourceId"].ToString()),
-                LessonId = Guid.Parse(reader["LessonId"].ToString()),
-                Name = reader["Name"].ToString(),
-                Type = (ResourceType)Convert.ToInt32(reader["Type"]),
-                Path = reader["Path"].ToString(),
-                CreatedAt = DateTime.Parse(reader["CreatedAt"].ToString()),
-                UpdatedAt = DateTime.Parse(reader["UpdatedAt"].ToString())
-            };
+                    Logger.LogInformation("Deleted {Count} resources for lesson {LessonId}", rowsAffected, lessonId);
+                    return true;
+                },
+                $"Error deleting resources for lesson {lessonId}",
+                false);
         }
     }
 }

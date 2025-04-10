@@ -1,11 +1,10 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
-using Adept.Data.Database;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -14,192 +13,117 @@ namespace Adept.Data.Repositories
     /// <summary>
     /// Repository for lesson templates
     /// </summary>
-    public class LessonTemplateRepository : ILessonTemplateRepository
+    public class LessonTemplateRepository : BaseRepository<LessonTemplate>, ILessonTemplateRepository
     {
-        private readonly IDatabaseProvider _databaseProvider;
-        private readonly ILogger<LessonTemplateRepository> _logger;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="LessonTemplateRepository"/> class
         /// </summary>
-        /// <param name="databaseProvider">The database provider</param>
+        /// <param name="databaseContext">The database context</param>
         /// <param name="logger">The logger</param>
-        public LessonTemplateRepository(IDatabaseProvider databaseProvider, ILogger<LessonTemplateRepository> logger)
+        public LessonTemplateRepository(IDatabaseContext databaseContext, ILogger<LessonTemplateRepository> logger)
+            : base(databaseContext, logger)
         {
-            _databaseProvider = databaseProvider;
-            _logger = logger;
         }
 
         /// <inheritdoc/>
         public async Task<IEnumerable<LessonTemplate>> GetAllTemplatesAsync()
         {
-            var templates = new List<LessonTemplate>();
-
-            try
-            {
-                using (var connection = _databaseProvider.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                        SELECT TemplateId, Name, Description, Category, Tags, Title, LearningObjectives, ComponentsJson, CreatedAt, UpdatedAt
-                        FROM LessonTemplates
-                        ORDER BY Name";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                templates.Add(MapTemplateFromReader(reader));
-                            }
-                        }
-                    }
-                    }
-                }
-
-                _logger.LogInformation("Retrieved {Count} templates", templates.Count);
-                return templates;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving templates");
-                throw;
-            }
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QueryAsync<LessonTemplate>(
+                    @"SELECT
+                        template_id AS TemplateId,
+                        name AS Name,
+                        description AS Description,
+                        category AS Category,
+                        tags AS Tags,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonTemplates
+                      ORDER BY name"),
+                "Error retrieving templates",
+                Enumerable.Empty<LessonTemplate>());
         }
 
         /// <inheritdoc/>
         public async Task<LessonTemplate> GetTemplateByIdAsync(Guid templateId)
         {
-            try
+            if (templateId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                        SELECT TemplateId, Name, Description, Category, Tags, Title, LearningObjectives, ComponentsJson, CreatedAt, UpdatedAt
-                        FROM LessonTemplates
-                        WHERE TemplateId = @TemplateId";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@TemplateId", templateId.ToString());
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            if (await reader.ReadAsync())
-                            {
-                                var template = MapTemplateFromReader(reader);
-                                _logger.LogInformation("Retrieved template {TemplateId}", templateId);
-                                return template;
-                            }
-                        }
-                    }
-                    }
-                }
-
-                _logger.LogWarning("Template {TemplateId} not found", templateId);
-                return null;
+                throw new ArgumentException("Template ID cannot be empty", nameof(templateId));
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving template {TemplateId}", templateId);
-                throw;
-            }
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QuerySingleOrDefaultAsync<LessonTemplate>(
+                    @"SELECT
+                        template_id AS TemplateId,
+                        name AS Name,
+                        description AS Description,
+                        category AS Category,
+                        tags AS Tags,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonTemplates
+                      WHERE template_id = @TemplateId",
+                    new { TemplateId = templateId.ToString() }),
+                $"Error retrieving template {templateId}");
         }
 
         /// <inheritdoc/>
         public async Task<IEnumerable<LessonTemplate>> GetTemplatesByCategoryAsync(string category)
         {
-            var templates = new List<LessonTemplate>();
+            ValidateStringNotNullOrEmpty(category, nameof(category));
 
-            try
-            {
-                using (var connection = _databaseProvider.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                        SELECT TemplateId, Name, Description, Category, Tags, Title, LearningObjectives, ComponentsJson, CreatedAt, UpdatedAt
-                        FROM LessonTemplates
-                        WHERE Category = @Category
-                        ORDER BY Name";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@Category", category);
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                templates.Add(MapTemplateFromReader(reader));
-                            }
-                        }
-                    }
-                    }
-                }
-
-                _logger.LogInformation("Retrieved {Count} templates for category {Category}", templates.Count, category);
-                return templates;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving templates for category {Category}", category);
-                throw;
-            }
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QueryAsync<LessonTemplate>(
+                    @"SELECT
+                        template_id AS TemplateId,
+                        name AS Name,
+                        description AS Description,
+                        category AS Category,
+                        tags AS Tags,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonTemplates
+                      WHERE category = @Category
+                      ORDER BY name",
+                    new { Category = category }),
+                $"Error retrieving templates for category {category}",
+                Enumerable.Empty<LessonTemplate>());
         }
 
         /// <inheritdoc/>
         public async Task<IEnumerable<LessonTemplate>> GetTemplatesByTagAsync(string tag)
         {
-            var templates = new List<LessonTemplate>();
+            ValidateStringNotNullOrEmpty(tag, nameof(tag));
 
-            try
-            {
-                using (var connection = _databaseProvider.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                        SELECT TemplateId, Name, Description, Category, Tags, Title, LearningObjectives, ComponentsJson, CreatedAt, UpdatedAt
-                        FROM LessonTemplates
-                        WHERE Tags LIKE @Tag
-                        ORDER BY Name";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@Tag", $"%\"{tag}\"%");
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                templates.Add(MapTemplateFromReader(reader));
-                            }
-                        }
-                    }
-                    }
-                }
-
-                _logger.LogInformation("Retrieved {Count} templates for tag {Tag}", templates.Count, tag);
-                return templates;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving templates for tag {Tag}", tag);
-                throw;
-            }
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QueryAsync<LessonTemplate>(
+                    @"SELECT
+                        template_id AS TemplateId,
+                        name AS Name,
+                        description AS Description,
+                        category AS Category,
+                        tags AS Tags,
+                        title AS Title,
+                        learning_objectives AS LearningObjectives,
+                        components_json AS ComponentsJson,
+                        created_at AS CreatedAt,
+                        updated_at AS UpdatedAt
+                      FROM LessonTemplates
+                      WHERE tags LIKE @Tag
+                      ORDER BY name",
+                    new { Tag = $"%\"{tag}\"%" }),
+                $"Error retrieving templates for tag {tag}",
+                Enumerable.Empty<LessonTemplate>());
         }
 
         /// <inheritdoc/>
