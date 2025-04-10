@@ -67,7 +67,6 @@ if exist src\Adept.Tests (
 )
 
 echo.
-echo.
 echo Removing CalendarIntegrationTest...
 if exist CalendarIntegrationTest (
     rd /s /q CalendarIntegrationTest
@@ -80,6 +79,45 @@ echo.
 echo Removing RecurringEventTest...
 if exist RecurringEventTest (
     rd /s /q RecurringEventTest
+    echo - Removed successfully.
+) else (
+    echo - Directory not found.
+)
+
+echo.
+echo Removing duplicate test projects at the root of tests directory...
+
+echo.
+echo Removing tests\Adept.Core.Tests...
+if exist tests\Adept.Core.Tests (
+    rd /s /q tests\Adept.Core.Tests
+    echo - Removed successfully.
+) else (
+    echo - Directory not found.
+)
+
+echo.
+echo Removing tests\Adept.Data.Tests...
+if exist tests\Adept.Data.Tests (
+    rd /s /q tests\Adept.Data.Tests
+    echo - Removed successfully.
+) else (
+    echo - Directory not found.
+)
+
+echo.
+echo Removing tests\Adept.Services.Tests...
+if exist tests\Adept.Services.Tests (
+    rd /s /q tests\Adept.Services.Tests
+    echo - Removed successfully.
+) else (
+    echo - Directory not found.
+)
+
+echo.
+echo Removing tests\Adept.UI.Tests...
+if exist tests\Adept.UI.Tests (
+    rd /s /q tests\Adept.UI.Tests
     echo - Removed successfully.
 ) else (
     echo - Directory not found.

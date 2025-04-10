@@ -1,5 +1,6 @@
 using Xunit;
 using Adept.Core.Configuration;
+using Adept.TestUtilities.Helpers;
 
 namespace Adept.Core.Tests
 {

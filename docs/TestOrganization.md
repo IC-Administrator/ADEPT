@@ -4,32 +4,39 @@ This document outlines a comprehensive plan for organizing and improving the tes
 
 ## Current State Analysis
 
-The ADEPT project has a well-organized test structure in the `tests` directory:
+The ADEPT project has a test structure in the `tests` directory that has been partially reorganized but still requires some refinement:
 
 ```
 tests/
-├── Unit/                      # Unit tests
+├── Adept.Core.Tests/          # Core unit tests (should be in Unit/)
+├── Adept.Data.Tests/          # Data unit tests (should be in Unit/)
+├── Adept.Services.Tests/      # Services unit tests (should be in Unit/)
+├── Adept.UI.Tests/            # UI unit tests (should be in Unit/)
+├── Unit/                      # Unit tests directory
 │   ├── Adept.Core.Tests/      # Core unit tests
 │   │   └── Models/            # Tests for core models
 │   ├── Adept.Services.Tests/  # Services unit tests
-│   │   ├── Llm/              # Tests for LLM services
-│   │   └── Mcp/              # Tests for MCP tools
-│   └── Adept.Data.Tests/      # Data unit tests
-│       ├── Database/         # Tests for database operations
-│       ├── Repository/       # Tests for repositories
-│       ├── TestData/         # Test data for data tests
-│       └── Validation/       # Tests for validation
+│   │   ├── Calendar/          # Tests for calendar services
+│   │   ├── FileSystem/        # Tests for file system services
+│   │   ├── Llm/               # Tests for LLM services
+│   │   ├── Mcp/               # Tests for MCP tools
+│   │   └── TestData/          # Test data for service tests
+│   ├── Adept.Data.Tests/      # Data unit tests
+│   │   ├── Database/          # Tests for database operations
+│   │   ├── Repository/        # Tests for repositories
+│   │   ├── TestData/          # Test data for data tests
+│   │   └── Validation/        # Tests for validation
+│   └── Adept.UI.Tests/        # UI unit tests
 ├── Integration/               # Integration tests
 │   ├── Adept.Services.Integration.Tests/ # Service integration tests
-│   │   ├── Calendar/         # Calendar integration tests
-│   │   ├── FileSystem/       # File system integration tests
-│   │   ├── Database/         # Database integration tests
-│   │   ├── Llm/              # LLM provider integration tests
-│   │   └── Mcp/              # MCP tool integration tests
+│   │   └── Calendar/          # Calendar integration tests
 │   ├── Adept.FileSystem.Tests/ # File system integration tests
-│   │   ├── Fixtures/         # Test fixtures for file system tests
-│   │   └── Services/         # Tests for file system services
+│   │   ├── Fixtures/          # Test fixtures for file system tests
+│   │   └── Services/          # Tests for file system services
 │   └── Adept.Database.Tests/  # Database integration tests
+│       ├── Context/           # Tests for database context
+│       ├── Fixtures/          # Test fixtures for database tests
+│       └── Repository/        # Tests for repositories
 ├── Manual/                    # Manual test applications
 │   ├── Adept.Calendar.ManualTests/       # Calendar manual tests
 │   ├── Adept.FileSystem.ManualTests/     # File system manual tests
@@ -39,9 +46,12 @@ tests/
 │   └── Adept.Puppeteer.ManualTests/      # Puppeteer manual tests
 └── Common/                    # Shared test utilities
     └── Adept.TestUtilities/   # Common test helpers and fixtures
+        ├── Fixtures/          # Test fixtures
+        ├── Helpers/           # Test helpers
+        └── TestBase/          # Base classes for tests
 ```
 
-The test directories that were previously in the `src` folder have been migrated to the appropriate locations in the `tests` directory structure.
+The test directories that were previously in the `src` folder have been migrated to the appropriate locations in the `tests` directory structure. However, there are still some test projects at the root of the `tests` directory that should be moved to their respective subdirectories (Unit, Integration, etc.).
 
 ## Test Organization Recommendations
 
@@ -62,7 +72,8 @@ The test directories that were previously in the `src` folder have been migrated
 
 **Implemented Solution:**
 - Updated the `cleanup-test-dirs.bat` script to include `src/Adept.Tests`
-- The script can now be executed to remove all test directories from the `src` folder
+- Renamed to `cleanup-legacy-tests.bat` to better reflect its purpose
+- The script can now be executed to remove all test directories from the `src` folder and standalone test applications from the root directory
 
 ### 3. Standardize Test Project Structure ✅
 
@@ -81,7 +92,16 @@ The test directories that were previously in the `src` folder have been migrated
 - Created similar structures for other test projects based on what they're testing
 - Added README.md files to each directory explaining its purpose and providing guidelines for tests
 
-### 4. Complete Missing Test Projects
+### 4. Resolve Duplicate Test Projects ✅
+
+**Previous Issue:** There were duplicate test projects at the root of the `tests` directory and in the appropriate subdirectories.
+
+**Implemented Solution:**
+- Migrated the `CoreConfigurationTests.cs` from the root version to the Unit version
+- Updated the `cleanup-legacy-tests.bat` script to remove the duplicate test projects at the root level
+- Verified that the `run-tests.bat` file correctly references the tests in their new locations
+
+### 5. Complete Missing Test Projects
 
 **Current Issue:** Some test projects mentioned in documentation don't exist or are incomplete.
 
@@ -90,11 +110,16 @@ The test directories that were previously in the `src` folder have been migrated
 - Ensure all test projects have proper references to the projects they're testing
 - Update the solution file to include all test projects
 
-### 5. Improve Test Utilities
+### 6. Improve Test Utilities ✅
 
-**Current Issue:** The test utilities project has good foundations but could be expanded.
+**Previous Issue:** The test utilities project had good foundations but could be expanded. There was also a `.new` version of the project file that contained different dependencies.
 
-**Recommendation:**
+**Implemented Solution:**
+- Reviewed the differences between the current and `.new` versions of the project file
+- Determined that the current version is more comprehensive and should be kept
+- Removed the `.new` file to avoid confusion
+
+**Remaining Recommendations:**
 - Enhance the `MockFactory` to support all services in the application
 - Add more test data generators for all model types
 - Create additional assertion extensions for common test scenarios
@@ -263,6 +288,22 @@ The test directories that were previously in the `src` folder have been migrated
    - Service fixtures for integration tests
 6. ⏳ Document the test infrastructure and how to use it
 
+### Phase 2.5: Test Structure Cleanup (Week 2.5) ✅
+
+1. ✅ Resolve duplicate test projects:
+   - Compared test projects at the root level with those in subdirectories
+   - Migrated the `CoreConfigurationTests.cs` from the root version to the Unit version
+   - Updated `cleanup-legacy-tests.bat` to remove duplicate test projects at the root level
+   - Verified that `run-tests.bat` correctly references the tests in their new locations
+2. ✅ Standardize batch files:
+   - Updated `cleanup-legacy-tests.bat` to cover all legacy test directories and duplicate test projects
+   - Removed redundant `cleanup-test-dirs.bat` file
+   - Verified that `run-tests.bat` correctly calls all test projects in their new locations
+   - Added documentation to batch files explaining their purpose
+3. ✅ Review and merge pending changes:
+   - Reviewed `Adept.TestUtilities.csproj.new` and determined the current version is more comprehensive
+   - Removed the `.new` file to avoid confusion
+
 ### Phase 3: Unit Tests (Weeks 3-4)
 
 1. Implement tests for repositories:
@@ -358,6 +399,38 @@ The batch files in the root directory have been updated to reflect the new test 
 4. Added entries for the standalone test applications we've migrated (`CalendarIntegrationTest` and `RecurringEventTest`)
 
 These changes ensure that the Adept.Data project can be built successfully, which is a prerequisite for running the tests.
+
+## Resolved Issues
+
+### Duplicate Test Projects ✅
+
+There were duplicate test projects at the root of the `tests` directory and in the subdirectories:
+
+1. `tests/Adept.Core.Tests` and `tests/Unit/Adept.Core.Tests`
+2. `tests/Adept.Data.Tests` and `tests/Unit/Adept.Data.Tests`
+3. `tests/Adept.Services.Tests` and `tests/Unit/Adept.Services.Tests`
+4. `tests/Adept.UI.Tests` and `tests/Unit/Adept.UI.Tests`
+
+These issues have been resolved by:
+
+1. Migrating the `CoreConfigurationTests.cs` from the root version to the Unit version
+2. Updating the `cleanup-legacy-tests.bat` script to remove the duplicate test projects at the root level
+3. Ensuring that the `run-tests.bat` file correctly references the tests in their new locations
+
+### Pending Changes in Test Utilities ✅
+
+There was a `.new` version of the `Adept.TestUtilities.csproj` file that contained different package references and project references:
+
+1. The current version included additional package references:
+   - Microsoft.Extensions.DependencyInjection
+   - Microsoft.Extensions.Logging
+   - Microsoft.Extensions.Logging.Console
+
+2. The current version included additional project references:
+   - Adept.Data.csproj
+   - Adept.Services.csproj
+
+After reviewing the differences, we determined that the current version is more comprehensive and should be kept. The `.new` file has been removed.
 
 ## Conclusion
 
