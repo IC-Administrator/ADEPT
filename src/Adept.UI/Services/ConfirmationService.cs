@@ -16,9 +16,9 @@ namespace Adept.UI.Services
     public class ConfirmationService : IConfirmationService
     {
         private readonly ILogger<ConfirmationService> _logger;
-        private Grid _overlayGrid;
-        private ConfirmationDialog _confirmationDialog;
-        private TaskCompletionSource<bool> _tcs;
+        private Grid? _overlayGrid;
+        private ConfirmationDialog? _confirmationDialog;
+        private TaskCompletionSource<bool>? _tcs;
 
         public ConfirmationService(ILogger<ConfirmationService> logger)
         {
@@ -58,7 +58,7 @@ namespace Adept.UI.Services
                 };
 
                 // Add dialog to overlay
-                _overlayGrid.Children.Add(_confirmationDialog);
+                _overlayGrid.Children.Add(_confirmationDialog!);
 
                 // Add overlay to visual tree
                 var mainWindow = Application.Current.MainWindow;
@@ -78,7 +78,7 @@ namespace Adept.UI.Services
                 }
 
                 // Wait for user response
-                return await _tcs.Task;
+                return await _tcs!.Task;
             }
             catch (Exception ex)
             {
@@ -110,19 +110,19 @@ namespace Adept.UI.Services
                     var mainGrid = mainWindow.Content as Grid;
                     if (mainGrid != null)
                     {
-                        mainGrid.Children.Remove(_overlayGrid);
+                        mainGrid.Children.Remove(_overlayGrid!);
                     }
 
                     // Complete task
-                    _tcs.SetResult(result);
+                    _tcs!.SetResult(result);
                 };
 
-                _overlayGrid.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+                _overlayGrid!.BeginAnimation(UIElement.OpacityProperty, fadeOut);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error closing confirmation dialog");
-                _tcs.SetResult(false);
+                _tcs!.SetResult(false);
             }
         }
     }
