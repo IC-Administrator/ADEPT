@@ -20,6 +20,12 @@ tests/
 │       ├── TestData/         # Test data for data tests
 │       └── Validation/       # Tests for validation
 ├── Integration/               # Integration tests
+│   ├── Adept.Services.Integration.Tests/ # Service integration tests
+│   │   ├── Calendar/         # Calendar integration tests
+│   │   ├── FileSystem/       # File system integration tests
+│   │   ├── Database/         # Database integration tests
+│   │   ├── Llm/              # LLM provider integration tests
+│   │   └── Mcp/              # MCP tool integration tests
 │   ├── Adept.FileSystem.Tests/ # File system integration tests
 │   │   ├── Fixtures/         # Test fixtures for file system tests
 │   │   └── Services/         # Tests for file system services
@@ -321,6 +327,16 @@ The following build errors in the Adept.Data project have been fixed:
    - Created the `IDatabaseProvider` interface in the `Adept.Data.Database` namespace
    - Implemented `SqliteDatabaseProvider` class that implements the interface
    - Added service registration extension method for the database services
+
+### Migrated CalendarIntegrationTest to Proper Test Structure ✅
+
+The standalone `CalendarIntegrationTest` console application in the root directory has been migrated to the proper test structure:
+
+1. Created a new `Adept.Services.Integration.Tests` project in the `tests/Integration` directory
+2. Implemented proper integration tests for Google Calendar API in `Calendar/GoogleCalendarIntegrationTests.cs`
+3. Added appropriate configuration files and documentation
+4. Updated the solution file to include the new integration test project
+5. The original `CalendarIntegrationTest` folder can now be removed
 
 These changes ensure that the Adept.Data project can be built successfully, which is a prerequisite for running the tests.
 

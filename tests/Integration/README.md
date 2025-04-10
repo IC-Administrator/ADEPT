@@ -8,6 +8,12 @@ Integration tests focus on testing the interaction between multiple components. 
 
 ## Projects
 
+- **Adept.Services.Integration.Tests**: Tests for service integrations with external systems
+  - Calendar: Tests for calendar service integrations (Google Calendar, etc.)
+  - FileSystem: Tests for file system operations
+  - Database: Tests for database interactions
+  - Llm: Tests for LLM provider integrations
+  - Mcp: Tests for MCP tool integrations
 - **Adept.FileSystem.Tests**: Tests for file system operations
 - **Adept.Database.Tests**: Tests for database operations
 
