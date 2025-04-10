@@ -1,4 +1,4 @@
-using System.Text.Json;
+using Adept.Common.Json;
 
 namespace Adept.Core.Models
 {
@@ -64,18 +64,21 @@ namespace Adept.Core.Models
         {
             get
             {
-                try
-                {
-                    return JsonSerializer.Deserialize<LessonComponents>(ComponentsJson) ?? new LessonComponents();
-                }
-                catch
+                if (string.IsNullOrEmpty(ComponentsJson) || ComponentsJson == "{}")
                 {
                     return new LessonComponents();
                 }
+
+                if (ComponentsJson.TryFromJson<LessonComponents>(out var components) && components != null)
+                {
+                    return components;
+                }
+
+                return new LessonComponents();
             }
             set
             {
-                ComponentsJson = JsonSerializer.Serialize(value);
+                ComponentsJson = value.ToJson();
             }
         }
     }

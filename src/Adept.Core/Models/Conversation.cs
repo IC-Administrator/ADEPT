@@ -1,5 +1,5 @@
+using Adept.Common.Json;
 using Adept.Core.Interfaces;
-using System.Text.Json;
 
 namespace Adept.Core.Models
 {
@@ -50,18 +50,21 @@ namespace Adept.Core.Models
         {
             get
             {
-                try
-                {
-                    return JsonSerializer.Deserialize<List<LlmMessage>>(HistoryJson) ?? new List<LlmMessage>();
-                }
-                catch
+                if (string.IsNullOrEmpty(HistoryJson) || HistoryJson == "[]")
                 {
                     return new List<LlmMessage>();
                 }
+
+                if (HistoryJson.TryFromJson<List<LlmMessage>>(out var history) && history != null)
+                {
+                    return history;
+                }
+
+                return new List<LlmMessage>();
             }
             set
             {
-                HistoryJson = JsonSerializer.Serialize(value);
+                HistoryJson = value.ToJson();
             }
         }
 

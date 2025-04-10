@@ -1,3 +1,5 @@
+using Adept.Core.Models;
+
 namespace Adept.Core.Interfaces
 {
     /// <summary>
@@ -48,41 +50,5 @@ namespace Adept.Core.Interfaces
         /// </summary>
         /// <param name="promptId">The ID of the prompt to delete</param>
         Task DeletePromptAsync(string promptId);
-    }
-
-    /// <summary>
-    /// System prompt for LLM interactions
-    /// </summary>
-    public class SystemPrompt
-    {
-        /// <summary>
-        /// The ID of the prompt
-        /// </summary>
-        public string PromptId { get; set; } = Guid.NewGuid().ToString();
-
-        /// <summary>
-        /// The name of the prompt
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>
-        /// The content of the prompt
-        /// </summary>
-        public string Content { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Whether this is the default prompt
-        /// </summary>
-        public bool IsDefault { get; set; }
-
-        /// <summary>
-        /// When the prompt was created
-        /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// When the prompt was last updated
-        /// </summary>
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }
