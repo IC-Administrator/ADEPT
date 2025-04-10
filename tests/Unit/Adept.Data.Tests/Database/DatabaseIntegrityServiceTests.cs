@@ -7,6 +7,9 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
+// Use alias to avoid ambiguity with Moq.MockFactory
+using TestMockFactory = Adept.TestUtilities.Helpers.MockFactory;
+
 namespace Adept.Data.Tests.Database
 {
     /// <summary>
@@ -21,9 +24,9 @@ namespace Adept.Data.Tests.Database
 
         public DatabaseIntegrityServiceTests()
         {
-            _mockDatabaseContext = MockFactory.CreateMockDatabaseContext();
+            _mockDatabaseContext = TestMockFactory.CreateMockDatabaseContext();
             _mockBackupService = new Mock<IDatabaseBackupService>();
-            _mockLogger = MockFactory.CreateMockLogger<DatabaseIntegrityService>();
+            _mockLogger = TestMockFactory.CreateMockLogger<DatabaseIntegrityService>();
 
             _service = new DatabaseIntegrityService(
                 _mockDatabaseContext.Object,
@@ -98,15 +101,15 @@ namespace Adept.Data.Tests.Database
 
             _mockDatabaseContext.Setup(d => d.ExecuteNonQueryAsync(TestConstants.DatabaseQueries.Vacuum, null))
                 .Callback(() => vacuumCalled = true)
-                .Returns(Task.CompletedTask);
+                .Returns(Task.FromResult(1));
 
             _mockDatabaseContext.Setup(d => d.ExecuteNonQueryAsync(TestConstants.DatabaseQueries.Analyze, null))
                 .Callback(() => analyzeCalled = true)
-                .Returns(Task.CompletedTask);
+                .Returns(Task.FromResult(1));
 
             _mockDatabaseContext.Setup(d => d.ExecuteNonQueryAsync(TestConstants.DatabaseQueries.Checkpoint, null))
                 .Callback(() => checkpointCalled = true)
-                .Returns(Task.CompletedTask);
+                .Returns(Task.FromResult(1));
 
             // Act
             bool result = await _service.PerformMaintenanceAsync();

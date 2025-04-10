@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Adept.Core\Adept.Core.csproj" />
     <ProjectReference Include="..\..\..\src\Adept.Data\Adept.Data.csproj" />
     <ProjectReference Include="..\..\Common\Adept.TestUtilities\Adept.TestUtilities.csproj" />
   </ItemGroup>
@@ -29,7 +30,6 @@
   <ItemGroup>
     <Folder Include="Database\" />
     <Folder Include="Validation\" />
-    <Folder Include="Repository\" />
     <Folder Include="TestData\" />
   </ItemGroup>
 

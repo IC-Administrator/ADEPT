@@ -1,3 +1,5 @@
 @echo off
 echo Running tests for Adept...
-dotnet test src\Adept.Tests\Adept.Tests.csproj
+echo Redirecting to tests\run-tests.bat
+echo.
+call tests\run-tests.bat

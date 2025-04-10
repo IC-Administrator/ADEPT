@@ -1,11 +1,11 @@
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Adept.Data.Database;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
 using System.Threading.Tasks;
 
 namespace Adept.Data.Repositories
@@ -46,7 +46,9 @@ namespace Adept.Data.Repositories
                         WHERE LessonId = @LessonId
                         ORDER BY Name";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@LessonId", lessonId.ToString());
 
@@ -57,6 +59,7 @@ namespace Adept.Data.Repositories
                                 resources.Add(MapResourceFromReader(reader));
                             }
                         }
+                    }
                     }
                 }
 
@@ -84,7 +87,9 @@ namespace Adept.Data.Repositories
                         FROM LessonResources
                         WHERE ResourceId = @ResourceId";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@ResourceId", resourceId.ToString());
 
@@ -97,6 +102,7 @@ namespace Adept.Data.Repositories
                                 return resource;
                             }
                         }
+                    }
                     }
                 }
 
@@ -123,7 +129,9 @@ namespace Adept.Data.Repositories
                         INSERT INTO LessonResources (ResourceId, LessonId, Name, Type, Path, CreatedAt, UpdatedAt)
                         VALUES (@ResourceId, @LessonId, @Name, @Type, @Path, @CreatedAt, @UpdatedAt)";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@ResourceId", resource.ResourceId.ToString());
                         command.Parameters.AddWithValue("@LessonId", resource.LessonId.ToString());
@@ -134,6 +142,7 @@ namespace Adept.Data.Repositories
                         command.Parameters.AddWithValue("@UpdatedAt", resource.UpdatedAt.ToString("o"));
 
                         await command.ExecuteNonQueryAsync();
+                    }
                     }
                 }
 
@@ -161,7 +170,9 @@ namespace Adept.Data.Repositories
                         SET Name = @Name, Type = @Type, Path = @Path, UpdatedAt = @UpdatedAt
                         WHERE ResourceId = @ResourceId";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@ResourceId", resource.ResourceId.ToString());
                         command.Parameters.AddWithValue("@Name", resource.Name);
@@ -175,6 +186,7 @@ namespace Adept.Data.Repositories
                             _logger.LogWarning("Resource {ResourceId} not found for update", resource.ResourceId);
                             return null;
                         }
+                    }
                     }
                 }
 
@@ -199,7 +211,9 @@ namespace Adept.Data.Repositories
 
                     string sql = "DELETE FROM LessonResources WHERE ResourceId = @ResourceId";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@ResourceId", resourceId.ToString());
 
@@ -209,6 +223,7 @@ namespace Adept.Data.Repositories
                             _logger.LogWarning("Resource {ResourceId} not found for deletion", resourceId);
                             return false;
                         }
+                    }
                     }
                 }
 
@@ -233,13 +248,16 @@ namespace Adept.Data.Repositories
 
                     string sql = "DELETE FROM LessonResources WHERE LessonId = @LessonId";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@LessonId", lessonId.ToString());
 
                         int rowsAffected = await command.ExecuteNonQueryAsync();
                         _logger.LogInformation("Deleted {Count} resources for lesson {LessonId}", rowsAffected, lessonId);
                         return true;
+                    }
                     }
                 }
             }

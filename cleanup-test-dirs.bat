@@ -57,6 +57,15 @@ if exist src\PuppeteerTest (
 )
 
 echo.
+echo Removing src\Adept.Tests...
+if exist src\Adept.Tests (
+    rd /s /q src\Adept.Tests
+    echo - Removed successfully.
+) else (
+    echo - Directory not found.
+)
+
+echo.
 echo Cleanup completed.
 echo.
 

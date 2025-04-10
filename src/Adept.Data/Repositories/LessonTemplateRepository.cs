@@ -1,11 +1,11 @@
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Adept.Data.Database;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -46,7 +46,9 @@ namespace Adept.Data.Repositories
                         FROM LessonTemplates
                         ORDER BY Name";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         using (var reader = await command.ExecuteReaderAsync())
                         {
@@ -55,6 +57,7 @@ namespace Adept.Data.Repositories
                                 templates.Add(MapTemplateFromReader(reader));
                             }
                         }
+                    }
                     }
                 }
 
@@ -82,7 +85,9 @@ namespace Adept.Data.Repositories
                         FROM LessonTemplates
                         WHERE TemplateId = @TemplateId";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@TemplateId", templateId.ToString());
 
@@ -95,6 +100,7 @@ namespace Adept.Data.Repositories
                                 return template;
                             }
                         }
+                    }
                     }
                 }
 
@@ -125,7 +131,9 @@ namespace Adept.Data.Repositories
                         WHERE Category = @Category
                         ORDER BY Name";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@Category", category);
 
@@ -136,6 +144,7 @@ namespace Adept.Data.Repositories
                                 templates.Add(MapTemplateFromReader(reader));
                             }
                         }
+                    }
                     }
                 }
 
@@ -166,7 +175,9 @@ namespace Adept.Data.Repositories
                         WHERE Tags LIKE @Tag
                         ORDER BY Name";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@Tag", $"%\"{tag}\"%");
 
@@ -177,6 +188,7 @@ namespace Adept.Data.Repositories
                                 templates.Add(MapTemplateFromReader(reader));
                             }
                         }
+                    }
                     }
                 }
 
@@ -203,7 +215,9 @@ namespace Adept.Data.Repositories
                         INSERT INTO LessonTemplates (TemplateId, Name, Description, Category, Tags, Title, LearningObjectives, ComponentsJson, CreatedAt, UpdatedAt)
                         VALUES (@TemplateId, @Name, @Description, @Category, @Tags, @Title, @LearningObjectives, @ComponentsJson, @CreatedAt, @UpdatedAt)";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@TemplateId", template.TemplateId.ToString());
                         command.Parameters.AddWithValue("@Name", template.Name);
@@ -217,6 +231,7 @@ namespace Adept.Data.Repositories
                         command.Parameters.AddWithValue("@UpdatedAt", template.UpdatedAt.ToString("o"));
 
                         await command.ExecuteNonQueryAsync();
+                    }
                     }
                 }
 
@@ -241,11 +256,13 @@ namespace Adept.Data.Repositories
 
                     string sql = @"
                         UPDATE LessonTemplates
-                        SET Name = @Name, Description = @Description, Category = @Category, Tags = @Tags, 
+                        SET Name = @Name, Description = @Description, Category = @Category, Tags = @Tags,
                             Title = @Title, LearningObjectives = @LearningObjectives, ComponentsJson = @ComponentsJson, UpdatedAt = @UpdatedAt
                         WHERE TemplateId = @TemplateId";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@TemplateId", template.TemplateId.ToString());
                         command.Parameters.AddWithValue("@Name", template.Name);
@@ -263,6 +280,7 @@ namespace Adept.Data.Repositories
                             _logger.LogWarning("Template {TemplateId} not found for update", template.TemplateId);
                             return null;
                         }
+                    }
                     }
                 }
 
@@ -287,7 +305,9 @@ namespace Adept.Data.Repositories
 
                     string sql = "DELETE FROM LessonTemplates WHERE TemplateId = @TemplateId";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@TemplateId", templateId.ToString());
 
@@ -297,6 +317,7 @@ namespace Adept.Data.Repositories
                             _logger.LogWarning("Template {TemplateId} not found for deletion", templateId);
                             return false;
                         }
+                    }
                     }
                 }
 
@@ -327,7 +348,9 @@ namespace Adept.Data.Repositories
                         WHERE Name LIKE @SearchTerm OR Description LIKE @SearchTerm OR Title LIKE @SearchTerm OR LearningObjectives LIKE @SearchTerm
                         ORDER BY Name";
 
-                    using (var command = new SQLiteCommand(sql, connection))
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = sql;
                     {
                         command.Parameters.AddWithValue("@SearchTerm", $"%{searchTerm}%");
 
@@ -338,6 +361,7 @@ namespace Adept.Data.Repositories
                                 templates.Add(MapTemplateFromReader(reader));
                             }
                         }
+                    }
                     }
                 }
 

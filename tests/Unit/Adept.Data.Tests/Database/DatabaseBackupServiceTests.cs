@@ -12,6 +12,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
+// Use alias to avoid ambiguity with Moq.MockFactory
+using TestMockFactory = Adept.TestUtilities.Helpers.MockFactory;
+
 namespace Adept.Data.Tests.Database
 {
     /// <summary>
@@ -26,9 +29,9 @@ namespace Adept.Data.Tests.Database
 
         public DatabaseBackupServiceTests()
         {
-            _mockDatabaseContext = MockFactory.CreateMockDatabaseContext();
+            _mockDatabaseContext = TestMockFactory.CreateMockDatabaseContext();
             _mockConfiguration = new Mock<IConfiguration>();
-            _mockLogger = MockFactory.CreateMockLogger<DatabaseBackupService>();
+            _mockLogger = TestMockFactory.CreateMockLogger<DatabaseBackupService>();
 
             // Setup test paths
             _testBackupDir = TestConstants.DatabasePaths.TestBackupDirectory;
