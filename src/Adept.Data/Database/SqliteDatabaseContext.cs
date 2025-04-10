@@ -2,9 +2,14 @@ using Adept.Common.Interfaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 using System.Data;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 using DbTransaction = Adept.Common.Interfaces.IDbTransaction;
 
 namespace Adept.Data.Database
@@ -69,12 +74,12 @@ namespace Adept.Data.Database
         }
 
         /// <summary>
-        /// Executes a SQL query and returns a single value
+        /// Executes a SQL query and returns a scalar result
         /// </summary>
-        /// <typeparam name="T">The type of the return value</typeparam>
+        /// <typeparam name="T">The type of result to return</typeparam>
         /// <param name="sql">The SQL query to execute</param>
         /// <param name="parameters">Optional parameters for the SQL query</param>
-        /// <returns>The query result</returns>
+        /// <returns>The scalar result</returns>
         public async Task<T?> ExecuteScalarAsync<T>(string sql, object? parameters = null)
         {
             try
@@ -124,11 +129,7 @@ namespace Adept.Data.Database
 
                 while (await reader.ReadAsync())
                 {
-                    var item = MapToObject<T>(reader);
-                    if (item != null)
-                    {
-                        results.Add(item);
-                    }
+                    results.Add(MapToObject<T>(reader));
                 }
 
                 return results;
@@ -141,12 +142,12 @@ namespace Adept.Data.Database
         }
 
         /// <summary>
-        /// Executes a SQL query and returns a single result
+        /// Executes a SQL query and returns a single result or default
         /// </summary>
         /// <typeparam name="T">The type of object to return</typeparam>
         /// <param name="sql">The SQL query to execute</param>
         /// <param name="parameters">Optional parameters for the SQL query</param>
-        /// <returns>A single query result or default if no results</returns>
+        /// <returns>The query result or default</returns>
         public async Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null)
         {
             try
@@ -234,263 +235,8 @@ namespace Adept.Data.Database
         /// <param name="currentVersion">The current database version</param>
         private async Task ApplyMigrationsAsync(long currentVersion)
         {
-            // Define migrations
-            var migrations = new Dictionary<long, string>(DatabaseMigrations.Migrations)
-            {
-                {
-                    1,
-                    @"
-                    -- Configuration table for application settings
-                    CREATE TABLE Configuration (
-                        key TEXT PRIMARY KEY,
-                        value TEXT NOT NULL,
-                        encrypted INTEGER NOT NULL DEFAULT 0,
-                        last_modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-
-                    -- Secure storage for API keys and sensitive data
-                    CREATE TABLE SecureStorage (
-                        key TEXT PRIMARY KEY,
-                        encrypted_value BLOB NOT NULL,
-                        iv BLOB NOT NULL,
-                        last_modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-
-                    -- Classes table for storing class information
-                    CREATE TABLE Classes (
-                        class_id TEXT PRIMARY KEY,
-                        class_code TEXT NOT NULL,
-                        education_level TEXT NOT NULL,
-                        current_topic TEXT,
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT uq_class_code UNIQUE (class_code)
-                    );
-                    CREATE INDEX idx_classes_code ON Classes(class_code);
-
-                    -- Students table for storing student information
-                    CREATE TABLE Students (
-                        student_id TEXT PRIMARY KEY,
-                        class_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        fsm_status INTEGER CHECK (fsm_status IN (0, 1) OR fsm_status IS NULL),
-                        sen_status INTEGER CHECK (sen_status IN (0, 1) OR sen_status IS NULL),
-                        eal_status INTEGER CHECK (eal_status IN (0, 1) OR eal_status IS NULL),
-                        ability_level TEXT,
-                        reading_age TEXT,
-                        target_grade TEXT,
-                        notes TEXT,
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (class_id) REFERENCES Classes(class_id) ON DELETE CASCADE
-                    );
-                    CREATE INDEX idx_students_class ON Students(class_id);
-
-                    -- Teaching schedule table for storing weekly class schedules
-                    CREATE TABLE TeachingSchedule (
-                        schedule_id TEXT PRIMARY KEY,
-                        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
-                        time_slot INTEGER NOT NULL CHECK (time_slot BETWEEN 0 AND 4),
-                        class_id TEXT,
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT uq_schedule_slot UNIQUE (day_of_week, time_slot),
-                        FOREIGN KEY (class_id) REFERENCES Classes(class_id) ON DELETE SET NULL
-                    );
-                    CREATE INDEX idx_schedule_class ON TeachingSchedule(class_id);
-
-                    -- Lesson plans table for storing lesson information
-                    CREATE TABLE LessonPlans (
-                        lesson_id TEXT PRIMARY KEY,
-                        class_id TEXT NOT NULL,
-                        date TEXT NOT NULL,
-                        time_slot INTEGER NOT NULL CHECK (time_slot BETWEEN 0 AND 4),
-                        title TEXT NOT NULL,
-                        learning_objectives TEXT,
-                        calendar_event_id TEXT,
-                        components_json TEXT NOT NULL DEFAULT '{}',
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT uq_lesson_class_date_slot UNIQUE (class_id, date, time_slot),
-                        FOREIGN KEY (class_id) REFERENCES Classes(class_id) ON DELETE CASCADE
-                    );
-                    CREATE INDEX idx_lesson_date ON LessonPlans(date);
-                    CREATE INDEX idx_lesson_calendar ON LessonPlans(calendar_event_id);
-
-                    -- Conversations table for storing chat history
-                    CREATE TABLE Conversations (
-                        conversation_id TEXT PRIMARY KEY,
-                        class_id TEXT,
-                        date TEXT NOT NULL,
-                        time_slot INTEGER CHECK (time_slot BETWEEN 0 AND 4),
-                        history_json TEXT NOT NULL DEFAULT '[]',
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (class_id) REFERENCES Classes(class_id) ON DELETE SET NULL
-                    );
-                    CREATE INDEX idx_conversation_class ON Conversations(class_id);
-                    CREATE INDEX idx_conversation_date ON Conversations(date);
-
-                    -- System prompts table for storing LLM system prompts
-                    CREATE TABLE SystemPrompts (
-                        prompt_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        is_default INTEGER NOT NULL DEFAULT 0,
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-                    CREATE INDEX idx_prompts_default ON SystemPrompts(is_default);
-
-                    -- Database version tracking table
-                    CREATE TABLE DatabaseVersion (
-                        Version INTEGER PRIMARY KEY,
-                        AppliedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-                    "
-                },
-                {
-                    2,
-                    @"
-                    -- Add validation triggers for Classes table
-                    CREATE TRIGGER IF NOT EXISTS validate_class_insert
-                    BEFORE INSERT ON Classes
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.class_code IS NULL OR trim(NEW.class_code) = ''
-                                THEN RAISE(ABORT, 'Class code cannot be empty')
-                            WHEN NEW.education_level IS NULL OR trim(NEW.education_level) = ''
-                                THEN RAISE(ABORT, 'Education level cannot be empty')
-                        END;
-                    END;
-
-                    CREATE TRIGGER IF NOT EXISTS validate_class_update
-                    BEFORE UPDATE ON Classes
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.class_code IS NULL OR trim(NEW.class_code) = ''
-                                THEN RAISE(ABORT, 'Class code cannot be empty')
-                            WHEN NEW.education_level IS NULL OR trim(NEW.education_level) = ''
-                                THEN RAISE(ABORT, 'Education level cannot be empty')
-                        END;
-                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
-                    END;
-
-                    -- Add validation triggers for Students table
-                    CREATE TRIGGER IF NOT EXISTS validate_student_insert
-                    BEFORE INSERT ON Students
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
-                                THEN RAISE(ABORT, 'Student name cannot be empty')
-                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
-                                THEN RAISE(ABORT, 'Referenced class does not exist')
-                        END;
-                    END;
-
-                    CREATE TRIGGER IF NOT EXISTS validate_student_update
-                    BEFORE UPDATE ON Students
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
-                                THEN RAISE(ABORT, 'Student name cannot be empty')
-                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
-                                THEN RAISE(ABORT, 'Referenced class does not exist')
-                        END;
-                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
-                    END;
-
-                    -- Add validation triggers for LessonPlans table
-                    CREATE TRIGGER IF NOT EXISTS validate_lesson_insert
-                    BEFORE INSERT ON LessonPlans
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.title IS NULL OR trim(NEW.title) = ''
-                                THEN RAISE(ABORT, 'Lesson title cannot be empty')
-                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
-                                THEN RAISE(ABORT, 'Lesson date cannot be empty')
-                            WHEN NEW.time_slot < 0 OR NEW.time_slot > 4
-                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
-                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
-                                THEN RAISE(ABORT, 'Referenced class does not exist')
-                        END;
-                    END;
-
-                    CREATE TRIGGER IF NOT EXISTS validate_lesson_update
-                    BEFORE UPDATE ON LessonPlans
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.title IS NULL OR trim(NEW.title) = ''
-                                THEN RAISE(ABORT, 'Lesson title cannot be empty')
-                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
-                                THEN RAISE(ABORT, 'Lesson date cannot be empty')
-                            WHEN NEW.time_slot < 0 OR NEW.time_slot > 4
-                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
-                            WHEN NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
-                                THEN RAISE(ABORT, 'Referenced class does not exist')
-                        END;
-                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
-                    END;
-                    "
-                },
-                {
-                    3,
-                    @"
-                    -- Add validation triggers for Conversations table
-                    CREATE TRIGGER IF NOT EXISTS validate_conversation_insert
-                    BEFORE INSERT ON Conversations
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
-                                THEN RAISE(ABORT, 'Conversation date cannot be empty')
-                            WHEN NEW.class_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
-                                THEN RAISE(ABORT, 'Referenced class does not exist')
-                            WHEN NEW.time_slot IS NOT NULL AND (NEW.time_slot < 0 OR NEW.time_slot > 4)
-                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
-                        END;
-                    END;
-
-                    CREATE TRIGGER IF NOT EXISTS validate_conversation_update
-                    BEFORE UPDATE ON Conversations
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.date IS NULL OR trim(NEW.date) = ''
-                                THEN RAISE(ABORT, 'Conversation date cannot be empty')
-                            WHEN NEW.class_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Classes WHERE class_id = NEW.class_id)
-                                THEN RAISE(ABORT, 'Referenced class does not exist')
-                            WHEN NEW.time_slot IS NOT NULL AND (NEW.time_slot < 0 OR NEW.time_slot > 4)
-                                THEN RAISE(ABORT, 'Time slot must be between 0 and 4')
-                        END;
-                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
-                    END;
-
-                    -- Add validation triggers for SystemPrompts table
-                    CREATE TRIGGER IF NOT EXISTS validate_prompt_insert
-                    BEFORE INSERT ON SystemPrompts
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
-                                THEN RAISE(ABORT, 'Prompt name cannot be empty')
-                            WHEN NEW.content IS NULL OR trim(NEW.content) = ''
-                                THEN RAISE(ABORT, 'Prompt content cannot be empty')
-                        END;
-                    END;
-
-                    CREATE TRIGGER IF NOT EXISTS validate_prompt_update
-                    BEFORE UPDATE ON SystemPrompts
-                    BEGIN
-                        SELECT CASE
-                            WHEN NEW.name IS NULL OR trim(NEW.name) = ''
-                                THEN RAISE(ABORT, 'Prompt name cannot be empty')
-                            WHEN NEW.content IS NULL OR trim(NEW.content) = ''
-                                THEN RAISE(ABORT, 'Prompt content cannot be empty')
-                        END;
-                        UPDATE NEW SET updated_at = CURRENT_TIMESTAMP;
-                    END;
-                    "
-                }
-                // Add more migrations as needed
-            };
+            // Get migrations from the DatabaseMigrations class
+            var migrations = DatabaseMigrations.Migrations;
 
             // Create a backup before applying migrations if backup service is available
             if (_backupService != null && currentVersion < migrations.Keys.Max())
@@ -533,7 +279,7 @@ namespace Adept.Data.Database
         }
 
         /// <summary>
-        /// Adds parameters to a SQL command
+        /// Adds parameters to a command
         /// </summary>
         /// <param name="command">The command</param>
         /// <param name="parameters">The parameters</param>
@@ -555,10 +301,10 @@ namespace Adept.Data.Database
         /// <summary>
         /// Maps a data reader to an object
         /// </summary>
-        /// <typeparam name="T">The type of object to create</typeparam>
+        /// <typeparam name="T">The type of object to map to</typeparam>
         /// <param name="reader">The data reader</param>
         /// <returns>The mapped object</returns>
-        private T? MapToObject<T>(IDataReader reader)
+        private T MapToObject<T>(SqliteDataReader reader)
         {
             var obj = Activator.CreateInstance<T>();
             var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -566,49 +312,78 @@ namespace Adept.Data.Database
             for (int i = 0; i < reader.FieldCount; i++)
             {
                 var columnName = reader.GetName(i);
-                var property = properties.FirstOrDefault(p =>
-                    string.Equals(p.Name, columnName, StringComparison.OrdinalIgnoreCase));
+                var property = properties.FirstOrDefault(p => p.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase));
 
-                if (property != null && property.CanWrite)
+                if (property != null && reader[i] != DBNull.Value)
                 {
-                    var value = reader.GetValue(i);
-                    if (value != DBNull.Value)
+                    var value = reader[i];
+                    var propertyType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+                    // Handle special cases
+                    if (propertyType == typeof(Guid) && value is string stringValue)
                     {
-                        if (property.PropertyType == typeof(DateTime) && value is string dateStr)
+                        property.SetValue(obj, Guid.Parse(stringValue));
+                    }
+                    else if (propertyType.IsEnum && value is long longValue)
+                    {
+                        property.SetValue(obj, Enum.ToObject(propertyType, longValue));
+                    }
+                    else if (propertyType == typeof(DateTime) && value is string dateString)
+                    {
+                        property.SetValue(obj, DateTime.Parse(dateString));
+                    }
+                    else if (propertyType == typeof(bool) && value is long boolValue)
+                    {
+                        property.SetValue(obj, boolValue != 0);
+                    }
+                    else if (propertyType == typeof(string) && value is byte[] bytes)
+                    {
+                        property.SetValue(obj, System.Text.Encoding.UTF8.GetString(bytes));
+                    }
+                    else if (property.Name.EndsWith("Json") && value is string json)
+                    {
+                        // Handle JSON properties
+                        var jsonPropertyName = property.Name.Substring(0, property.Name.Length - 4);
+                        var jsonProperty = properties.FirstOrDefault(p => p.Name.Equals(jsonPropertyName, StringComparison.OrdinalIgnoreCase));
+
+                        if (jsonProperty != null)
                         {
-                            if (DateTime.TryParse(dateStr, out var dateValue))
+                            try
                             {
-                                property.SetValue(obj, dateValue);
+                                var deserializedValue = JsonSerializer.Deserialize(json, jsonProperty.PropertyType);
+                                jsonProperty.SetValue(obj, deserializedValue);
                             }
-                        }
-                        else if (property.PropertyType.IsEnum && value is string enumStr)
-                        {
-                            if (Enum.TryParse(property.PropertyType, enumStr, true, out var enumValue))
+                            catch (Exception ex)
                             {
-                                property.SetValue(obj, enumValue);
+                                // Log but continue
+                                Console.WriteLine($"Error deserializing JSON: {ex.Message}");
                             }
                         }
                         else
                         {
+                            // Just set the JSON string
+                            property.SetValue(obj, value);
+                        }
+                    }
+                    else
+                    {
+                        // Standard conversion
+                        try
+                        {
+                            var convertedValue = Convert.ChangeType(value, propertyType);
+                            property.SetValue(obj, convertedValue);
+                        }
+                        catch (Exception)
+                        {
+                            // If conversion fails, try direct assignment
                             try
                             {
-                                property.SetValue(obj, Convert.ChangeType(value, property.PropertyType));
+                                property.SetValue(obj, value);
                             }
-                            catch
+                            catch (Exception ex)
                             {
-                                // If conversion fails, try JSON deserialization for complex types
-                                if (value is string jsonStr)
-                                {
-                                    try
-                                    {
-                                        var deserializedValue = JsonSerializer.Deserialize(jsonStr, property.PropertyType);
-                                        property.SetValue(obj, deserializedValue);
-                                    }
-                                    catch
-                                    {
-                                        // Ignore JSON deserialization errors
-                                    }
-                                }
+                                // Log but continue
+                                Console.WriteLine($"Error setting property {property.Name}: {ex.Message}");
                             }
                         }
                     }
@@ -626,7 +401,7 @@ namespace Adept.Data.Database
     {
         private readonly SqliteConnection _connection;
         private readonly SqliteTransaction _transaction;
-        private bool _disposed;
+        private bool _isDisposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqliteDbTransaction"/> class
@@ -642,69 +417,48 @@ namespace Adept.Data.Database
         /// <summary>
         /// Commits the transaction
         /// </summary>
-        public Task CommitAsync()
+        public override void Commit()
         {
             _transaction.Commit();
-            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Commits the transaction asynchronously
+        /// </summary>
+        public override async Task CommitAsync()
+        {
+            await Task.Run(() => _transaction.Commit());
         }
 
         /// <summary>
         /// Rolls back the transaction
         /// </summary>
-        public Task RollbackAsync()
+        public override void Rollback()
         {
             _transaction.Rollback();
-            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Rolls back the transaction asynchronously
+        /// </summary>
+        public override async Task RollbackAsync()
+        {
+            await Task.Run(() => _transaction.Rollback());
         }
 
         /// <summary>
         /// Disposes the transaction
         /// </summary>
-        public void Dispose()
+        public override void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Disposes the transaction asynchronously
-        /// </summary>
-        public async ValueTask DisposeAsync()
-        {
-            await DisposeAsyncCore();
-            Dispose(false);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Disposes the transaction asynchronously
-        /// </summary>
-        protected virtual async ValueTask DisposeAsyncCore()
-        {
-            if (!_disposed)
+            if (_isDisposed)
             {
-                _transaction.Dispose();
-                await _connection.DisposeAsync();
-                _disposed = true;
+                return;
             }
-        }
 
-        /// <summary>
-        /// Disposes the transaction
-        /// </summary>
-        /// <param name="disposing">Whether to dispose managed resources</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _transaction.Dispose();
-                    _connection.Dispose();
-                }
-
-                _disposed = true;
-            }
+            _transaction.Dispose();
+            _connection.Dispose();
+            _isDisposed = true;
         }
     }
 }

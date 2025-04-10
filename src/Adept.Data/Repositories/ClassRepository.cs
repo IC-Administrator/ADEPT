@@ -2,26 +2,26 @@ using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Adept.Data.Repositories
 {
     /// <summary>
     /// Repository for class data operations
     /// </summary>
-    public class ClassRepository : IClassRepository
+    public class ClassRepository : BaseRepository<Class>, IClassRepository
     {
-        private readonly IDatabaseContext _databaseContext;
-        private readonly ILogger<ClassRepository> _logger;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ClassRepository"/> class
         /// </summary>
         /// <param name="databaseContext">The database context</param>
         /// <param name="logger">The logger</param>
         public ClassRepository(IDatabaseContext databaseContext, ILogger<ClassRepository> logger)
+            : base(databaseContext, logger)
         {
-            _databaseContext = databaseContext;
-            _logger = logger;
         }
 
         /// <summary>
@@ -30,9 +30,8 @@ namespace Adept.Data.Repositories
         /// <returns>All classes</returns>
         public async Task<IEnumerable<Class>> GetAllClassesAsync()
         {
-            try
-            {
-                return await _databaseContext.QueryAsync<Class>(
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QueryAsync<Class>(
                     @"SELECT
                         class_id AS ClassId,
                         class_code AS ClassCode,
@@ -41,13 +40,9 @@ namespace Adept.Data.Repositories
                         created_at AS CreatedAt,
                         updated_at AS UpdatedAt
                       FROM Classes
-                      ORDER BY class_code");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all classes");
-                return Enumerable.Empty<Class>();
-            }
+                      ORDER BY class_code"),
+                "Error getting all classes",
+                Enumerable.Empty<Class>());
         }
 
         /// <summary>
@@ -57,9 +52,10 @@ namespace Adept.Data.Repositories
         /// <returns>The class or null if not found</returns>
         public async Task<Class?> GetClassByIdAsync(string classId)
         {
-            try
-            {
-                return await _databaseContext.QuerySingleOrDefaultAsync<Class>(
+            ValidateId(classId, "class");
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QuerySingleOrDefaultAsync<Class>(
                     @"SELECT
                         class_id AS ClassId,
                         class_code AS ClassCode,
@@ -69,13 +65,8 @@ namespace Adept.Data.Repositories
                         updated_at AS UpdatedAt
                       FROM Classes
                       WHERE class_id = @ClassId",
-                    new { ClassId = classId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting class by ID {ClassId}", classId);
-                return null;
-            }
+                    new { ClassId = classId }),
+                $"Error getting class by ID {classId}");
         }
 
         /// <summary>
@@ -85,9 +76,10 @@ namespace Adept.Data.Repositories
         /// <returns>The class or null if not found</returns>
         public async Task<Class?> GetClassByCodeAsync(string classCode)
         {
-            try
-            {
-                return await _databaseContext.QuerySingleOrDefaultAsync<Class>(
+            ValidateStringNotNullOrEmpty(classCode, "classCode");
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QuerySingleOrDefaultAsync<Class>(
                     @"SELECT
                         class_id AS ClassId,
                         class_code AS ClassCode,
@@ -97,13 +89,8 @@ namespace Adept.Data.Repositories
                         updated_at AS UpdatedAt
                       FROM Classes
                       WHERE class_code = @ClassCode",
-                    new { ClassCode = classCode });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting class by code {ClassCode}", classCode);
-                return null;
-            }
+                    new { ClassCode = classCode }),
+                $"Error getting class by code {classCode}");
         }
 
         /// <summary>
@@ -113,20 +100,9 @@ namespace Adept.Data.Repositories
         /// <exception cref="ArgumentException">Thrown when validation fails</exception>
         private void ValidateClass(Class classEntity)
         {
-            if (classEntity == null)
-            {
-                throw new ArgumentNullException(nameof(classEntity), "Class entity cannot be null");
-            }
-
-            if (string.IsNullOrWhiteSpace(classEntity.ClassCode))
-            {
-                throw new ArgumentException("Class code cannot be empty", nameof(classEntity));
-            }
-
-            if (string.IsNullOrWhiteSpace(classEntity.EducationLevel))
-            {
-                throw new ArgumentException("Education level cannot be empty", nameof(classEntity));
-            }
+            ValidateEntityNotNull(classEntity, "class");
+            ValidateStringNotNullOrEmpty(classEntity.ClassCode, "ClassCode");
+            ValidateStringNotNullOrEmpty(classEntity.EducationLevel, "EducationLevel");
 
             // Additional validation rules can be added here
         }
@@ -140,52 +116,49 @@ namespace Adept.Data.Repositories
         /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task<string> AddClassAsync(Class classEntity)
         {
-            try
-            {
-                // Validate the class entity
-                ValidateClass(classEntity);
-
-                // Check if a class with the same code already exists
-                var existingClass = await GetClassByCodeAsync(classEntity.ClassCode);
-                if (existingClass != null)
+            return await ExecuteWithErrorHandlingAndThrowAsync(
+                async () =>
                 {
-                    throw new InvalidOperationException($"A class with code '{classEntity.ClassCode}' already exists");
-                }
+                    // Validate the class entity
+                    ValidateClass(classEntity);
 
-                if (string.IsNullOrEmpty(classEntity.ClassId))
-                {
-                    classEntity.ClassId = Guid.NewGuid().ToString();
-                }
+                    // Check if a class with the same code already exists
+                    var existingClass = await GetClassByCodeAsync(classEntity.ClassCode);
+                    if (existingClass != null)
+                    {
+                        throw new InvalidOperationException($"A class with code '{classEntity.ClassCode}' already exists");
+                    }
 
-                classEntity.CreatedAt = DateTime.UtcNow;
-                classEntity.UpdatedAt = DateTime.UtcNow;
+                    if (string.IsNullOrEmpty(classEntity.ClassId))
+                    {
+                        classEntity.ClassId = Guid.NewGuid().ToString();
+                    }
 
-                await _databaseContext.ExecuteNonQueryAsync(
-                    @"INSERT INTO Classes (
-                        class_id,
-                        class_code,
-                        education_level,
-                        current_topic,
-                        created_at,
-                        updated_at
-                      ) VALUES (
-                        @ClassId,
-                        @ClassCode,
-                        @EducationLevel,
-                        @CurrentTopic,
-                        @CreatedAt,
-                        @UpdatedAt
-                      )",
-                    classEntity);
+                    classEntity.CreatedAt = DateTime.UtcNow;
+                    classEntity.UpdatedAt = DateTime.UtcNow;
 
-                _logger.LogInformation("Added new class: {ClassCode}", classEntity.ClassCode);
-                return classEntity.ClassId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding class {ClassCode}", classEntity.ClassCode);
-                throw;
-            }
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        @"INSERT INTO Classes (
+                            class_id,
+                            class_code,
+                            education_level,
+                            current_topic,
+                            created_at,
+                            updated_at
+                          ) VALUES (
+                            @ClassId,
+                            @ClassCode,
+                            @EducationLevel,
+                            @CurrentTopic,
+                            @CreatedAt,
+                            @UpdatedAt
+                          )",
+                        classEntity);
+
+                    Logger.LogInformation("Added new class: {ClassCode}", classEntity.ClassCode);
+                    return classEntity.ClassId;
+                },
+                $"Error adding class {classEntity?.ClassCode ?? "<unknown>"}");
         }
 
         /// <summary>
@@ -196,47 +169,45 @@ namespace Adept.Data.Repositories
         /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task UpdateClassAsync(Class classEntity)
         {
-            try
-            {
-                // Validate the class entity
-                ValidateClass(classEntity);
-
-                // Check if the class exists
-                var existingClass = await GetClassByIdAsync(classEntity.ClassId);
-                if (existingClass == null)
+            await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    throw new InvalidOperationException($"Class with ID '{classEntity.ClassId}' not found");
-                }
+                    // Validate the class entity
+                    ValidateClass(classEntity);
+                    ValidateId(classEntity.ClassId, "class");
 
-                // Check if the class code is being changed and if it conflicts with another class
-                if (existingClass.ClassCode != classEntity.ClassCode)
-                {
-                    var conflictingClass = await GetClassByCodeAsync(classEntity.ClassCode);
-                    if (conflictingClass != null && conflictingClass.ClassId != classEntity.ClassId)
+                    // Check if the class exists
+                    var existingClass = await GetClassByIdAsync(classEntity.ClassId);
+                    if (existingClass == null)
                     {
-                        throw new InvalidOperationException($"A class with code '{classEntity.ClassCode}' already exists");
+                        throw new InvalidOperationException($"Class with ID '{classEntity.ClassId}' not found");
                     }
-                }
 
-                classEntity.UpdatedAt = DateTime.UtcNow;
-                classEntity.CreatedAt = existingClass.CreatedAt; // Preserve the original creation date
+                    // Check if the class code is being changed and if it conflicts with another class
+                    if (existingClass.ClassCode != classEntity.ClassCode)
+                    {
+                        var conflictingClass = await GetClassByCodeAsync(classEntity.ClassCode);
+                        if (conflictingClass != null && conflictingClass.ClassId != classEntity.ClassId)
+                        {
+                            throw new InvalidOperationException($"A class with code '{classEntity.ClassCode}' already exists");
+                        }
+                    }
 
-                await _databaseContext.ExecuteNonQueryAsync(
-                    @"UPDATE Classes SET
-                        class_code = @ClassCode,
-                        education_level = @EducationLevel,
-                        current_topic = @CurrentTopic,
-                        updated_at = @UpdatedAt
-                      WHERE class_id = @ClassId",
-                    classEntity);
+                    classEntity.UpdatedAt = DateTime.UtcNow;
+                    classEntity.CreatedAt = existingClass.CreatedAt; // Preserve the original creation date
 
-                _logger.LogInformation("Updated class: {ClassId}, {ClassCode}", classEntity.ClassId, classEntity.ClassCode);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating class {ClassId}", classEntity.ClassId);
-                throw;
-            }
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        @"UPDATE Classes SET
+                            class_code = @ClassCode,
+                            education_level = @EducationLevel,
+                            current_topic = @CurrentTopic,
+                            updated_at = @UpdatedAt
+                          WHERE class_id = @ClassId",
+                        classEntity);
+
+                    Logger.LogInformation("Updated class: {ClassId}, {ClassCode}", classEntity.ClassId, classEntity.ClassCode);
+                },
+                $"Error updating class {classEntity?.ClassId ?? "<unknown>"}");
         }
 
         /// <summary>
@@ -247,44 +218,26 @@ namespace Adept.Data.Repositories
         /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task DeleteClassAsync(string classId)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(classId))
+            await ExecuteInTransactionAsync(
+                async (transaction) =>
                 {
-                    throw new ArgumentException("Class ID cannot be empty", nameof(classId));
-                }
+                    ValidateId(classId, "class");
 
-                // Check if the class exists
-                var existingClass = await GetClassByIdAsync(classId);
-                if (existingClass == null)
-                {
-                    throw new InvalidOperationException($"Class with ID '{classId}' not found");
-                }
+                    // Check if the class exists
+                    var existingClass = await GetClassByIdAsync(classId);
+                    if (existingClass == null)
+                    {
+                        throw new InvalidOperationException($"Class with ID '{classId}' not found");
+                    }
 
-                // Begin a transaction to ensure data integrity
-                using var transaction = await _databaseContext.BeginTransactionAsync();
-                try
-                {
                     // Delete the class (cascade will handle related records)
-                    await _databaseContext.ExecuteNonQueryAsync(
+                    await DatabaseContext.ExecuteNonQueryAsync(
                         "DELETE FROM Classes WHERE class_id = @ClassId",
                         new { ClassId = classId });
 
-                    await transaction.CommitAsync();
-                    _logger.LogInformation("Deleted class: {ClassId}, {ClassCode}", classId, existingClass.ClassCode);
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(ex, "Transaction rolled back while deleting class {ClassId}", classId);
-                    throw;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting class {ClassId}", classId);
-                throw;
-            }
+                    Logger.LogInformation("Deleted class: {ClassId}, {ClassCode}", classId, existingClass.ClassCode);
+                },
+                $"Error deleting class {classId}");
         }
 
         /// <summary>
@@ -295,45 +248,40 @@ namespace Adept.Data.Repositories
         /// <exception cref="ArgumentException">Thrown when the class ID is invalid</exception>
         public async Task<IEnumerable<Student>> GetStudentsForClassAsync(string classId)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(classId))
-                {
-                    throw new ArgumentException("Class ID cannot be empty", nameof(classId));
-                }
+            ValidateId(classId, "class");
 
-                // Check if the class exists
-                var existingClass = await GetClassByIdAsync(classId);
-                if (existingClass == null)
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    _logger.LogWarning("Attempted to get students for non-existent class {ClassId}", classId);
-                    return Enumerable.Empty<Student>();
-                }
+                    // Check if the class exists
+                    var existingClass = await GetClassByIdAsync(classId);
+                    if (existingClass == null)
+                    {
+                        Logger.LogWarning("Attempted to get students for non-existent class {ClassId}", classId);
+                        return Enumerable.Empty<Student>();
+                    }
 
-                return await _databaseContext.QueryAsync<Student>(
-                    @"SELECT
-                        student_id AS StudentId,
-                        class_id AS ClassId,
-                        name AS Name,
-                        fsm_status AS FsmStatus,
-                        sen_status AS SenStatus,
-                        eal_status AS EalStatus,
-                        ability_level AS AbilityLevel,
-                        reading_age AS ReadingAge,
-                        target_grade AS TargetGrade,
-                        notes AS Notes,
-                        created_at AS CreatedAt,
-                        updated_at AS UpdatedAt
-                      FROM Students
-                      WHERE class_id = @ClassId
-                      ORDER BY name",
-                    new { ClassId = classId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting students for class {ClassId}", classId);
-                return Enumerable.Empty<Student>();
-            }
+                    return await DatabaseContext.QueryAsync<Student>(
+                        @"SELECT
+                            student_id AS StudentId,
+                            class_id AS ClassId,
+                            name AS Name,
+                            fsm_status AS FsmStatus,
+                            sen_status AS SenStatus,
+                            eal_status AS EalStatus,
+                            ability_level AS AbilityLevel,
+                            reading_age AS ReadingAge,
+                            target_grade AS TargetGrade,
+                            notes AS Notes,
+                            created_at AS CreatedAt,
+                            updated_at AS UpdatedAt
+                          FROM Students
+                          WHERE class_id = @ClassId
+                          ORDER BY name",
+                        new { ClassId = classId });
+                },
+                $"Error getting students for class {classId}",
+                Enumerable.Empty<Student>());
         }
     }
 }

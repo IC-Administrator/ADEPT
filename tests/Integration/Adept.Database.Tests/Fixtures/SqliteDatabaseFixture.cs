@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Xunit;
@@ -26,31 +27,40 @@ namespace Adept.Database.Tests.Fixtures
         {
             // Create a unique test database path
             DatabasePath = Path.Combine(
-                Path.GetTempPath(), 
+                Path.GetTempPath(),
                 $"adept_test_{Guid.NewGuid():N}.db");
-            
+
             // Set up services
             var services = new ServiceCollection();
-            
+
             // Add logging
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
                 builder.SetMinimumLevel(LogLevel.Debug);
             });
-            
+
+            // Add configuration
+            var configuration = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    { "Database:ConnectionString", $"Data Source={DatabasePath}" }
+                })
+                .Build();
+            services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(configuration);
+
             // Add database services
-            services.AddSingleton<IDatabaseContext>(provider => 
+            services.AddSingleton<IDatabaseContext>(provider =>
                 new SqliteDatabaseContext(
-                    provider.GetRequiredService<ILogger<SqliteDatabaseContext>>(),
-                    $"Data Source={DatabasePath}"));
-            
+                    provider.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(),
+                    provider.GetRequiredService<ILogger<SqliteDatabaseContext>>()));
+
             // Add backup service
             services.AddSingleton<DatabaseBackupService>();
-            
+
             // Add integrity service
             services.AddSingleton<DatabaseIntegrityService>();
-            
+
             ServiceProvider = services.BuildServiceProvider();
         }
 
@@ -61,7 +71,7 @@ namespace Adept.Database.Tests.Fixtures
         {
             // Create the database schema
             await CreateDatabaseSchemaAsync();
-            
+
             // Insert test data
             await InsertTestDataAsync();
         }
@@ -80,7 +90,7 @@ namespace Adept.Database.Tests.Fixtures
                     CreatedDate TEXT NOT NULL,
                     LastUpdatedDate TEXT
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Messages (
                     MessageId TEXT PRIMARY KEY,
                     ConversationId TEXT NOT NULL,
@@ -89,7 +99,7 @@ namespace Adept.Database.Tests.Fixtures
                     Timestamp TEXT NOT NULL,
                     FOREIGN KEY (ConversationId) REFERENCES Conversations(ConversationId)
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Classes (
                     ClassId TEXT PRIMARY KEY,
                     ClassCode TEXT NOT NULL,
@@ -98,14 +108,14 @@ namespace Adept.Database.Tests.Fixtures
                     CurrentTopic TEXT,
                     CreatedDate TEXT NOT NULL
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Students (
                     StudentId TEXT PRIMARY KEY,
                     Name TEXT NOT NULL,
                     Email TEXT,
                     EnrollmentDate TEXT NOT NULL
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Lessons (
                     LessonId TEXT PRIMARY KEY,
                     ClassId TEXT NOT NULL,
@@ -114,7 +124,7 @@ namespace Adept.Database.Tests.Fixtures
                     CreatedDate TEXT NOT NULL,
                     FOREIGN KEY (ClassId) REFERENCES Classes(ClassId)
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Assignments (
                     AssignmentId TEXT PRIMARY KEY,
                     LessonId TEXT NOT NULL,
@@ -142,7 +152,7 @@ namespace Adept.Database.Tests.Fixtures
                 SystemPrompt = "You are a helpful assistant.",
                 CreatedDate = DateTime.Now.ToString("o")
             });
-            
+
             // Insert a test class
             string classId = Guid.NewGuid().ToString();
             await DatabaseContext.ExecuteNonQueryAsync(@"
@@ -157,7 +167,7 @@ namespace Adept.Database.Tests.Fixtures
                 CurrentTopic = "Variables and Data Types",
                 CreatedDate = DateTime.Now.ToString("o")
             });
-            
+
             // Insert a test student
             await DatabaseContext.ExecuteNonQueryAsync(@"
                 INSERT INTO Students (StudentId, Name, Email, EnrollmentDate)
@@ -169,7 +179,7 @@ namespace Adept.Database.Tests.Fixtures
                 Email = "john.doe@example.com",
                 EnrollmentDate = DateTime.Now.AddDays(-30).ToString("o")
             });
-            
+
             // Insert a test lesson
             string lessonId = Guid.NewGuid().ToString();
             await DatabaseContext.ExecuteNonQueryAsync(@"
@@ -183,7 +193,7 @@ namespace Adept.Database.Tests.Fixtures
                 Content = "This lesson covers variables and data types in programming.",
                 CreatedDate = DateTime.Now.AddDays(-5).ToString("o")
             });
-            
+
             // Insert a test assignment
             await DatabaseContext.ExecuteNonQueryAsync(@"
                 INSERT INTO Assignments (AssignmentId, LessonId, Title, Description, DueDate)
@@ -215,7 +225,7 @@ namespace Adept.Database.Tests.Fixtures
             {
                 // Close any open connections
                 SqliteConnection.ClearAllPools();
-                
+
                 // Delete the database file
                 if (File.Exists(DatabasePath))
                 {
@@ -226,7 +236,7 @@ namespace Adept.Database.Tests.Fixtures
             {
                 // Ignore errors during cleanup
             }
-            
+
             if (ServiceProvider is IDisposable disposable)
             {
                 disposable.Dispose();

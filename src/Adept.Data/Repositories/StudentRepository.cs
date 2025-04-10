@@ -3,26 +3,26 @@ using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Adept.Data.Validation;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Adept.Data.Repositories
 {
     /// <summary>
     /// Repository for student data operations
     /// </summary>
-    public class StudentRepository : IStudentRepository
+    public class StudentRepository : BaseRepository<Student>, IStudentRepository
     {
-        private readonly IDatabaseContext _databaseContext;
-        private readonly ILogger<StudentRepository> _logger;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="StudentRepository"/> class
         /// </summary>
         /// <param name="databaseContext">The database context</param>
         /// <param name="logger">The logger</param>
         public StudentRepository(IDatabaseContext databaseContext, ILogger<StudentRepository> logger)
+            : base(databaseContext, logger)
         {
-            _databaseContext = databaseContext;
-            _logger = logger;
         }
 
         /// <summary>
@@ -31,9 +31,8 @@ namespace Adept.Data.Repositories
         /// <returns>All students</returns>
         public async Task<IEnumerable<Student>> GetAllStudentsAsync()
         {
-            try
-            {
-                return await _databaseContext.QueryAsync<Student>(
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QueryAsync<Student>(
                     @"SELECT
                         student_id AS StudentId,
                         class_id AS ClassId,
@@ -48,13 +47,9 @@ namespace Adept.Data.Repositories
                         created_at AS CreatedAt,
                         updated_at AS UpdatedAt
                       FROM Students
-                      ORDER BY name");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all students");
-                return Enumerable.Empty<Student>();
-            }
+                      ORDER BY name"),
+                "Error getting all students",
+                Enumerable.Empty<Student>());
         }
 
         /// <summary>
@@ -64,9 +59,10 @@ namespace Adept.Data.Repositories
         /// <returns>The student or null if not found</returns>
         public async Task<Student?> GetStudentByIdAsync(string studentId)
         {
-            try
-            {
-                return await _databaseContext.QuerySingleOrDefaultAsync<Student>(
+            ValidateId(studentId, "student");
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QuerySingleOrDefaultAsync<Student>(
                     @"SELECT
                         student_id AS StudentId,
                         class_id AS ClassId,
@@ -82,13 +78,8 @@ namespace Adept.Data.Repositories
                         updated_at AS UpdatedAt
                       FROM Students
                       WHERE student_id = @StudentId",
-                    new { StudentId = studentId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting student by ID {StudentId}", studentId);
-                return null;
-            }
+                    new { StudentId = studentId }),
+                $"Error getting student by ID {studentId}");
         }
 
         /// <summary>
@@ -98,9 +89,10 @@ namespace Adept.Data.Repositories
         /// <returns>Students in the class</returns>
         public async Task<IEnumerable<Student>> GetStudentsByClassIdAsync(string classId)
         {
-            try
-            {
-                return await _databaseContext.QueryAsync<Student>(
+            ValidateId(classId, "class");
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () => await DatabaseContext.QueryAsync<Student>(
                     @"SELECT
                         student_id AS StudentId,
                         class_id AS ClassId,
@@ -117,13 +109,9 @@ namespace Adept.Data.Repositories
                       FROM Students
                       WHERE class_id = @ClassId
                       ORDER BY name",
-                    new { ClassId = classId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting students for class {ClassId}", classId);
-                return Enumerable.Empty<Student>();
-            }
+                    new { ClassId = classId }),
+                $"Error getting students for class {classId}",
+                Enumerable.Empty<Student>());
         }
 
         /// <summary>
@@ -133,56 +121,55 @@ namespace Adept.Data.Repositories
         /// <returns>The ID of the added student</returns>
         public async Task<string> AddStudentAsync(Student student)
         {
-            try
-            {
-                // Validate student data
-                var validationResult = EntityValidator.ValidateStudent(student);
-                validationResult.ThrowIfInvalid();
-                if (string.IsNullOrEmpty(student.StudentId))
+            return await ExecuteWithErrorHandlingAndThrowAsync(
+                async () =>
                 {
-                    student.StudentId = Guid.NewGuid().ToString();
-                }
+                    // Validate student data using the EntityValidator
+                    var validationResult = EntityValidator.ValidateStudent(student);
+                    validationResult.ThrowIfInvalid();
 
-                student.CreatedAt = DateTime.UtcNow;
-                student.UpdatedAt = DateTime.UtcNow;
+                    if (string.IsNullOrEmpty(student.StudentId))
+                    {
+                        student.StudentId = Guid.NewGuid().ToString();
+                    }
 
-                await _databaseContext.ExecuteNonQueryAsync(
-                    @"INSERT INTO Students (
-                        student_id,
-                        class_id,
-                        name,
-                        fsm_status,
-                        sen_status,
-                        eal_status,
-                        ability_level,
-                        reading_age,
-                        target_grade,
-                        notes,
-                        created_at,
-                        updated_at
-                      ) VALUES (
-                        @StudentId,
-                        @ClassId,
-                        @Name,
-                        @FsmStatus,
-                        @SenStatus,
-                        @EalStatus,
-                        @AbilityLevel,
-                        @ReadingAge,
-                        @TargetGrade,
-                        @Notes,
-                        @CreatedAt,
-                        @UpdatedAt
-                      )",
-                    student);
+                    student.CreatedAt = DateTime.UtcNow;
+                    student.UpdatedAt = DateTime.UtcNow;
 
-                return student.StudentId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding student {Name}", student.Name);
-                throw;
-            }
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        @"INSERT INTO Students (
+                            student_id,
+                            class_id,
+                            name,
+                            fsm_status,
+                            sen_status,
+                            eal_status,
+                            ability_level,
+                            reading_age,
+                            target_grade,
+                            notes,
+                            created_at,
+                            updated_at
+                          ) VALUES (
+                            @StudentId,
+                            @ClassId,
+                            @Name,
+                            @FsmStatus,
+                            @SenStatus,
+                            @EalStatus,
+                            @AbilityLevel,
+                            @ReadingAge,
+                            @TargetGrade,
+                            @Notes,
+                            @CreatedAt,
+                            @UpdatedAt
+                          )",
+                        student);
+
+                    Logger.LogInformation("Added new student: {Name} (ID: {StudentId})", student.Name, student.StudentId);
+                    return student.StudentId;
+                },
+                $"Error adding student {student?.Name ?? "<unnamed>"}");
         }
 
         /// <summary>
@@ -191,33 +178,34 @@ namespace Adept.Data.Repositories
         /// <param name="student">The student to update</param>
         public async Task UpdateStudentAsync(Student student)
         {
-            try
-            {
-                // Validate student data
-                var validationResult = EntityValidator.ValidateStudent(student);
-                validationResult.ThrowIfInvalid();
-                student.UpdatedAt = DateTime.UtcNow;
+            await ExecuteWithErrorHandlingAsync(
+                async () =>
+                {
+                    // Validate student data using the EntityValidator
+                    var validationResult = EntityValidator.ValidateStudent(student);
+                    validationResult.ThrowIfInvalid();
+                    ValidateId(student.StudentId, "student");
 
-                await _databaseContext.ExecuteNonQueryAsync(
-                    @"UPDATE Students SET
-                        class_id = @ClassId,
-                        name = @Name,
-                        fsm_status = @FsmStatus,
-                        sen_status = @SenStatus,
-                        eal_status = @EalStatus,
-                        ability_level = @AbilityLevel,
-                        reading_age = @ReadingAge,
-                        target_grade = @TargetGrade,
-                        notes = @Notes,
-                        updated_at = @UpdatedAt
-                      WHERE student_id = @StudentId",
-                    student);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating student {StudentId}", student.StudentId);
-                throw;
-            }
+                    student.UpdatedAt = DateTime.UtcNow;
+
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        @"UPDATE Students SET
+                            class_id = @ClassId,
+                            name = @Name,
+                            fsm_status = @FsmStatus,
+                            sen_status = @SenStatus,
+                            eal_status = @EalStatus,
+                            ability_level = @AbilityLevel,
+                            reading_age = @ReadingAge,
+                            target_grade = @TargetGrade,
+                            notes = @Notes,
+                            updated_at = @UpdatedAt
+                          WHERE student_id = @StudentId",
+                        student);
+
+                    Logger.LogInformation("Updated student: {Name} (ID: {StudentId})", student.Name, student.StudentId);
+                },
+                $"Error updating student {student?.StudentId ?? "<unknown>"}");
         }
 
         /// <summary>
@@ -226,17 +214,18 @@ namespace Adept.Data.Repositories
         /// <param name="studentId">The ID of the student to delete</param>
         public async Task DeleteStudentAsync(string studentId)
         {
-            try
-            {
-                await _databaseContext.ExecuteNonQueryAsync(
-                    "DELETE FROM Students WHERE student_id = @StudentId",
-                    new { StudentId = studentId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting student {StudentId}", studentId);
-                throw;
-            }
+            await ExecuteWithErrorHandlingAsync(
+                async () =>
+                {
+                    ValidateId(studentId, "student");
+
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        "DELETE FROM Students WHERE student_id = @StudentId",
+                        new { StudentId = studentId });
+
+                    Logger.LogInformation("Deleted student: {StudentId}", studentId);
+                },
+                $"Error deleting student {studentId}");
         }
 
         /// <summary>
@@ -246,35 +235,36 @@ namespace Adept.Data.Repositories
         /// <returns>The IDs of the added students</returns>
         public async Task<IEnumerable<string>> AddStudentsAsync(IEnumerable<Student> students)
         {
-            var studentIds = new List<string>();
-            using var transaction = await _databaseContext.BeginTransactionAsync();
-
-            try
+            if (students == null)
             {
-                // Validate all students before adding any
-                foreach (var student in students)
+                throw new ArgumentNullException(nameof(students), "Students collection cannot be null");
+            }
+
+            return await ExecuteInTransactionAsync<IEnumerable<string>>(
+                async (transaction) =>
                 {
-                    var validationResult = EntityValidator.ValidateStudent(student);
-                    if (!validationResult.IsValid)
+                    var studentIds = new List<string>();
+
+                    // Validate all students before adding any
+                    foreach (var student in students)
                     {
-                        throw new ValidationException($"Validation failed for student {student.Name}: {string.Join(", ", validationResult.Errors)}");
+                        var validationResult = EntityValidator.ValidateStudent(student);
+                        if (!validationResult.IsValid)
+                        {
+                            throw new ValidationException($"Validation failed for student {student.Name}: {string.Join(", ", validationResult.Errors)}");
+                        }
                     }
-                }
-                foreach (var student in students)
-                {
-                    var studentId = await AddStudentAsync(student);
-                    studentIds.Add(studentId);
-                }
 
-                await transaction.CommitAsync();
-                return studentIds;
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "Error adding multiple students");
-                throw;
-            }
+                    foreach (var student in students)
+                    {
+                        var studentId = await AddStudentAsync(student);
+                        studentIds.Add(studentId);
+                    }
+
+                    Logger.LogInformation("Added {Count} students", studentIds.Count);
+                    return studentIds;
+                },
+                "Error adding multiple students");
         }
     }
 }
