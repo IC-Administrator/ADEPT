@@ -9,14 +9,14 @@
             <Storyboard x:Key="TabEnterStoryboard">
                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
                                  From="0" To="1"
-                                 Duration="0:0:0.3">
+                                 Duration="0:0:0.2">
                     <DoubleAnimation.EasingFunction>
                         <CubicEase EasingMode="EaseOut" />
                     </DoubleAnimation.EasingFunction>
                 </DoubleAnimation>
                 <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                 From="20" To="0"
-                                 Duration="0:0:0.3">
+                                 From="10" To="0"
+                                 Duration="0:0:0.2">
                     <DoubleAnimation.EasingFunction>
                         <CubicEase EasingMode="EaseOut" />
                     </DoubleAnimation.EasingFunction>
@@ -46,15 +46,15 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        
+
                         <!-- TabPanel (Header) -->
-                        <TabPanel Grid.Row="0" 
-                                  IsItemsHost="True" 
-                                  Panel.ZIndex="1" 
+                        <TabPanel Grid.Row="0"
+                                  IsItemsHost="True"
+                                  Panel.ZIndex="1"
                                   KeyboardNavigation.TabIndex="1" />
-                        
+
                         <!-- Content -->
-                        <Border Grid.Row="1" 
+                        <Border Grid.Row="1"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
@@ -63,7 +63,11 @@
                                 KeyboardNavigation.TabIndex="2">
                             <ContentPresenter x:Name="PART_SelectedContentHost"
                                               ContentSource="SelectedContent"
-                                              Style="{StaticResource TabContentTransitionStyle}" />
+                                              Style="{StaticResource TabContentTransitionStyle}">
+                                <ContentPresenter.CacheMode>
+                                    <BitmapCache EnableClearType="True" SnapsToDevicePixels="True" RenderAtScale="1.0" />
+                                </ContentPresenter.CacheMode>
+                            </ContentPresenter>
                         </Border>
                     </Grid>
                 </ControlTemplate>

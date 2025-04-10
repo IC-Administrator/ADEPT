@@ -147,6 +147,7 @@ namespace Adept.UI
 
             // Register UI Services
             services.AddSingleton<INotificationService, NotificationService>();
+            services.AddSingleton<IConfirmationService, ConfirmationService>();
             services.AddSingleton<NotificationControl>();
 
             // Register ViewModels

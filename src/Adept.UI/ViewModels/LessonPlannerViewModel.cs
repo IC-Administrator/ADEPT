@@ -2,6 +2,7 @@ using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Adept.UI.Commands;
+using Adept.UI.Services;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -17,6 +18,7 @@ namespace Adept.UI.ViewModels
         private readonly ILessonRepository _lessonRepository;
         private readonly ILlmService _llmService;
         private readonly ICalendarSyncService _calendarSyncService;
+        private readonly IConfirmationService _confirmationService;
         private readonly ILogger<LessonPlannerViewModel> _logger;
         private bool _isBusy;
         private Class? _selectedClass;
@@ -236,12 +238,14 @@ namespace Adept.UI.ViewModels
             ILessonRepository lessonRepository,
             ILlmService llmService,
             ICalendarSyncService calendarSyncService,
+            IConfirmationService confirmationService,
             ILogger<LessonPlannerViewModel> logger)
         {
             _classRepository = classRepository;
             _lessonRepository = lessonRepository;
             _llmService = llmService;
             _calendarSyncService = calendarSyncService;
+            _confirmationService = confirmationService;
             _logger = logger;
             _currentDate = DateTime.Today.ToString("yyyy-MM-dd");
 
@@ -423,8 +427,16 @@ namespace Adept.UI.ViewModels
 
             try
             {
-                // In a real implementation, this would show a confirmation dialog
+                // Show a confirmation dialog
                 var lessonToDelete = SelectedLesson;
+                var title = "Delete Lesson";
+                var message = $"Are you sure you want to delete the lesson '{lessonToDelete.Title}'? This action cannot be undone.";
+
+                var confirmed = await _confirmationService.ShowConfirmationAsync(title, message, "Delete", "Cancel");
+                if (!confirmed)
+                {
+                    return;
+                }
 
                 IsBusy = true;
 

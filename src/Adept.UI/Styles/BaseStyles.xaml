@@ -277,6 +277,16 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Background" Value="White" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource EnhancedFocusVisualStyle}" />
+        <Style.Triggers>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                <Setter Property="BorderThickness" Value="2" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- ListView Style -->
@@ -301,6 +311,7 @@
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource EnhancedFocusVisualStyle}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
@@ -325,6 +336,12 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}" />
                             <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="BorderThickness" Value="1,1,1,2" />
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -444,7 +461,22 @@
         <Setter Property="Control.Template">
             <Setter.Value>
                 <ControlTemplate>
-                    <Rectangle StrokeThickness="2" Stroke="{StaticResource AccentBrush}" StrokeDashArray="1 2" />
+                    <Rectangle StrokeThickness="3" Stroke="{StaticResource AccentBrush}" StrokeDashArray="1 1" Margin="-3" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Enhanced Focus Visual Style for better visibility -->
+    <Style x:Key="EnhancedFocusVisualStyle">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle StrokeThickness="2" Stroke="{StaticResource AccentBrush}" Margin="-2">
+                        <Rectangle.Effect>
+                            <DropShadowEffect BlurRadius="4" ShadowDepth="0" Color="#FF4081" Opacity="0.5" />
+                        </Rectangle.Effect>
+                    </Rectangle>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
