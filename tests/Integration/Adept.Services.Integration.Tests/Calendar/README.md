@@ -32,6 +32,7 @@ The tests are organized into the following categories:
 - **Authentication**: Tests for OAuth flow and token management
 - **CalendarOperations**: Tests for basic calendar operations
 - **EventOperations**: Tests for event creation, reading, updating, and deletion
+- **RecurringEvents**: Tests for creating and managing recurring events with various patterns
 - **Synchronization**: Tests for two-way synchronization between local and remote calendars
 
 ## Running Tests
