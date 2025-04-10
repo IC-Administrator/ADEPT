@@ -346,7 +346,16 @@ The standalone `RecurringEventTest` console application in the root directory ha
 2. Implemented proper integration tests for recurring events in `Calendar/RecurringEventIntegrationTests.cs`
 3. Added tests for various recurring event patterns (daily, weekly, monthly, yearly)
 4. Added tests for event reminders and other advanced features
-5. The original `RecurringEventTest` folder can now be removed
+5. The original `RecurringEventTest` folder has been removed
+
+### Updated Batch Files for Test Organization ✅
+
+The batch files in the root directory have been updated to reflect the new test organization:
+
+1. Updated `tests/run-tests.bat` to include the new `Adept.Services.Integration.Tests` project
+2. Added instructions for running specific integration tests by category
+3. Created `cleanup-legacy-tests.bat` (renamed from `cleanup-test-dirs.bat`) to clean up legacy test directories
+4. Added entries for the standalone test applications we've migrated (`CalendarIntegrationTest` and `RecurringEventTest`)
 
 These changes ensure that the Adept.Data project can be built successfully, which is a prerequisite for running the tests.
 

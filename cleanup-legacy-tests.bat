@@ -1,6 +1,7 @@
 @echo off
-echo Cleaning up test directories from src folder
-echo ==========================================
+echo Cleaning up legacy test directories
+echo ================================
+echo This script removes old test directories that have been migrated to the new test structure.
 
 echo.
 echo Removing src\CalendarApiTest...

@@ -12,6 +12,7 @@ dotnet test tests\Unit\Adept.Data.Tests
 echo.
 echo Running Integration Tests
 echo -----------------------
+dotnet test tests\Integration\Adept.Services.Integration.Tests
 dotnet test tests\Integration\Adept.FileSystem.Tests
 dotnet test tests\Integration\Adept.Database.Tests
 
@@ -25,6 +26,10 @@ echo dotnet run --project tests\Manual\Adept.Calendar.ManualTests
 echo dotnet run --project tests\Manual\Adept.GoogleCalendar.ManualTests
 echo dotnet run --project tests\Manual\Adept.Mcp.ManualTests
 echo dotnet run --project tests\Manual\Adept.Puppeteer.ManualTests
+echo.
+echo To run specific integration tests, use the following commands:
+echo dotnet test tests\Integration\Adept.Services.Integration.Tests --filter "Category=Calendar"
+echo dotnet test tests\Integration\Adept.Services.Integration.Tests --filter "TestCategory=RecurringEvents"
 echo.
 
 pause
