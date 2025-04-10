@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Adept.Core.Interfaces;
+using Adept.Core.Models.Llm;
 
-namespace ManualTests
+namespace Adept.Llm.ManualTests.LlmProviderTests
 {
-    class Program
+    public class ModelSelectionTests
     {
-        static void Main(string[] args)
+        public static void Run()
         {
-            Console.WriteLine("Manual Tests for Adept LLM Integration");
-            Console.WriteLine("======================================");
-            Console.WriteLine();
-
-            // Test model selection
             Console.WriteLine("Testing Model Selection");
             Console.WriteLine("======================\n");
 
@@ -40,7 +38,7 @@ namespace ManualTests
             Console.WriteLine($"Result: {(result ? "Success" : "Failed")}");
             Console.WriteLine($"Current model is still: {provider.ModelName}");
 
-            Console.WriteLine("\nTests completed. Press any key to exit...");
+            Console.WriteLine("\nTests completed. Press any key to continue...");
             Console.ReadKey();
         }
     }
