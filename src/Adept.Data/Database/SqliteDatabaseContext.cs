@@ -235,7 +235,7 @@ namespace Adept.Data.Database
         private async Task ApplyMigrationsAsync(long currentVersion)
         {
             // Define migrations
-            var migrations = new Dictionary<long, string>
+            var migrations = new Dictionary<long, string>(DatabaseMigrations.Migrations)
             {
                 {
                     1,

@@ -1,0 +1,267 @@
+        #region Template Management Methods
+
+        /// <summary>
+        /// Loads templates
+        /// </summary>
+        public async Task LoadTemplatesAsync()
+        {
+            try
+            {
+                Templates.Clear();
+
+                // Load templates from the repository
+                var templates = await _templateRepository.GetAllTemplatesAsync();
+
+                foreach (var template in templates)
+                {
+                    Templates.Add(template);
+                }
+
+                // Update categories
+                UpdateCategories();
+
+                _logger.LogInformation("Loaded {Count} templates", Templates.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading templates");
+            }
+        }
+
+        /// <summary>
+        /// Updates the categories list
+        /// </summary>
+        private void UpdateCategories()
+        {
+            Categories.Clear();
+            Categories.Add("All Categories");
+
+            var categories = Templates
+                .Select(t => t.Category)
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Distinct()
+                .OrderBy(c => c);
+
+            foreach (var category in categories)
+            {
+                Categories.Add(category);
+            }
+        }
+
+        /// <summary>
+        /// Searches for templates
+        /// </summary>
+        private async void SearchTemplates()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(SearchTerm))
+                {
+                    await LoadTemplatesAsync();
+                    return;
+                }
+
+                Templates.Clear();
+
+                // Search templates from the repository
+                var templates = await _templateRepository.SearchTemplatesAsync(SearchTerm);
+
+                foreach (var template in templates)
+                {
+                    Templates.Add(template);
+                }
+
+                _logger.LogInformation("Found {Count} templates matching '{SearchTerm}'", Templates.Count, SearchTerm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching templates");
+            }
+        }
+
+        /// <summary>
+        /// Filters templates by category
+        /// </summary>
+        private async void FilterTemplatesByCategory()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(SelectedCategory) || SelectedCategory == "All Categories")
+                {
+                    await LoadTemplatesAsync();
+                    return;
+                }
+
+                Templates.Clear();
+
+                // Filter templates from the repository
+                var templates = await _templateRepository.GetTemplatesByCategoryAsync(SelectedCategory);
+
+                foreach (var template in templates)
+                {
+                    Templates.Add(template);
+                }
+
+                _logger.LogInformation("Found {Count} templates in category '{Category}'", Templates.Count, SelectedCategory);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error filtering templates by category");
+            }
+        }
+
+        /// <summary>
+        /// Saves the current lesson as a template
+        /// </summary>
+        private async void SaveAsTemplate()
+        {
+            if (SelectedLesson == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Show the save template dialog
+                IsSavingTemplate = true;
+                NewTemplateName = SelectedLesson.Title;
+                NewTemplateDescription = string.Empty;
+                NewTemplateCategory = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error preparing to save template");
+            }
+        }
+
+        /// <summary>
+        /// Cancels saving a template
+        /// </summary>
+        private void CancelSaveTemplate()
+        {
+            IsSavingTemplate = false;
+        }
+
+        /// <summary>
+        /// Confirms saving a template
+        /// </summary>
+        private async void ConfirmSaveTemplate()
+        {
+            if (SelectedLesson == null || string.IsNullOrEmpty(NewTemplateName))
+            {
+                return;
+            }
+
+            try
+            {
+                // Create a new template
+                var template = new LessonTemplate
+                {
+                    Name = NewTemplateName,
+                    Description = NewTemplateDescription,
+                    Category = NewTemplateCategory,
+                    Tags = new List<string>(),
+                    Title = SelectedLesson.Title,
+                    LearningObjectives = SelectedLesson.LearningObjectives,
+                    ComponentsJson = SelectedLesson.ComponentsJson
+                };
+
+                // Add to the repository
+                await _templateRepository.AddTemplateAsync(template);
+
+                // Hide the dialog
+                IsSavingTemplate = false;
+
+                // Reload templates
+                await LoadTemplatesAsync();
+
+                _logger.LogInformation("Saved lesson as template: {TemplateName}", template.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving template");
+            }
+        }
+
+        /// <summary>
+        /// Applies a template to the current lesson
+        /// </summary>
+        private async void ApplyTemplate()
+        {
+            if (SelectedLesson == null || SelectedTemplate == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Show a confirmation dialog
+                var title = "Apply Template";
+                var message = $"Are you sure you want to apply the template '{SelectedTemplate.Name}' to the current lesson? This will overwrite the current lesson content.";
+
+                var confirmed = await _confirmationService.ShowConfirmationAsync(title, message, "Apply", "Cancel");
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                // Apply the template
+                SelectedLesson.Title = SelectedTemplate.Title;
+                SelectedLesson.LearningObjectives = SelectedTemplate.LearningObjectives;
+                SelectedLesson.ComponentsJson = SelectedTemplate.ComponentsJson;
+                SelectedLesson.UpdatedAt = DateTime.UtcNow;
+
+                // Update the view model properties
+                LessonTitle = SelectedLesson.Title;
+                LearningObjectives = SelectedLesson.LearningObjectives;
+                LessonComponents = SelectedLesson.ComponentsJson;
+
+                // Save the lesson
+                await _lessonRepository.UpdateLessonAsync(SelectedLesson);
+
+                _logger.LogInformation("Applied template {TemplateName} to lesson {LessonTitle}",
+                    SelectedTemplate.Name, SelectedLesson.Title);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error applying template");
+            }
+        }
+
+        /// <summary>
+        /// Deletes a template
+        /// </summary>
+        private async void DeleteTemplate()
+        {
+            if (SelectedTemplate == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Show a confirmation dialog
+                var title = "Delete Template";
+                var message = $"Are you sure you want to delete the template '{SelectedTemplate.Name}'? This action cannot be undone.";
+
+                var confirmed = await _confirmationService.ShowConfirmationAsync(title, message, "Delete", "Cancel");
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                // Delete the template
+                await _templateRepository.DeleteTemplateAsync(SelectedTemplate.TemplateId);
+
+                // Reload templates
+                await LoadTemplatesAsync();
+
+                _logger.LogInformation("Deleted template: {TemplateName}", SelectedTemplate.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting template");
+            }
+        }
+
+        #endregion

@@ -105,6 +105,8 @@ namespace Adept.UI
             services.AddSingleton<ILessonRepository, LessonRepository>();
             services.AddSingleton<ISystemPromptService, SystemPromptRepository>();
             services.AddSingleton<IConversationRepository, ConversationRepository>();
+            services.AddSingleton<ILessonResourceRepository, LessonResourceRepository>();
+            services.AddSingleton<ILessonTemplateRepository, LessonTemplateRepository>();
 
             // Register Voice Services
             services.AddSingleton<SimpleWakeWordDetector>();

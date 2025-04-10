@@ -26,6 +26,8 @@ namespace Adept.UI.ViewModels
         private readonly ILlmService _llmService;
         private readonly ICalendarSyncService _calendarSyncService;
         private readonly IConfirmationService _confirmationService;
+        private readonly ILessonResourceRepository _resourceRepository;
+        private readonly ILessonTemplateRepository _templateRepository;
         private readonly ILogger<LessonPlannerViewModel> _logger;
         private bool _isBusy;
         private Class? _selectedClass;
@@ -64,6 +66,15 @@ namespace Adept.UI.ViewModels
         private string _newResourceUrl = string.Empty;
         private string _previewResourceName = string.Empty;
         private object _previewContent;
+        private ObservableCollection<LessonTemplate> _templates = new ObservableCollection<LessonTemplate>();
+        private LessonTemplate _selectedTemplate;
+        private ObservableCollection<string> _categories = new ObservableCollection<string>();
+        private string _selectedCategory = "All Categories";
+        private string _searchTerm = string.Empty;
+        private bool _isSavingTemplate;
+        private string _newTemplateName = string.Empty;
+        private string _newTemplateDescription = string.Empty;
+        private string _newTemplateCategory = string.Empty;
 
         /// <summary>
         /// Gets or sets whether the view model is busy
@@ -491,6 +502,104 @@ namespace Adept.UI.ViewModels
         }
 
         /// <summary>
+        /// Gets or sets the templates
+        /// </summary>
+        public ObservableCollection<LessonTemplate> Templates
+        {
+            get => _templates;
+            set => SetProperty(ref _templates, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the selected template
+        /// </summary>
+        public LessonTemplate SelectedTemplate
+        {
+            get => _selectedTemplate;
+            set
+            {
+                if (SetProperty(ref _selectedTemplate, value))
+                {
+                    OnPropertyChanged(nameof(IsTemplateSelected));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the categories
+        /// </summary>
+        public ObservableCollection<string> Categories
+        {
+            get => _categories;
+            set => SetProperty(ref _categories, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the selected category
+        /// </summary>
+        public string SelectedCategory
+        {
+            get => _selectedCategory;
+            set
+            {
+                if (SetProperty(ref _selectedCategory, value))
+                {
+                    FilterTemplatesByCategory();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the search term
+        /// </summary>
+        public string SearchTerm
+        {
+            get => _searchTerm;
+            set => SetProperty(ref _searchTerm, value);
+        }
+
+        /// <summary>
+        /// Gets or sets whether a template is being saved
+        /// </summary>
+        public bool IsSavingTemplate
+        {
+            get => _isSavingTemplate;
+            set => SetProperty(ref _isSavingTemplate, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the name of the new template
+        /// </summary>
+        public string NewTemplateName
+        {
+            get => _newTemplateName;
+            set => SetProperty(ref _newTemplateName, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the description of the new template
+        /// </summary>
+        public string NewTemplateDescription
+        {
+            get => _newTemplateDescription;
+            set => SetProperty(ref _newTemplateDescription, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the category of the new template
+        /// </summary>
+        public string NewTemplateCategory
+        {
+            get => _newTemplateCategory;
+            set => SetProperty(ref _newTemplateCategory, value);
+        }
+
+        /// <summary>
+        /// Gets whether a template is selected
+        /// </summary>
+        public bool IsTemplateSelected => SelectedTemplate != null;
+
+        /// <summary>
         /// Gets whether a class is selected
         /// </summary>
         public bool IsClassSelected => SelectedClass != null;
@@ -683,12 +792,45 @@ namespace Adept.UI.ViewModels
         public ICommand ClosePreviewCommand { get; }
 
         /// <summary>
+        /// Gets the search templates command
+        /// </summary>
+        public ICommand SearchTemplatesCommand { get; }
+
+        /// <summary>
+        /// Gets the save as template command
+        /// </summary>
+        public ICommand SaveAsTemplateCommand { get; }
+
+        /// <summary>
+        /// Gets the apply template command
+        /// </summary>
+        public ICommand ApplyTemplateCommand { get; }
+
+        /// <summary>
+        /// Gets the delete template command
+        /// </summary>
+        public ICommand DeleteTemplateCommand { get; }
+
+        /// <summary>
+        /// Gets the cancel save template command
+        /// </summary>
+        public ICommand CancelSaveTemplateCommand { get; }
+
+        /// <summary>
+        /// Gets the confirm save template command
+        /// </summary>
+        public ICommand ConfirmSaveTemplateCommand { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="LessonPlannerViewModel"/> class
         /// </summary>
         /// <param name="classRepository">The class repository</param>
         /// <param name="lessonRepository">The lesson repository</param>
         /// <param name="llmService">The LLM service</param>
         /// <param name="calendarSyncService">The calendar sync service</param>
+        /// <param name="confirmationService">The confirmation service</param>
+        /// <param name="resourceRepository">The resource repository</param>
+        /// <param name="templateRepository">The template repository</param>
         /// <param name="logger">The logger</param>
         public LessonPlannerViewModel(
             IClassRepository classRepository,
@@ -696,6 +838,8 @@ namespace Adept.UI.ViewModels
             ILlmService llmService,
             ICalendarSyncService calendarSyncService,
             IConfirmationService confirmationService,
+            ILessonResourceRepository resourceRepository,
+            ILessonTemplateRepository templateRepository,
             ILogger<LessonPlannerViewModel> logger)
         {
             _classRepository = classRepository;
@@ -703,6 +847,8 @@ namespace Adept.UI.ViewModels
             _llmService = llmService;
             _calendarSyncService = calendarSyncService;
             _confirmationService = confirmationService;
+            _resourceRepository = resourceRepository;
+            _templateRepository = templateRepository;
             _logger = logger;
             _currentDate = DateTime.Today;
 
@@ -742,8 +888,17 @@ namespace Adept.UI.ViewModels
             ConfirmAddLinkCommand = new RelayCommand(ConfirmAddLink, () => !string.IsNullOrEmpty(NewResourceName) && !string.IsNullOrEmpty(NewResourceUrl));
             ClosePreviewCommand = new RelayCommand(ClosePreview);
 
-            // Load classes
+            // Template management commands
+            SearchTemplatesCommand = new RelayCommand(SearchTemplates);
+            SaveAsTemplateCommand = new RelayCommand(SaveAsTemplate, () => IsLessonSelected);
+            ApplyTemplateCommand = new RelayCommand(ApplyTemplate, () => IsLessonSelected && IsTemplateSelected);
+            DeleteTemplateCommand = new RelayCommand(DeleteTemplate, () => IsTemplateSelected);
+            CancelSaveTemplateCommand = new RelayCommand(CancelSaveTemplate);
+            ConfirmSaveTemplateCommand = new RelayCommand(ConfirmSaveTemplate, () => !string.IsNullOrEmpty(NewTemplateName));
+
+            // Load classes and templates
             LoadClassesAsync().ConfigureAwait(false);
+            LoadTemplatesAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1835,32 +1990,8 @@ namespace Adept.UI.ViewModels
             {
                 Resources.Clear();
 
-                // In a real implementation, this would load resources from a repository
-                // For now, we'll just create some sample resources
-                var resources = new List<LessonResource>
-                {
-                    new LessonResource
-                    {
-                        LessonId = Guid.Parse(SelectedLesson.LessonId),
-                        Name = "Lesson Slides",
-                        Type = ResourceType.Presentation,
-                        Path = "C:\\Temp\\slides.pptx"
-                    },
-                    new LessonResource
-                    {
-                        LessonId = Guid.Parse(SelectedLesson.LessonId),
-                        Name = "Worksheet",
-                        Type = ResourceType.Document,
-                        Path = "C:\\Temp\\worksheet.docx"
-                    },
-                    new LessonResource
-                    {
-                        LessonId = Guid.Parse(SelectedLesson.LessonId),
-                        Name = "Reference Website",
-                        Type = ResourceType.Link,
-                        Path = "https://www.example.com"
-                    }
-                };
+                // Load resources from the repository
+                var resources = await _resourceRepository.GetResourcesByLessonIdAsync(Guid.Parse(SelectedLesson.LessonId));
 
                 foreach (var resource in resources)
                 {
@@ -1879,7 +2010,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Adds a file resource to the selected lesson
         /// </summary>
-        private void AddFileResource()
+        private async void AddFileResource()
         {
             if (SelectedLesson == null)
             {
@@ -1914,6 +2045,9 @@ namespace Adept.UI.ViewModels
                         Type = resourceType,
                         Path = filePath
                     };
+
+                    // Add to the repository
+                    await _resourceRepository.AddResourceAsync(resource);
 
                     // Add to the collection
                     Resources.Add(resource);
@@ -1996,7 +2130,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Confirms adding a link resource
         /// </summary>
-        private void ConfirmAddLink()
+        private async void ConfirmAddLink()
         {
             if (SelectedLesson == null || string.IsNullOrEmpty(NewResourceName) || string.IsNullOrEmpty(NewResourceUrl))
             {
@@ -2013,6 +2147,9 @@ namespace Adept.UI.ViewModels
                     Type = ResourceType.Link,
                     Path = NewResourceUrl
                 };
+
+                // Add to the repository
+                await _resourceRepository.AddResourceAsync(resource);
 
                 // Add to the collection
                 Resources.Add(resource);
@@ -2032,7 +2169,7 @@ namespace Adept.UI.ViewModels
         /// <summary>
         /// Removes a resource from the selected lesson
         /// </summary>
-        private void RemoveResource(LessonResource resource)
+        private async void RemoveResource(LessonResource resource)
         {
             if (resource == null)
             {
@@ -2041,6 +2178,9 @@ namespace Adept.UI.ViewModels
 
             try
             {
+                // Remove from the repository
+                await _resourceRepository.DeleteResourceAsync(resource.ResourceId);
+
                 // Remove from the collection
                 Resources.Remove(resource);
 
@@ -2136,6 +2276,274 @@ namespace Adept.UI.ViewModels
         {
             IsPreviewingResource = false;
             PreviewContent = null;
+        }
+
+        #endregion
+
+        #region Template Management Methods
+
+        /// <summary>
+        /// Loads templates
+        /// </summary>
+        public async Task LoadTemplatesAsync()
+        {
+            try
+            {
+                Templates.Clear();
+
+                // Load templates from the repository
+                var templates = await _templateRepository.GetAllTemplatesAsync();
+
+                foreach (var template in templates)
+                {
+                    Templates.Add(template);
+                }
+
+                // Update categories
+                UpdateCategories();
+
+                _logger.LogInformation("Loaded {Count} templates", Templates.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading templates");
+            }
+        }
+
+        /// <summary>
+        /// Updates the categories list
+        /// </summary>
+        private void UpdateCategories()
+        {
+            Categories.Clear();
+            Categories.Add("All Categories");
+
+            var categories = Templates
+                .Select(t => t.Category)
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Distinct()
+                .OrderBy(c => c);
+
+            foreach (var category in categories)
+            {
+                Categories.Add(category);
+            }
+        }
+
+        /// <summary>
+        /// Searches for templates
+        /// </summary>
+        private async void SearchTemplates()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(SearchTerm))
+                {
+                    await LoadTemplatesAsync();
+                    return;
+                }
+
+                Templates.Clear();
+
+                // Search templates from the repository
+                var templates = await _templateRepository.SearchTemplatesAsync(SearchTerm);
+
+                foreach (var template in templates)
+                {
+                    Templates.Add(template);
+                }
+
+                _logger.LogInformation("Found {Count} templates matching '{SearchTerm}'", Templates.Count, SearchTerm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching templates");
+            }
+        }
+
+        /// <summary>
+        /// Filters templates by category
+        /// </summary>
+        private async void FilterTemplatesByCategory()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(SelectedCategory) || SelectedCategory == "All Categories")
+                {
+                    await LoadTemplatesAsync();
+                    return;
+                }
+
+                Templates.Clear();
+
+                // Filter templates from the repository
+                var templates = await _templateRepository.GetTemplatesByCategoryAsync(SelectedCategory);
+
+                foreach (var template in templates)
+                {
+                    Templates.Add(template);
+                }
+
+                _logger.LogInformation("Found {Count} templates in category '{Category}'", Templates.Count, SelectedCategory);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error filtering templates by category");
+            }
+        }
+
+        /// <summary>
+        /// Saves the current lesson as a template
+        /// </summary>
+        private async void SaveAsTemplate()
+        {
+            if (SelectedLesson == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Show the save template dialog
+                IsSavingTemplate = true;
+                NewTemplateName = SelectedLesson.Title;
+                NewTemplateDescription = string.Empty;
+                NewTemplateCategory = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error preparing to save template");
+            }
+        }
+
+        /// <summary>
+        /// Cancels saving a template
+        /// </summary>
+        private void CancelSaveTemplate()
+        {
+            IsSavingTemplate = false;
+        }
+
+        /// <summary>
+        /// Confirms saving a template
+        /// </summary>
+        private async void ConfirmSaveTemplate()
+        {
+            if (SelectedLesson == null || string.IsNullOrEmpty(NewTemplateName))
+            {
+                return;
+            }
+
+            try
+            {
+                // Create a new template
+                var template = new LessonTemplate
+                {
+                    Name = NewTemplateName,
+                    Description = NewTemplateDescription,
+                    Category = NewTemplateCategory,
+                    Tags = new List<string>(),
+                    Title = SelectedLesson.Title,
+                    LearningObjectives = SelectedLesson.LearningObjectives,
+                    ComponentsJson = SelectedLesson.ComponentsJson
+                };
+
+                // Add to the repository
+                await _templateRepository.AddTemplateAsync(template);
+
+                // Hide the dialog
+                IsSavingTemplate = false;
+
+                // Reload templates
+                await LoadTemplatesAsync();
+
+                _logger.LogInformation("Saved lesson as template: {TemplateName}", template.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving template");
+            }
+        }
+
+        /// <summary>
+        /// Applies a template to the current lesson
+        /// </summary>
+        private async void ApplyTemplate()
+        {
+            if (SelectedLesson == null || SelectedTemplate == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Show a confirmation dialog
+                var title = "Apply Template";
+                var message = $"Are you sure you want to apply the template '{SelectedTemplate.Name}' to the current lesson? This will overwrite the current lesson content.";
+
+                var confirmed = await _confirmationService.ShowConfirmationAsync(title, message, "Apply", "Cancel");
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                // Apply the template
+                SelectedLesson.Title = SelectedTemplate.Title;
+                SelectedLesson.LearningObjectives = SelectedTemplate.LearningObjectives;
+                SelectedLesson.ComponentsJson = SelectedTemplate.ComponentsJson;
+                SelectedLesson.UpdatedAt = DateTime.UtcNow;
+
+                // Update the view model properties
+                LessonTitle = SelectedLesson.Title;
+                LearningObjectives = SelectedLesson.LearningObjectives;
+                LessonComponents = SelectedLesson.ComponentsJson;
+
+                // Save the lesson
+                await _lessonRepository.UpdateLessonAsync(SelectedLesson);
+
+                _logger.LogInformation("Applied template {TemplateName} to lesson {LessonTitle}",
+                    SelectedTemplate.Name, SelectedLesson.Title);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error applying template");
+            }
+        }
+
+        /// <summary>
+        /// Deletes a template
+        /// </summary>
+        private async void DeleteTemplate()
+        {
+            if (SelectedTemplate == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Show a confirmation dialog
+                var title = "Delete Template";
+                var message = $"Are you sure you want to delete the template '{SelectedTemplate.Name}'? This action cannot be undone.";
+
+                var confirmed = await _confirmationService.ShowConfirmationAsync(title, message, "Delete", "Cancel");
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                // Delete the template
+                await _templateRepository.DeleteTemplateAsync(SelectedTemplate.TemplateId);
+
+                // Reload templates
+                await LoadTemplatesAsync();
+
+                _logger.LogInformation("Deleted template: {TemplateName}", SelectedTemplate.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting template");
+            }
         }
 
         #endregion

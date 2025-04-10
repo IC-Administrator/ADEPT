@@ -12,8 +12,8 @@ namespace Adept.UI.Converters
     public class ClassIdToColorConverter : IValueConverter
     {
         // Dictionary to store class ID to color mappings for consistency
-        private static readonly Dictionary<Guid, SolidColorBrush> _colorMap = new Dictionary<Guid, SolidColorBrush>();
-        
+        private static readonly Dictionary<string, SolidColorBrush> _colorMap = new Dictionary<string, SolidColorBrush>();
+
         // Predefined colors for classes
         private static readonly List<SolidColorBrush> _predefinedColors = new List<SolidColorBrush>
         {
@@ -28,31 +28,32 @@ namespace Adept.UI.Converters
             new SolidColorBrush(Colors.LightSteelBlue),
             new SolidColorBrush(Colors.LightGoldenrodYellow)
         };
-        
+
         private static int _colorIndex = 0;
-        
+
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is Guid classId)
+            string classId = value?.ToString();
+            if (!string.IsNullOrEmpty(classId))
             {
                 // If we already have a color for this class ID, return it
                 if (_colorMap.TryGetValue(classId, out var brush))
                 {
                     return brush;
                 }
-                
+
                 // Otherwise, assign a new color
                 var newBrush = _predefinedColors[_colorIndex % _predefinedColors.Count];
                 _colorIndex++;
-                
+
                 _colorMap[classId] = newBrush;
                 return newBrush;
             }
-            
+
             // Default color if not a valid class ID
             return new SolidColorBrush(Colors.LightGray);
         }
-        
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
