@@ -1,0 +1,3 @@
+@echo off
+echo Running Adept in test mode...
+dotnet run --project src\Adept.UI\Adept.UI.csproj -- --test

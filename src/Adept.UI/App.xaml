@@ -20,6 +20,11 @@
             <converters:BooleanToStatusConverter x:Key="BooleanToStatusConverter" />
             <converters:BooleanToColorConverter x:Key="BooleanToColorConverter" />
             <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
+            <converters:StringToSyncStatusConverter x:Key="StringToSyncStatusConverter" />
+            <converters:StringToSyncStatusTextConverter x:Key="StringToSyncStatusTextConverter" />
+            <converters:DateHasLessonsConverter x:Key="DateHasLessonsConverter" />
+            <converters:ResourceTypeToIconConverter x:Key="ResourceTypeToIconConverter" />
+            <converters:ClassIdToColorConverter x:Key="ClassIdToColorConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

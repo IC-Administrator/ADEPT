@@ -1,0 +1,3 @@
+@echo off
+echo Running tests for Adept...
+dotnet test src\Adept.Tests\Adept.Tests.csproj

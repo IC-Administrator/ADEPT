@@ -57,7 +57,17 @@ namespace Adept.UI
             var databaseInitializer = _serviceProvider.GetRequiredService<DatabaseBackupInitializer>();
             databaseInitializer.InitializeAsync().ConfigureAwait(false);
 
-            // Start the application
+            // Check for test mode
+            bool testMode = e.Args.Length > 0 && e.Args[0] == "--test";
+
+            if (testMode)
+            {
+                RunTestMode();
+                Shutdown();
+                return;
+            }
+
+            // Start the application normally
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }
@@ -172,6 +182,61 @@ namespace Adept.UI
             _serviceProvider.Dispose();
 
             base.OnExit(e);
+        }
+
+        /// <summary>
+        /// Runs the application in test mode to verify functionality
+        /// </summary>
+        private void RunTestMode()
+        {
+            var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
+            logger.LogInformation("Running in test mode");
+
+            // Test the LessonPlannerViewModel
+            var lessonPlannerViewModel = _serviceProvider.GetRequiredService<ViewModels.LessonPlannerViewModel>();
+            logger.LogInformation("Testing LessonPlannerViewModel");
+
+            // Test loading classes
+            lessonPlannerViewModel.LoadClassesAsync().Wait();
+            logger.LogInformation("Loaded {Count} classes", lessonPlannerViewModel.Classes.Count);
+
+            // Test resource management
+            if (lessonPlannerViewModel.Classes.Count > 0)
+            {
+                lessonPlannerViewModel.SelectedClass = lessonPlannerViewModel.Classes[0];
+                logger.LogInformation("Selected class: {ClassName}", lessonPlannerViewModel.SelectedClass.Name);
+
+                // Test loading lessons
+                lessonPlannerViewModel.LoadLessonsForSelectedClassAsync().Wait();
+                logger.LogInformation("Loaded {Count} lessons", lessonPlannerViewModel.Lessons.Count);
+
+                // Test resource management
+                if (lessonPlannerViewModel.Lessons.Count > 0)
+                {
+                    lessonPlannerViewModel.SelectedLesson = lessonPlannerViewModel.Lessons[0];
+                    logger.LogInformation("Selected lesson: {LessonTitle}", lessonPlannerViewModel.SelectedLesson.Title);
+
+                    // Test loading resources
+                    lessonPlannerViewModel.LoadResourcesAsync().Wait();
+                    logger.LogInformation("Resources count: {Count}", lessonPlannerViewModel.Resources.Count);
+
+                    // Test resource details
+                    foreach (var resource in lessonPlannerViewModel.Resources)
+                    {
+                        logger.LogInformation("Resource: {ResourceName}, Type: {ResourceType}", resource.Name, resource.Type);
+                    }
+                }
+                else
+                {
+                    logger.LogInformation("No lessons available for testing resource management");
+                }
+            }
+            else
+            {
+                logger.LogInformation("No classes available for testing");
+            }
+
+            logger.LogInformation("Test mode completed successfully");
         }
     }
 }

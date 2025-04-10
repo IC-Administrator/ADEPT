@@ -1,0 +1,183 @@
+<UserControl x:Class="Adept.UI.Controls.TemplateManagementControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Adept.UI.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0" Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="0,0,10,0"
+                     Style="{StaticResource StandardTextBoxStyle}">
+                <TextBox.Tag>Search templates...</TextBox.Tag>
+            </TextBox>
+
+            <Button Grid.Column="1" Content="Search" Command="{Binding SearchTemplatesCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,0" />
+
+            <Button Grid.Column="2" Content="Save as Template" Command="{Binding SaveAsTemplateCommand}"
+                    Style="{StaticResource SecondaryButtonStyle}" />
+        </Grid>
+
+        <!-- Templates List -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Categories and Templates List -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Categories" FontWeight="SemiBold" Margin="0,0,0,5" />
+
+                <ComboBox Grid.Row="1" ItemsSource="{Binding Categories}"
+                          SelectedItem="{Binding SelectedCategory}"
+                          Margin="0,0,0,10" Style="{StaticResource StandardComboBoxStyle}" />
+
+                <ListView Grid.Row="2" ItemsSource="{Binding Templates}"
+                          SelectedItem="{Binding SelectedTemplate}"
+                          Style="{StaticResource StandardListViewStyle}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="5">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Category}" Foreground="Gray" FontSize="12" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
+
+            <!-- Template Details -->
+            <Grid Grid.Column="2" Visibility="{Binding IsTemplateSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="{Binding SelectedTemplate.Name}" FontWeight="Bold" FontSize="16" Margin="0,0,0,10" />
+
+                <TextBlock Grid.Row="1" Text="{Binding SelectedTemplate.Description}" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Text="Category: " FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SelectedTemplate.Category}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Text="Tags: " FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding SelectedTemplate.Tags}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="LightGray" CornerRadius="3" Margin="0,0,5,0" Padding="3,1">
+                                    <TextBlock Text="{Binding}" FontSize="12" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <Expander Grid.Row="4" Header="Template Content" IsExpanded="False" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Title:" FontWeight="SemiBold" Margin="0,5,0,0" />
+                        <TextBlock Text="{Binding SelectedTemplate.Title}" TextWrapping="Wrap" Margin="0,0,0,5" />
+
+                        <TextBlock Text="Learning Objectives:" FontWeight="SemiBold" Margin="0,5,0,0" />
+                        <TextBlock Text="{Binding SelectedTemplate.LearningObjectives}" TextWrapping="Wrap" Margin="0,0,0,5" />
+
+                        <TextBlock Text="Components:" FontWeight="SemiBold" Margin="0,5,0,0" />
+                        <TextBlock Text="{Binding SelectedTemplate.ComponentsJson}" TextWrapping="Wrap" Margin="0,0,0,5" />
+                    </StackPanel>
+                </Expander>
+
+                <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                    <Button Content="Delete" Command="{Binding DeleteTemplateCommand}"
+                            Style="{StaticResource DangerButtonStyle}" Margin="0,0,10,0" />
+                    <Button Content="Apply Template" Command="{Binding ApplyTemplateCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- No Template Selected Message -->
+            <TextBlock Grid.Column="2" Text="Select a template to view details"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"
+                       Visibility="{Binding IsTemplateSelected, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}" />
+        </Grid>
+
+        <!-- Save Template Dialog -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Background="#80000000"
+                Visibility="{Binding IsSavingTemplate, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="White" CornerRadius="5" MaxWidth="500" MaxHeight="600" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Save as Template" FontWeight="Bold" FontSize="16" Margin="0,0,0,10" />
+
+                    <TextBlock Grid.Row="1" Text="Template Name:" Margin="0,0,0,5" />
+                    <TextBox Grid.Row="2" Text="{Binding NewTemplateName, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,0,10" Style="{StaticResource StandardTextBoxStyle}" />
+
+                    <TextBlock Grid.Row="3" Text="Description:" Margin="0,0,0,5" />
+                    <TextBox Grid.Row="4" Text="{Binding NewTemplateDescription, UpdateSourceTrigger=PropertyChanged}"
+                             TextWrapping="Wrap" AcceptsReturn="True" Height="60"
+                             Margin="0,0,0,10" Style="{StaticResource StandardTextBoxStyle}" />
+
+                    <TextBlock Grid.Row="5" Text="Category:" Margin="0,0,0,5" />
+                    <ComboBox Grid.Row="6" ItemsSource="{Binding Categories}"
+                              Text="{Binding NewTemplateCategory, UpdateSourceTrigger=PropertyChanged}"
+                              IsEditable="True" Margin="0,0,0,10" Style="{StaticResource StandardComboBoxStyle}" />
+
+                    <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelSaveTemplateCommand}"
+                                Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,0" />
+                        <Button Content="Save" Command="{Binding ConfirmSaveTemplateCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

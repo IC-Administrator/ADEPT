@@ -1,0 +1,196 @@
+<UserControl x:Class="Adept.UI.Controls.LessonComponentEditorControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Adept.UI.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <TabControl Style="{StaticResource AnimatedTabControlStyle}">
+            <!-- Retrieval Questions Tab -->
+            <TabItem Header="Retrieval Questions" Style="{StaticResource SubTabItemStyle}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="Add Question" Command="{Binding AddRetrievalQuestionCommand}" 
+                                Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,0" />
+                        <Button Content="Generate Questions" Command="{Binding GenerateRetrievalQuestionsCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" />
+                    </StackPanel>
+                    
+                    <ListView Grid.Row="1" ItemsSource="{Binding RetrievalQuestions}" 
+                              SelectedItem="{Binding SelectedRetrievalQuestion}"
+                              Style="{StaticResource StandardListViewStyle}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Expander Header="{Binding Question}" IsExpanded="False">
+                                    <Grid Margin="10">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Question:" VerticalAlignment="Top" Margin="0,5,10,0" />
+                                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Question, UpdateSourceTrigger=PropertyChanged}" 
+                                                 TextWrapping="Wrap" AcceptsReturn="True" Margin="0,5,0,5"
+                                                 Style="{StaticResource StandardTextBoxStyle}" />
+                                        
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Answer:" VerticalAlignment="Top" Margin="0,5,10,0" />
+                                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Answer, UpdateSourceTrigger=PropertyChanged}" 
+                                                 TextWrapping="Wrap" AcceptsReturn="True" Margin="0,5,0,5"
+                                                 Style="{StaticResource StandardTextBoxStyle}" />
+                                        
+                                        <Button Grid.Row="2" Grid.Column="1" Content="Remove" 
+                                                Command="{Binding DataContext.RemoveRetrievalQuestionCommand, RelativeSource={RelativeSource AncestorType=ListView}}" 
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource DangerButtonStyle}" 
+                                                HorizontalAlignment="Right" Margin="0,5,0,0" />
+                                    </Grid>
+                                </Expander>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    
+                    <TextBlock Grid.Row="2" Text="{Binding RetrievalQuestionsStatus}" Margin="0,10,0,0" 
+                               Visibility="{Binding IsGeneratingRetrievalQuestions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </TabItem>
+            
+            <!-- Challenge Question Tab -->
+            <TabItem Header="Challenge Question" Style="{StaticResource SubTabItemStyle}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Grid.Row="0" Grid.Column="1" Content="Generate Challenge Question" 
+                            Command="{Binding GenerateChallengeQuestionCommand}" 
+                            Style="{StaticResource SecondaryButtonStyle}" 
+                            HorizontalAlignment="Left" Margin="0,0,0,10" />
+                    
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Question:" VerticalAlignment="Top" Margin="0,5,10,0" />
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ChallengeQuestion.Question, UpdateSourceTrigger=PropertyChanged}" 
+                             TextWrapping="Wrap" AcceptsReturn="True" Margin="0,5,0,5" Height="60"
+                             Style="{StaticResource StandardTextBoxStyle}" />
+                    
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Answer:" VerticalAlignment="Top" Margin="0,5,10,0" />
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ChallengeQuestion.Answer, UpdateSourceTrigger=PropertyChanged}" 
+                             TextWrapping="Wrap" AcceptsReturn="True" Margin="0,5,0,5" Height="100"
+                             Style="{StaticResource StandardTextBoxStyle}" />
+                    
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ChallengeQuestionStatus}" Margin="0,10,0,0" 
+                               Visibility="{Binding IsGeneratingChallengeQuestion, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </TabItem>
+            
+            <!-- Big Question Tab -->
+            <TabItem Header="Big Question" Style="{StaticResource SubTabItemStyle}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <Button Grid.Row="0" Content="Generate Big Question" 
+                            Command="{Binding GenerateBigQuestionCommand}" 
+                            Style="{StaticResource SecondaryButtonStyle}" 
+                            HorizontalAlignment="Left" Margin="0,0,0,10" />
+                    
+                    <TextBlock Grid.Row="1" Text="Big Question:" Margin="0,0,0,5" />
+                    <TextBox Grid.Row="2" Text="{Binding BigQuestion, UpdateSourceTrigger=PropertyChanged}" 
+                             TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,5" Height="100"
+                             Style="{StaticResource StandardTextBoxStyle}" />
+                </Grid>
+            </TabItem>
+            
+            <!-- Activities Tab -->
+            <TabItem Header="Activities" Style="{StaticResource SubTabItemStyle}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <Button Grid.Row="0" Content="Generate All Activities" 
+                            Command="{Binding GenerateAllActivitiesCommand}" 
+                            Style="{StaticResource SecondaryButtonStyle}" 
+                            HorizontalAlignment="Left" Margin="0,0,0,10" />
+                    
+                    <TextBlock Grid.Row="1" Text="Starter Activity:" Margin="0,0,0,5" />
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding StarterActivity, UpdateSourceTrigger=PropertyChanged}" 
+                                 TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,10,10" Height="80"
+                                 Style="{StaticResource StandardTextBoxStyle}" />
+                        <Button Grid.Column="1" Content="Generate" 
+                                Command="{Binding GenerateStarterActivityCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" 
+                                VerticalAlignment="Top" />
+                    </Grid>
+                    
+                    <TextBlock Grid.Row="3" Text="Main Activity:" Margin="0,0,0,5" />
+                    <Grid Grid.Row="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding MainActivity, UpdateSourceTrigger=PropertyChanged}" 
+                                 TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,10,10" Height="100"
+                                 Style="{StaticResource StandardTextBoxStyle}" />
+                        <Button Grid.Column="1" Content="Generate" 
+                                Command="{Binding GenerateMainActivityCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" 
+                                VerticalAlignment="Top" />
+                    </Grid>
+                    
+                    <TextBlock Grid.Row="5" Text="Plenary Activity:" Margin="0,0,0,5" />
+                    <Grid Grid.Row="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding PlenaryActivity, UpdateSourceTrigger=PropertyChanged}" 
+                                 TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,10,10" Height="80"
+                                 Style="{StaticResource StandardTextBoxStyle}" />
+                        <Button Grid.Column="1" Content="Generate" 
+                                Command="{Binding GeneratePlenaryActivityCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" 
+                                VerticalAlignment="Top" />
+                    </Grid>
+                    
+                    <TextBlock Grid.Row="7" Text="{Binding ActivitiesStatus}" Margin="0,10,0,0" 
+                               Visibility="{Binding IsGeneratingActivities, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>
