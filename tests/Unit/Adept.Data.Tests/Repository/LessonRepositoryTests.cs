@@ -255,14 +255,19 @@ namespace Adept.Data.Tests.Repository
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<LessonPlan>(
                     It.IsAny<string>(),
                     It.Is<object>(p =>
-                        ((dynamic)p).ClassId == lessonPlan.ClassId &&
-                        ((dynamic)p).Date == lessonPlan.Date &&
-                        ((dynamic)p).TimeSlot == lessonPlan.TimeSlot)))
-                .ReturnsAsync((LessonPlan)null);
+                        p != null &&
+                        p.GetType().GetProperty("ClassId") != null &&
+                        p.GetType().GetProperty("ClassId").GetValue(p).ToString() == lessonPlan.ClassId &&
+                        p.GetType().GetProperty("Date") != null &&
+                        p.GetType().GetProperty("Date").GetValue(p).ToString() == lessonPlan.Date &&
+                        p.GetType().GetProperty("TimeSlot") != null &&
+                        Convert.ToInt32(p.GetType().GetProperty("TimeSlot").GetValue(p)) == lessonPlan.TimeSlot)))
+                .ReturnsAsync((LessonPlan?)null);
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<int>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == lessonPlan.ClassId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == lessonPlan.ClassId)))
                 .ReturnsAsync(1); // Class exists
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
@@ -277,7 +282,8 @@ namespace Adept.Data.Tests.Repository
             Assert.Equal(lessonPlan.LessonId, result);
             _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).LessonId == lessonPlan.LessonId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("LessonId") != null &&
+                             p.GetType().GetProperty("LessonId").GetValue(p).ToString() == lessonPlan.LessonId)),
                 Times.Once);
         }
 
@@ -285,7 +291,8 @@ namespace Adept.Data.Tests.Repository
         public async Task AddLessonAsync_WithNullLesson_ThrowsArgumentNullException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.AddLessonAsync(null));
+            LessonPlan? nullLesson = null;
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.AddLessonAsync(nullLesson!));
         }
 
         [Fact]
@@ -348,9 +355,13 @@ namespace Adept.Data.Tests.Repository
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<LessonPlan>(
                     It.IsAny<string>(),
                     It.Is<object>(p =>
-                        ((dynamic)p).ClassId == lessonPlan.ClassId &&
-                        ((dynamic)p).Date == lessonPlan.Date &&
-                        ((dynamic)p).TimeSlot == lessonPlan.TimeSlot)))
+                        p != null &&
+                        p.GetType().GetProperty("ClassId") != null &&
+                        p.GetType().GetProperty("ClassId").GetValue(p).ToString() == lessonPlan.ClassId &&
+                        p.GetType().GetProperty("Date") != null &&
+                        p.GetType().GetProperty("Date").GetValue(p).ToString() == lessonPlan.Date &&
+                        p.GetType().GetProperty("TimeSlot") != null &&
+                        Convert.ToInt32(p.GetType().GetProperty("TimeSlot").GetValue(p)) == lessonPlan.TimeSlot)))
                 .ReturnsAsync(existingLesson);
 
             // Act & Assert
@@ -373,14 +384,19 @@ namespace Adept.Data.Tests.Repository
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<LessonPlan>(
                     It.IsAny<string>(),
                     It.Is<object>(p =>
-                        ((dynamic)p).ClassId == lessonPlan.ClassId &&
-                        ((dynamic)p).Date == lessonPlan.Date &&
-                        ((dynamic)p).TimeSlot == lessonPlan.TimeSlot)))
-                .ReturnsAsync((LessonPlan)null);
+                        p != null &&
+                        p.GetType().GetProperty("ClassId") != null &&
+                        p.GetType().GetProperty("ClassId").GetValue(p).ToString() == lessonPlan.ClassId &&
+                        p.GetType().GetProperty("Date") != null &&
+                        p.GetType().GetProperty("Date").GetValue(p).ToString() == lessonPlan.Date &&
+                        p.GetType().GetProperty("TimeSlot") != null &&
+                        Convert.ToInt32(p.GetType().GetProperty("TimeSlot").GetValue(p)) == lessonPlan.TimeSlot)))
+                .ReturnsAsync((LessonPlan?)null);
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<int>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == lessonPlan.ClassId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == lessonPlan.ClassId)))
                 .ReturnsAsync(0); // Class does not exist
 
             // Act & Assert
@@ -486,8 +502,9 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<LessonPlan>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).LessonId == lessonPlan.LessonId)))
-                .ReturnsAsync((LessonPlan)null);
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("LessonId") != null &&
+                                 p.GetType().GetProperty("LessonId").GetValue(p).ToString() == lessonPlan.LessonId)))
+                .ReturnsAsync((LessonPlan?)null);
 
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.UpdateLessonAsync(lessonPlan));

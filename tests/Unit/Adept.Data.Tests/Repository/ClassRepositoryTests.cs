@@ -421,12 +421,16 @@ namespace Adept.Data.Tests.Repository
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
                     It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p) != null &&
                                  p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(existingClass);
 
             _mockDatabaseContext.Setup(x => x.QueryAsync<Student>(
                     It.IsAny<string>(),
                     It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p) != null &&
                                  p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(expectedStudents);
 
@@ -438,6 +442,8 @@ namespace Adept.Data.Tests.Repository
             _mockDatabaseContext.Verify(x => x.QueryAsync<Student>(
                 It.IsAny<string>(),
                 It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId").GetValue(p) != null &&
                              p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)),
                 Times.Once);
         }
@@ -460,6 +466,8 @@ namespace Adept.Data.Tests.Repository
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
                     It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p) != null &&
                                  p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync((Class?)null);
 
