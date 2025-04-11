@@ -84,17 +84,21 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
-            // DeepSeek V2 models
+            // DeepSeek V2 models (latest generation)
             _availableModels.Add(new LlmModel("deepseek-v2", "DeepSeek V2", 128000, true, true));
+            _availableModels.Add(new LlmModel("deepseek-v2-ultra", "DeepSeek V2 Ultra", 128000, true, true));
             _availableModels.Add(new LlmModel("deepseek-coder-v2", "DeepSeek Coder V2", 128000, true, false));
 
             // DeepSeek Chat models
             _availableModels.Add(new LlmModel("deepseek-chat", "DeepSeek Chat", 32000, true, false));
             _availableModels.Add(new LlmModel("deepseek-chat-v2", "DeepSeek Chat V2", 128000, true, true));
+            _availableModels.Add(new LlmModel("deepseek-llm-67b-chat", "DeepSeek LLM 67B Chat", 16000, true, false));
 
             // DeepSeek Coder models
             _availableModels.Add(new LlmModel("deepseek-coder", "DeepSeek Coder", 32000, true, false));
             _availableModels.Add(new LlmModel("deepseek-coder-instruct", "DeepSeek Coder Instruct", 32000, true, false));
+            _availableModels.Add(new LlmModel("deepseek-coder-33b-instruct", "DeepSeek Coder 33B Instruct", 16000, true, false));
+            _availableModels.Add(new LlmModel("deepseek-coder-instruct-v2", "DeepSeek Coder Instruct V2", 128000, true, false));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -147,8 +151,10 @@ namespace Adept.Services.Llm.Providers
                 // but we'll make sure it includes the latest models
                 _availableModels.Clear();
 
-                // DeepSeek V2 models
+                // DeepSeek V2 models (latest generation)
                 _availableModels.Add(new LlmModel("deepseek-v2", "DeepSeek V2", 128000, true, true));
+                _availableModels.Add(new LlmModel("deepseek-v2-ultra", "DeepSeek V2 Ultra", 128000, true, true));
+                _availableModels.Add(new LlmModel("deepseek-v2-vision", "DeepSeek V2 Vision", 128000, true, true));
                 _availableModels.Add(new LlmModel("deepseek-coder-v2", "DeepSeek Coder V2", 128000, true, false));
 
                 // DeepSeek Chat models
@@ -481,7 +487,7 @@ namespace Adept.Services.Llm.Providers
         /// <param name="systemPrompt">Optional system prompt to use</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The LLM response</returns>
-        public Task<LlmResponse> SendMessageWithImageAsync(string message, byte[] imageData, string? systemPrompt = null, CancellationToken cancellationToken = default)
+        public async Task<LlmResponse> SendMessageWithImageAsync(string message, byte[] imageData, string? systemPrompt = null, CancellationToken cancellationToken = default)
         {
             if (!HasValidApiKey)
             {
@@ -493,9 +499,91 @@ namespace Adept.Services.Llm.Providers
                 throw new InvalidOperationException($"Model {_currentModel.Name} does not support vision");
             }
 
-            // Currently, DeepSeek models don't support vision through the API
-            _logger.LogWarning("Vision not supported by DeepSeek provider");
-            throw new NotSupportedException("Vision not supported by DeepSeek provider");
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+                // Convert image to base64
+                var base64Image = Convert.ToBase64String(imageData);
+                var mimeType = "image/jpeg"; // Assuming JPEG format, adjust if needed
+
+                // Prepare the request with multimodal content
+                var requestMessages = new List<object>();
+
+                // Add system prompt if provided
+                if (!string.IsNullOrEmpty(systemPrompt))
+                {
+                    requestMessages.Add(new { role = "system", content = systemPrompt });
+                }
+
+                // Add user message with image
+                requestMessages.Add(new
+                {
+                    role = "user",
+                    content = new object[]
+                    {
+                        new { type = "text", text = message },
+                        new
+                        {
+                            type = "image_url",
+                            image_url = new
+                            {
+                                url = $"data:{mimeType};base64,{base64Image}"
+                            }
+                        }
+                    }
+                });
+
+                var requestBody = new
+                {
+                    model = _currentModel.Id,
+                    messages = requestMessages,
+                    temperature = 0.7,
+                    max_tokens = 2000,
+                    top_p = 1.0
+                };
+
+                var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync("https://api.deepseek.com/v1/chat/completions", content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var responseObject = JsonSerializer.Deserialize<JsonElement>(responseBody);
+
+                // Extract the response message
+                var choices = responseObject.GetProperty("choices");
+                var firstChoice = choices[0];
+                var messageObj = firstChoice.GetProperty("message");
+                var role = messageObj.GetProperty("role").GetString() ?? "assistant";
+                var content_text = messageObj.GetProperty("content").GetString() ?? string.Empty;
+
+                // Create the response
+                var llmResponse = new LlmResponse
+                {
+                    Message = new LlmMessage
+                    {
+                        Role = role == "assistant" ? LlmRole.Assistant : LlmRole.User,
+                        Content = content_text
+                    },
+                    ProviderName = ProviderName,
+                    ModelName = _currentModel.Name,
+                    Usage = new LlmUsage
+                    {
+                        PromptTokens = responseObject.GetProperty("usage").GetProperty("prompt_tokens").GetInt32(),
+                        CompletionTokens = responseObject.GetProperty("usage").GetProperty("completion_tokens").GetInt32(),
+                        TotalTokens = responseObject.GetProperty("usage").GetProperty("total_tokens").GetInt32()
+                    }
+                };
+
+                _logger.LogInformation("DeepSeek vision response received");
+                return llmResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending message with image to DeepSeek");
+                throw;
+            }
         }
 
         /// <summary>

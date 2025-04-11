@@ -84,17 +84,20 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
-            // Llama 3.1 models
+            // Llama 3.1 models (latest generation)
             _availableModels.Add(new LlmModel("llama-3.1-405b-instruct", "Llama 3.1 405B Instruct", 128000, true, true));
             _availableModels.Add(new LlmModel("llama-3.1-70b-instruct", "Llama 3.1 70B Instruct", 128000, true, true));
             _availableModels.Add(new LlmModel("llama-3.1-8b-instruct", "Llama 3.1 8B Instruct", 128000, true, false));
+            _availableModels.Add(new LlmModel("llama-3.1-70b-vision", "Llama 3.1 70B Vision", 128000, true, true));
 
             // Llama 3 models
             _availableModels.Add(new LlmModel("llama-3-70b-instruct", "Llama 3 70B Instruct", 128000, true, false));
             _availableModels.Add(new LlmModel("llama-3-8b-instruct", "Llama 3 8B Instruct", 128000, true, false));
 
-            // Llama 2 models
+            // Llama 2 models (previous generation)
             _availableModels.Add(new LlmModel("llama-2-70b-chat", "Llama 2 70B Chat", 4096, false, false));
+            _availableModels.Add(new LlmModel("llama-2-13b-chat", "Llama 2 13B Chat", 4096, false, false));
+            _availableModels.Add(new LlmModel("llama-2-7b-chat", "Llama 2 7B Chat", 4096, false, false));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -481,7 +484,7 @@ namespace Adept.Services.Llm.Providers
         /// <param name="systemPrompt">Optional system prompt to use</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>The LLM response</returns>
-        public Task<LlmResponse> SendMessageWithImageAsync(string message, byte[] imageData, string? systemPrompt = null, CancellationToken cancellationToken = default)
+        public async Task<LlmResponse> SendMessageWithImageAsync(string message, byte[] imageData, string? systemPrompt = null, CancellationToken cancellationToken = default)
         {
             if (!HasValidApiKey)
             {
@@ -493,9 +496,91 @@ namespace Adept.Services.Llm.Providers
                 throw new InvalidOperationException($"Model {_currentModel.Name} does not support vision");
             }
 
-            // Currently, Llama models don't support vision through the API
-            _logger.LogWarning("Vision not supported by Meta provider");
-            throw new NotSupportedException("Vision not supported by Meta provider");
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+                // Convert image to base64
+                var base64Image = Convert.ToBase64String(imageData);
+                var mimeType = "image/jpeg"; // Assuming JPEG format, adjust if needed
+
+                // Prepare the request with multimodal content
+                var requestMessages = new List<object>();
+
+                // Add system prompt if provided
+                if (!string.IsNullOrEmpty(systemPrompt))
+                {
+                    requestMessages.Add(new { role = "system", content = systemPrompt });
+                }
+
+                // Add user message with image
+                requestMessages.Add(new
+                {
+                    role = "user",
+                    content = new object[]
+                    {
+                        new { type = "text", text = message },
+                        new
+                        {
+                            type = "image_url",
+                            image_url = new
+                            {
+                                url = $"data:{mimeType};base64,{base64Image}"
+                            }
+                        }
+                    }
+                });
+
+                var requestBody = new
+                {
+                    model = _currentModel.Id,
+                    messages = requestMessages,
+                    temperature = 0.7,
+                    max_tokens = 2000,
+                    top_p = 1.0
+                };
+
+                var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync("https://llama.meta.ai/v1/chat/completions", content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var responseObject = JsonSerializer.Deserialize<JsonElement>(responseBody);
+
+                // Extract the response message
+                var choices = responseObject.GetProperty("choices");
+                var firstChoice = choices[0];
+                var messageObj = firstChoice.GetProperty("message");
+                var role = messageObj.GetProperty("role").GetString() ?? "assistant";
+                var content_text = messageObj.GetProperty("content").GetString() ?? string.Empty;
+
+                // Create the response
+                var llmResponse = new LlmResponse
+                {
+                    Message = new LlmMessage
+                    {
+                        Role = role == "assistant" ? LlmRole.Assistant : LlmRole.User,
+                        Content = content_text
+                    },
+                    ProviderName = ProviderName,
+                    ModelName = _currentModel.Name,
+                    Usage = new LlmUsage
+                    {
+                        PromptTokens = responseObject.GetProperty("usage").GetProperty("prompt_tokens").GetInt32(),
+                        CompletionTokens = responseObject.GetProperty("usage").GetProperty("completion_tokens").GetInt32(),
+                        TotalTokens = responseObject.GetProperty("usage").GetProperty("total_tokens").GetInt32()
+                    }
+                };
+
+                _logger.LogInformation("Meta vision response received");
+                return llmResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending message with image to Meta");
+                throw;
+            }
         }
 
         /// <summary>
