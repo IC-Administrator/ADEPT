@@ -203,7 +203,13 @@ ADEPT/
    - Fixed database backup and integrity service tests ✅
    - All tests now pass successfully ✅
 
-3. **Integration Test Development** (In Progress)
+3. **Remaining Test Issues** (Priority: High)
+   - Resolve ambiguous references to MockFactory in LlmServiceFallbackTests.cs
+   - Fix issues with ReturnsAsync in LlmToolIntegrationServiceTests.cs
+   - Address nullability warnings in OpenRouterProviderTests.cs
+   - Ensure all tests build and run successfully
+
+4. **Integration Test Development** (In Progress)
    - Create integration tests for database operations ✅
    - Implement tests for external service integrations
    - Add end-to-end tests for critical workflows
@@ -925,7 +931,14 @@ Ongoing maintenance will include:
 - Fixed issues in LlmService related to conversation handling
 - Fixed boolean comparison in model capability detection
 
-**Planned Tasks:**
+**Immediate Action Plan:**
+- Fix test project build issues:
+  - Resolve ambiguous references to MockFactory in LlmServiceFallbackTests.cs
+  - Fix issues with ReturnsAsync in LlmToolIntegrationServiceTests.cs
+  - Address nullability warnings in OpenRouterProviderTests.cs
+  - Ensure all tests build and run successfully
+
+**Subsequent Planned Tasks:**
 - Enhance remaining LLM provider implementations:
   - Google (Gemini)
   - Meta (Llama)
@@ -1004,4 +1017,6 @@ We have now completed Phase 1.3 (Testing Infrastructure), ensuring the applicati
 
 The OpenRouterProvider implementation includes proper error handling, logging, model selection, and configuration. We've also fixed related issues in the LlmService class, including conversation handling and model capability detection. This progress demonstrates our commitment to systematically implementing external integrations with high quality and attention to detail.
 
-By following this phased approach, we're systematically addressing the core infrastructure needs before moving on to external integrations and UI enhancements. This ensures that each component is built on a solid foundation, making the application more reliable, maintainable, and extensible.
+Before proceeding with the implementation of additional LLM providers, we will prioritize fixing the remaining test project build issues. This includes resolving ambiguous references to MockFactory, addressing issues with ReturnsAsync in test mocks, and fixing nullability warnings. By addressing these issues first, we ensure a solid testing foundation for the remaining implementation work.
+
+By following this phased approach and prioritizing quality, we're systematically addressing the core infrastructure needs before moving on to external integrations and UI enhancements. This ensures that each component is built on a solid foundation, making the application more reliable, maintainable, and extensible.
