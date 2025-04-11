@@ -175,18 +175,21 @@ ADEPT/
 
 #### 3.1.3 Testing Infrastructure
 
-**Priority: Medium** (In Progress)
+**Priority: Medium** (Almost Complete)
 
 1. **Test Utilities Enhancement** ✅
    - Enhanced MockFactory with mock implementations for all services and repositories ✅
    - Added test data generators for all model types ✅
    - Implemented additional assertion extensions for common test scenarios ✅
    - Created test fixtures for different testing scenarios ✅
+   - Fixed ambiguous references to MockFactory in test utilities ✅
+   - Updated test utilities to match current database interfaces ✅
 
 2. **Unit Test Expansion** (In Progress)
    - Increase test coverage for core components
    - Implement tests for database operations ✅
    - Implement tests for repositories (LessonResourceRepository, LessonTemplateRepository, SystemPromptRepository) ✅
+   - Fixed repository tests to use the BaseRepository pattern correctly (In Progress)
    - Add tests for JSON serialization ✅
    - Add tests for JSON validation ✅
    - Add tests for JSON extension methods ✅
@@ -196,10 +199,10 @@ ADEPT/
    - Implement tests for external service integrations
    - Add end-to-end tests for critical workflows
 
-4. **Test Organization**
+4. **Test Organization** ✅
    - Complete test organization according to TestOrganization.md ✅
    - Standardize test naming and structure ✅
-   - Implement test utilities for common operations
+   - Implement test utilities for common operations ✅
    - Create consistent test project structure ✅
 
 ### 3.2 Phase 2: External Integrations (3-4 weeks)

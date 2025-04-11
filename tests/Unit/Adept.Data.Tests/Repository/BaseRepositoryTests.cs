@@ -16,13 +16,13 @@ namespace Adept.Data.Tests.Repository
     public class BaseRepositoryTests
     {
         private readonly Mock<IDatabaseContext> _mockDatabaseContext;
-        private readonly Mock<ILogger> _mockLogger;
+        private readonly Mock<ILogger<TestBaseRepository>> _mockLogger;
         private readonly TestBaseRepository _repository;
 
         public BaseRepositoryTests()
         {
             _mockDatabaseContext = new Mock<IDatabaseContext>();
-            _mockLogger = new Mock<ILogger>();
+            _mockLogger = new Mock<ILogger<TestBaseRepository>>();
             _repository = new TestBaseRepository(_mockDatabaseContext.Object, _mockLogger.Object);
         }
 
@@ -45,9 +45,9 @@ namespace Adept.Data.Tests.Repository
         {
             // Arrange
             var expectedResult = new List<TestEntity> { new TestEntity { Id = "1", Name = "Test" } };
-            
+
             // Act
-            var result = await _repository.TestExecuteWithErrorHandlingAsync(
+            var result = await _repository.TestExecuteWithErrorHandlingAsync<List<TestEntity>>(
                 () => Task.FromResult(expectedResult),
                 "Test error message",
                 new List<TestEntity>());
@@ -61,9 +61,9 @@ namespace Adept.Data.Tests.Repository
         {
             // Arrange
             var defaultValue = new List<TestEntity>();
-            
+
             // Act
-            var result = await _repository.TestExecuteWithErrorHandlingAsync(
+            var result = await _repository.TestExecuteWithErrorHandlingAsync<List<TestEntity>>(
                 () => throw new Exception("Test exception"),
                 "Test error message",
                 defaultValue);
@@ -76,7 +76,7 @@ namespace Adept.Data.Tests.Repository
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => true),
                     It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
                 Times.Once);
         }
 
@@ -85,7 +85,7 @@ namespace Adept.Data.Tests.Repository
         {
             // Arrange
             var expectedResult = "test-result";
-            
+
             // Act
             var result = await _repository.TestExecuteWithErrorHandlingAndThrowAsync(
                 () => Task.FromResult(expectedResult),
@@ -100,13 +100,13 @@ namespace Adept.Data.Tests.Repository
         {
             // Arrange
             var expectedException = new InvalidOperationException("Test exception");
-            
+
             // Act & Assert
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                await _repository.TestExecuteWithErrorHandlingAndThrowAsync(
+                await _repository.TestExecuteWithErrorHandlingAndThrowAsync<bool>(
                     () => throw expectedException,
                     "Test error message"));
-            
+
             Assert.Same(expectedException, exception);
             _mockLogger.Verify(
                 x => x.Log(
@@ -114,7 +114,7 @@ namespace Adept.Data.Tests.Repository
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => true),
                     It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
                 Times.Once);
         }
 
@@ -126,10 +126,10 @@ namespace Adept.Data.Tests.Repository
             var mockTransaction = new Mock<IDbTransaction>();
             _mockDatabaseContext.Setup(x => x.BeginTransactionAsync())
                 .ReturnsAsync(mockTransaction.Object);
-            
+
             // Act
             var result = await _repository.TestExecuteInTransactionAsync(
-                async (transaction) => 
+                async (transaction) =>
                 {
                     Assert.Same(mockTransaction.Object, transaction);
                     return expectedResult;
@@ -151,13 +151,13 @@ namespace Adept.Data.Tests.Repository
             var mockTransaction = new Mock<IDbTransaction>();
             _mockDatabaseContext.Setup(x => x.BeginTransactionAsync())
                 .ReturnsAsync(mockTransaction.Object);
-            
+
             // Act & Assert
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                await _repository.TestExecuteInTransactionAsync(
+                await _repository.TestExecuteInTransactionAsync<bool>(
                     async (transaction) => throw expectedException,
                     "Test error message"));
-            
+
             Assert.Same(expectedException, exception);
             mockTransaction.Verify(x => x.CommitAsync(), Times.Never);
             mockTransaction.Verify(x => x.RollbackAsync(), Times.Once);
@@ -168,7 +168,7 @@ namespace Adept.Data.Tests.Repository
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => true),
                     It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
                 Times.Once);
         }
 
@@ -176,9 +176,9 @@ namespace Adept.Data.Tests.Repository
         public void ValidateEntityNotNull_WithNullEntity_ThrowsArgumentNullException()
         {
             // Act & Assert
-            var exception = Assert.Throws<ArgumentNullException>(() => 
+            var exception = Assert.Throws<ArgumentNullException>(() =>
                 _repository.TestValidateEntityNotNull(null, "testEntity"));
-            
+
             Assert.Equal("testEntity", exception.ParamName);
         }
 
@@ -194,9 +194,9 @@ namespace Adept.Data.Tests.Repository
         public void ValidateStringNotNullOrEmpty_WithNullString_ThrowsArgumentException()
         {
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
+            var exception = Assert.Throws<ArgumentException>(() =>
                 _repository.TestValidateStringNotNullOrEmpty(null, "testString"));
-            
+
             Assert.Equal("testString", exception.ParamName);
         }
 
@@ -204,9 +204,9 @@ namespace Adept.Data.Tests.Repository
         public void ValidateStringNotNullOrEmpty_WithEmptyString_ThrowsArgumentException()
         {
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
+            var exception = Assert.Throws<ArgumentException>(() =>
                 _repository.TestValidateStringNotNullOrEmpty("", "testString"));
-            
+
             Assert.Equal("testString", exception.ParamName);
         }
 
@@ -222,9 +222,9 @@ namespace Adept.Data.Tests.Repository
         public void ValidateId_WithNullId_ThrowsArgumentException()
         {
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
+            var exception = Assert.Throws<ArgumentException>(() =>
                 _repository.TestValidateId(null, "testEntity"));
-            
+
             Assert.Contains("ID cannot be null or empty", exception.Message);
         }
 
@@ -232,9 +232,9 @@ namespace Adept.Data.Tests.Repository
         public void ValidateId_WithEmptyId_ThrowsArgumentException()
         {
             // Act & Assert
-            var exception = Assert.Throws<ArgumentException>(() => 
+            var exception = Assert.Throws<ArgumentException>(() =>
                 _repository.TestValidateId("", "testEntity"));
-            
+
             Assert.Contains("ID cannot be null or empty", exception.Message);
         }
 
@@ -251,7 +251,7 @@ namespace Adept.Data.Tests.Repository
         /// </summary>
         private class TestBaseRepository : BaseRepository<TestEntity>
         {
-            public TestBaseRepository(IDatabaseContext databaseContext, ILogger logger)
+            public TestBaseRepository(IDatabaseContext databaseContext, ILogger<TestBaseRepository> logger)
                 : base(databaseContext, logger)
             {
             }
