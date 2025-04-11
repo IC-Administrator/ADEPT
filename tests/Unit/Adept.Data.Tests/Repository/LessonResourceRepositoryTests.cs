@@ -170,8 +170,9 @@ namespace Adept.Data.Tests.Repository
         public async Task AddResourceAsync_NullResource_ThrowsArgumentNullException()
         {
             // Act & Assert
+            LessonResource? nullResource = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
-                () => _repository.AddResourceAsync(null),
+                () => _repository.AddResourceAsync(nullResource!),
                 "Value cannot be null");
         }
 
@@ -238,8 +239,9 @@ namespace Adept.Data.Tests.Repository
         public async Task UpdateResourceAsync_NullResource_ThrowsArgumentNullException()
         {
             // Act & Assert
+            LessonResource? nullResource = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
-                () => _repository.UpdateResourceAsync(null),
+                () => _repository.UpdateResourceAsync(nullResource!),
                 "Value cannot be null");
         }
 

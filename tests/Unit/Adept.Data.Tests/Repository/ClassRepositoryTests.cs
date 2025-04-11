@@ -86,7 +86,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(expectedClass);
 
             // Act
@@ -96,7 +97,8 @@ namespace Adept.Data.Tests.Repository
             Assert.Equal(expectedClass, result);
             _mockDatabaseContext.Verify(x => x.QuerySingleOrDefaultAsync<Class>(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).ClassId == classId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)),
                 Times.Once);
         }
 
@@ -104,7 +106,8 @@ namespace Adept.Data.Tests.Repository
         public async Task GetClassByIdAsync_WithInvalidId_ThrowsArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetClassByIdAsync(null));
+            string? nullId = null;
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetClassByIdAsync(nullId!));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetClassByIdAsync(""));
         }
 
@@ -117,7 +120,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassCode == classCode)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassCode") != null &&
+                                 p.GetType().GetProperty("ClassCode").GetValue(p).ToString() == classCode)))
                 .ReturnsAsync(expectedClass);
 
             // Act
@@ -127,7 +131,8 @@ namespace Adept.Data.Tests.Repository
             Assert.Equal(expectedClass, result);
             _mockDatabaseContext.Verify(x => x.QuerySingleOrDefaultAsync<Class>(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).ClassCode == classCode)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("ClassCode") != null &&
+                             p.GetType().GetProperty("ClassCode").GetValue(p).ToString() == classCode)),
                 Times.Once);
         }
 
@@ -135,7 +140,8 @@ namespace Adept.Data.Tests.Repository
         public async Task GetClassByCodeAsync_WithInvalidCode_ThrowsArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetClassByCodeAsync(null));
+            string? nullCode = null;
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetClassByCodeAsync(nullCode!));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetClassByCodeAsync(""));
         }
 
@@ -153,8 +159,9 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassCode == classEntity.ClassCode)))
-                .ReturnsAsync((Class)null);
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassCode") != null &&
+                                 p.GetType().GetProperty("ClassCode").GetValue(p).ToString() == classEntity.ClassCode)))
+                .ReturnsAsync((Class?)null);
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
@@ -168,7 +175,8 @@ namespace Adept.Data.Tests.Repository
             Assert.Equal(classEntity.ClassId, result);
             _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).ClassId == classEntity.ClassId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classEntity.ClassId)),
                 Times.Once);
         }
 
@@ -176,7 +184,8 @@ namespace Adept.Data.Tests.Repository
         public async Task AddClassAsync_WithNullClass_ThrowsArgumentNullException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.AddClassAsync(null));
+            Class? nullClass = null;
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.AddClassAsync(nullClass!));
         }
 
         [Fact]
@@ -220,7 +229,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassCode == classEntity.ClassCode)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassCode") != null &&
+                                 p.GetType().GetProperty("ClassCode").GetValue(p).ToString() == classEntity.ClassCode)))
                 .ReturnsAsync(existingClass);
 
             // Act & Assert
@@ -249,13 +259,15 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classEntity.ClassId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classEntity.ClassId)))
                 .ReturnsAsync(existingClass);
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassCode == classEntity.ClassCode)))
-                .ReturnsAsync((Class)null);
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassCode") != null &&
+                                 p.GetType().GetProperty("ClassCode").GetValue(p).ToString() == classEntity.ClassCode)))
+                .ReturnsAsync((Class?)null);
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
@@ -268,7 +280,8 @@ namespace Adept.Data.Tests.Repository
             // Assert
             _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).ClassId == classEntity.ClassId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classEntity.ClassId)),
                 Times.Once);
         }
 
@@ -276,7 +289,8 @@ namespace Adept.Data.Tests.Repository
         public async Task UpdateClassAsync_WithNullClass_ThrowsArgumentNullException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.UpdateClassAsync(null));
+            Class? nullClass = null;
+            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.UpdateClassAsync(nullClass!));
         }
 
         [Fact]
@@ -313,8 +327,9 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classEntity.ClassId)))
-                .ReturnsAsync((Class)null);
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classEntity.ClassId)))
+                .ReturnsAsync((Class?)null);
 
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.UpdateClassAsync(classEntity));
@@ -334,7 +349,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(existingClass);
 
             var mockTransaction = new Mock<IDbTransaction>();
@@ -343,7 +359,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(1);
 
             // Act
@@ -352,7 +369,8 @@ namespace Adept.Data.Tests.Repository
             // Assert
             _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).ClassId == classId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)),
                 Times.Once);
             mockTransaction.Verify(x => x.CommitAsync(), Times.Once);
         }
@@ -361,7 +379,8 @@ namespace Adept.Data.Tests.Repository
         public async Task DeleteClassAsync_WithInvalidId_ThrowsArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteClassAsync(null));
+            string? nullId = null;
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteClassAsync(nullId!));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteClassAsync(""));
         }
 
@@ -373,8 +392,9 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
-                .ReturnsAsync((Class)null);
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
+                .ReturnsAsync((Class?)null);
 
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.DeleteClassAsync(classId));
@@ -400,12 +420,14 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(existingClass);
 
             _mockDatabaseContext.Setup(x => x.QueryAsync<Student>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(expectedStudents);
 
             // Act
@@ -415,7 +437,8 @@ namespace Adept.Data.Tests.Repository
             Assert.Equal(expectedStudents, result);
             _mockDatabaseContext.Verify(x => x.QueryAsync<Student>(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).ClassId == classId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)),
                 Times.Once);
         }
 
@@ -423,7 +446,8 @@ namespace Adept.Data.Tests.Repository
         public async Task GetStudentsForClassAsync_WithInvalidId_ThrowsArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentsForClassAsync(null));
+            string? nullId = null;
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentsForClassAsync(nullId!));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentsForClassAsync(""));
         }
 
@@ -435,8 +459,9 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Class>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
-                .ReturnsAsync((Class)null);
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
+                .ReturnsAsync((Class?)null);
 
             // Act
             var result = await _repository.GetStudentsForClassAsync(classId);
@@ -448,8 +473,8 @@ namespace Adept.Data.Tests.Repository
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => true),
-                    null,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    (Exception?)null,
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
                 Times.Once);
         }
     }

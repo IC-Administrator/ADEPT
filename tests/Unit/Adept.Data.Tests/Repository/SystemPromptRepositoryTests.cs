@@ -90,17 +90,29 @@ namespace Adept.Data.Tests.Repository
         }
 
         /// <summary>
-        /// Tests that GetPromptByIdAsync throws an exception when given a null or empty ID
+        /// Tests that GetPromptByIdAsync throws an exception when given an empty ID
         /// </summary>
         [Theory]
-        [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public async Task GetPromptByIdAsync_NullOrEmptyId_ThrowsArgumentException(string promptId)
+        public async Task GetPromptByIdAsync_EmptyId_ThrowsArgumentException(string promptId)
         {
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.GetPromptByIdAsync(promptId),
+                "Value cannot be null or empty");
+        }
+
+        /// <summary>
+        /// Tests that GetPromptByIdAsync throws an exception when given a null ID
+        /// </summary>
+        [Fact]
+        public async Task GetPromptByIdAsync_NullId_ThrowsArgumentException()
+        {
+            // Act & Assert
+            string? nullId = null;
+            await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
+                () => _repository.GetPromptByIdAsync(nullId!),
                 "Value cannot be null or empty");
         }
 
@@ -170,8 +182,9 @@ namespace Adept.Data.Tests.Repository
         public async Task AddPromptAsync_NullPrompt_ThrowsArgumentNullException()
         {
             // Act & Assert
+            SystemPrompt? nullPrompt = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
-                () => _repository.AddPromptAsync(null),
+                () => _repository.AddPromptAsync(nullPrompt!),
                 "Value cannot be null");
         }
 
@@ -221,8 +234,9 @@ namespace Adept.Data.Tests.Repository
         public async Task UpdatePromptAsync_NullPrompt_ThrowsArgumentNullException()
         {
             // Act & Assert
+            SystemPrompt? nullPrompt = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
-                () => _repository.UpdatePromptAsync(null),
+                () => _repository.UpdatePromptAsync(nullPrompt!),
                 "Value cannot be null");
         }
 
@@ -262,17 +276,29 @@ namespace Adept.Data.Tests.Repository
         }
 
         /// <summary>
-        /// Tests that DeletePromptAsync throws an exception when given a null or empty ID
+        /// Tests that DeletePromptAsync throws an exception when given an empty ID
         /// </summary>
         [Theory]
-        [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public async Task DeletePromptAsync_NullOrEmptyId_ThrowsArgumentException(string promptId)
+        public async Task DeletePromptAsync_EmptyId_ThrowsArgumentException(string promptId)
         {
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.DeletePromptAsync(promptId),
+                "Value cannot be null or empty");
+        }
+
+        /// <summary>
+        /// Tests that DeletePromptAsync throws an exception when given a null ID
+        /// </summary>
+        [Fact]
+        public async Task DeletePromptAsync_NullId_ThrowsArgumentException()
+        {
+            // Act & Assert
+            string? nullId = null;
+            await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
+                () => _repository.DeletePromptAsync(nullId!),
                 "Value cannot be null or empty");
         }
 
@@ -313,17 +339,29 @@ namespace Adept.Data.Tests.Repository
         }
 
         /// <summary>
-        /// Tests that SetDefaultPromptAsync throws an exception when given a null or empty ID
+        /// Tests that SetDefaultPromptAsync throws an exception when given an empty ID
         /// </summary>
         [Theory]
-        [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public async Task SetDefaultPromptAsync_NullOrEmptyId_ThrowsArgumentException(string promptId)
+        public async Task SetDefaultPromptAsync_EmptyId_ThrowsArgumentException(string promptId)
         {
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.SetDefaultPromptAsync(promptId),
+                "Value cannot be null or empty");
+        }
+
+        /// <summary>
+        /// Tests that SetDefaultPromptAsync throws an exception when given a null ID
+        /// </summary>
+        [Fact]
+        public async Task SetDefaultPromptAsync_NullId_ThrowsArgumentException()
+        {
+            // Act & Assert
+            string? nullId = null;
+            await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
+                () => _repository.SetDefaultPromptAsync(nullId!),
                 "Value cannot be null or empty");
         }
     }

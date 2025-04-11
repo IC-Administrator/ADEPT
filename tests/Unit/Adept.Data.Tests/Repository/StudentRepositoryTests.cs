@@ -74,7 +74,7 @@ namespace Adept.Data.Tests.Repository
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => true),
                     It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
                 Times.Once);
         }
 
@@ -87,7 +87,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<Student>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).StudentId == studentId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("StudentId") != null &&
+                                 p.GetType().GetProperty("StudentId").GetValue(p).ToString() == studentId)))
                 .ReturnsAsync(expectedStudent);
 
             // Act
@@ -97,7 +98,8 @@ namespace Adept.Data.Tests.Repository
             Assert.Equal(expectedStudent, result);
             _mockDatabaseContext.Verify(x => x.QuerySingleOrDefaultAsync<Student>(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).StudentId == studentId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("StudentId") != null &&
+                             p.GetType().GetProperty("StudentId").GetValue(p).ToString() == studentId)),
                 Times.Once);
         }
 
@@ -105,7 +107,8 @@ namespace Adept.Data.Tests.Repository
         public async Task GetStudentByIdAsync_WithInvalidId_ThrowsArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentByIdAsync(null));
+            string? nullId = null;
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentByIdAsync(nullId!));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentByIdAsync(""));
         }
 
@@ -122,7 +125,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.QueryAsync<Student>(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).ClassId == classId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                                 p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)))
                 .ReturnsAsync(expectedStudents);
 
             // Act
@@ -132,7 +136,8 @@ namespace Adept.Data.Tests.Repository
             Assert.Equal(expectedStudents, result);
             _mockDatabaseContext.Verify(x => x.QueryAsync<Student>(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).ClassId == classId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("ClassId") != null &&
+                             p.GetType().GetProperty("ClassId").GetValue(p).ToString() == classId)),
                 Times.Once);
         }
 
@@ -140,7 +145,8 @@ namespace Adept.Data.Tests.Repository
         public async Task GetStudentsByClassIdAsync_WithInvalidClassId_ThrowsArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentsByClassIdAsync(null));
+            string? nullId = null;
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentsByClassIdAsync(nullId!));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetStudentsByClassIdAsync(""));
         }
 
@@ -156,16 +162,17 @@ namespace Adept.Data.Tests.Repository
             };
 
             // Setup validation result
-            var validationResult = new ValidationResult();
-            validationResult.IsValid = true;
+            var validationResult = new ValidationResult { };
 
-            // Use reflection to access the private static method
-            var methodInfo = typeof(EntityValidator).GetMethod("ValidateStudent", 
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            
-            // Mock the static method using a delegate
-            var originalMethod = methodInfo.CreateDelegate<Func<Student, ValidationResult>>(null);
-            EntityValidator.ValidateStudent = (s) => validationResult;
+            // Store the original method for restoration
+            var originalValidateStudent = EntityValidator.ValidateStudent;
+
+            // Use reflection to set the IsValid property
+            var isValidProperty = typeof(ValidationResult).GetProperty("IsValid");
+            isValidProperty?.SetValue(validationResult, true);
+
+            // Set up our test delegate
+            EntityValidator.ValidateStudent = _ => validationResult;
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
@@ -181,13 +188,14 @@ namespace Adept.Data.Tests.Repository
                 Assert.Equal(student.StudentId, result);
                 _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).StudentId == student.StudentId)),
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("StudentId") != null &&
+                                 p.GetType().GetProperty("StudentId").GetValue(p).ToString() == student.StudentId)),
                     Times.Once);
             }
             finally
             {
                 // Restore the original method
-                EntityValidator.ValidateStudent = originalMethod;
+                EntityValidator.ValidateStudent = originalValidateStudent;
             }
         }
 
@@ -218,16 +226,17 @@ namespace Adept.Data.Tests.Repository
             };
 
             // Setup validation result
-            var validationResult = new ValidationResult();
-            validationResult.IsValid = true;
+            var validationResult = new ValidationResult { };
 
-            // Use reflection to access the private static method
-            var methodInfo = typeof(EntityValidator).GetMethod("ValidateStudent", 
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            
-            // Mock the static method using a delegate
-            var originalMethod = methodInfo.CreateDelegate<Func<Student, ValidationResult>>(null);
-            EntityValidator.ValidateStudent = (s) => validationResult;
+            // Store the original method for restoration
+            var originalValidateStudent = EntityValidator.ValidateStudent;
+
+            // Use reflection to set the IsValid property
+            var isValidProperty = typeof(ValidationResult).GetProperty("IsValid");
+            isValidProperty?.SetValue(validationResult, true);
+
+            // Set up our test delegate
+            EntityValidator.ValidateStudent = _ => validationResult;
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
@@ -242,13 +251,14 @@ namespace Adept.Data.Tests.Repository
                 // Assert
                 _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).StudentId == student.StudentId)),
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("StudentId") != null &&
+                                 p.GetType().GetProperty("StudentId").GetValue(p).ToString() == student.StudentId)),
                     Times.Once);
             }
             finally
             {
                 // Restore the original method
-                EntityValidator.ValidateStudent = originalMethod;
+                EntityValidator.ValidateStudent = originalValidateStudent;
             }
         }
 
@@ -292,7 +302,8 @@ namespace Adept.Data.Tests.Repository
         public async Task DeleteStudentAsync_WithInvalidId_ThrowsArgumentException()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteStudentAsync(null));
+            string? nullId = null;
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteStudentAsync(nullId!));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.DeleteStudentAsync(""));
         }
 
@@ -307,16 +318,17 @@ namespace Adept.Data.Tests.Repository
             };
 
             // Setup validation result
-            var validationResult = new ValidationResult();
-            validationResult.IsValid = true;
+            var validationResult = new ValidationResult { };
 
-            // Use reflection to access the private static method
-            var methodInfo = typeof(EntityValidator).GetMethod("ValidateStudent", 
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            
-            // Mock the static method using a delegate
-            var originalMethod = methodInfo.CreateDelegate<Func<Student, ValidationResult>>(null);
-            EntityValidator.ValidateStudent = (s) => validationResult;
+            // Store the original method for restoration
+            var originalValidateStudent = EntityValidator.ValidateStudent;
+
+            // Use reflection to set the IsValid property
+            var isValidProperty = typeof(ValidationResult).GetProperty("IsValid");
+            isValidProperty?.SetValue(validationResult, true);
+
+            // Set up our test delegate
+            EntityValidator.ValidateStudent = _ => validationResult;
 
             var mockTransaction = new Mock<IDbTransaction>();
             _mockDatabaseContext.Setup(x => x.BeginTransactionAsync())
@@ -341,7 +353,7 @@ namespace Adept.Data.Tests.Repository
             finally
             {
                 // Restore the original method
-                EntityValidator.ValidateStudent = originalMethod;
+                EntityValidator.ValidateStudent = originalValidateStudent;
             }
         }
 

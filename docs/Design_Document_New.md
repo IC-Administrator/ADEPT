@@ -189,7 +189,9 @@ ADEPT/
    - Increase test coverage for core components
    - Implement tests for database operations ✅
    - Implement tests for repositories (LessonResourceRepository, LessonTemplateRepository, SystemPromptRepository) ✅
-   - Fixed repository tests to use the BaseRepository pattern correctly (In Progress)
+   - Fixed repository tests to use the BaseRepository pattern correctly ✅
+   - Fixed nullability reference type issues in repository tests (Partially Complete)
+   - Fixed dynamic operations in expression trees (Partially Complete)
    - Add tests for JSON serialization ✅
    - Add tests for JSON validation ✅
    - Add tests for JSON extension methods ✅

@@ -150,7 +150,6 @@ namespace Adept.Data.Tests.Repository
         /// Tests that GetTemplatesByCategoryAsync throws an exception when given a null or empty category
         /// </summary>
         [Theory]
-        [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
         public async Task GetTemplatesByCategoryAsync_NullOrEmptyCategory_ThrowsArgumentException(string category)
@@ -158,6 +157,19 @@ namespace Adept.Data.Tests.Repository
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.GetTemplatesByCategoryAsync(category),
+                "Value cannot be null or empty");
+        }
+
+        /// <summary>
+        /// Tests that GetTemplatesByCategoryAsync throws an exception when given a null category
+        /// </summary>
+        [Fact]
+        public async Task GetTemplatesByCategoryAsync_NullCategory_ThrowsArgumentException()
+        {
+            // Act & Assert
+            string? nullCategory = null;
+            await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
+                () => _repository.GetTemplatesByCategoryAsync(nullCategory!),
                 "Value cannot be null or empty");
         }
 
@@ -203,7 +215,6 @@ namespace Adept.Data.Tests.Repository
         /// Tests that GetTemplatesByTagAsync throws an exception when given a null or empty tag
         /// </summary>
         [Theory]
-        [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
         public async Task GetTemplatesByTagAsync_NullOrEmptyTag_ThrowsArgumentException(string tag)
@@ -211,6 +222,19 @@ namespace Adept.Data.Tests.Repository
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.GetTemplatesByTagAsync(tag),
+                "Value cannot be null or empty");
+        }
+
+        /// <summary>
+        /// Tests that GetTemplatesByTagAsync throws an exception when given a null tag
+        /// </summary>
+        [Fact]
+        public async Task GetTemplatesByTagAsync_NullTag_ThrowsArgumentException()
+        {
+            // Act & Assert
+            string? nullTag = null;
+            await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
+                () => _repository.GetTemplatesByTagAsync(nullTag!),
                 "Value cannot be null or empty");
         }
 
@@ -247,8 +271,9 @@ namespace Adept.Data.Tests.Repository
         public async Task AddTemplateAsync_NullTemplate_ThrowsArgumentNullException()
         {
             // Act & Assert
+            LessonTemplate? nullTemplate = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
-                () => _repository.AddTemplateAsync(null),
+                () => _repository.AddTemplateAsync(nullTemplate!),
                 "Value cannot be null");
         }
 
@@ -302,8 +327,9 @@ namespace Adept.Data.Tests.Repository
         public async Task UpdateTemplateAsync_NullTemplate_ThrowsArgumentNullException()
         {
             // Act & Assert
+            LessonTemplate? nullTemplate = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
-                () => _repository.UpdateTemplateAsync(null),
+                () => _repository.UpdateTemplateAsync(nullTemplate!),
                 "Value cannot be null");
         }
 
