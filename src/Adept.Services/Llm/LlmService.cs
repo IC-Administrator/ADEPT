@@ -9,7 +9,7 @@ namespace Adept.Services.Llm
     /// <summary>
     /// Service for interacting with Large Language Models
     /// </summary>
-    public class LlmService : ILlmService
+    public partial class LlmService : ILlmService
     {
         private readonly IEnumerable<ILlmProvider> _providers;
         private readonly IConversationRepository _conversationRepository;
@@ -94,6 +94,9 @@ namespace Adept.Services.Llm
 
             // Initialize providers
             InitializeProvidersAsync().ConfigureAwait(false);
+
+            // Start model refresh timer
+            StartModelRefreshTimer();
         }
 
         /// <summary>

@@ -442,6 +442,11 @@ namespace Adept.UI.ViewModels
         public ICommand BrowseDataDirectoryCommand { get; }
 
         /// <summary>
+        /// Gets the refresh models command
+        /// </summary>
+        public ICommand RefreshModelsCommand { get; }
+
+        /// <summary>
         /// Gets the create database backup command
         /// </summary>
         public ICommand CreateBackupCommand { get; }
@@ -500,6 +505,7 @@ namespace Adept.UI.ViewModels
             StopMcpServerCommand = new RelayCommand(StopMcpServerAsync, () => McpServerRunning);
             RestartMcpServerCommand = new RelayCommand(RestartMcpServerAsync);
             BrowseDataDirectoryCommand = new RelayCommand(BrowseDataDirectoryAsync);
+            RefreshModelsCommand = new RelayCommand(RefreshModelsAsync);
 
             // Database commands
             CreateBackupCommand = new RelayCommand(CreateBackupAsync);
@@ -708,11 +714,11 @@ namespace Adept.UI.ViewModels
                     return;
                 }
 
-                // Try to fetch models from the API first
-                var models = await provider.FetchAvailableModelsAsync();
+                // Use the new model refresh functionality to ensure we have the latest models
+                await _llmService.RefreshModelsForProviderAsync(provider.ProviderName);
 
                 // Add the models to the UI list
-                foreach (var model in models)
+                foreach (var model in provider.AvailableModels)
                 {
                     AvailableModels.Add(model.Id);
                 }
@@ -911,6 +917,32 @@ namespace Adept.UI.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error setting LLM model");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the models for all providers
+        /// </summary>
+        private async void RefreshModelsAsync()
+        {
+            try
+            {
+                IsBusy = true;
+
+                // Refresh models for all providers
+                await _llmService.RefreshModelsAsync();
+                _logger.LogInformation("Refreshed models for all providers");
+
+                // Update the UI with the refreshed models
+                UpdateAvailableModels();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing models");
             }
             finally
             {

@@ -3,7 +3,7 @@ namespace Adept.Core.Interfaces
     /// <summary>
     /// Service for interacting with Large Language Models
     /// </summary>
-    public interface ILlmService
+    public partial interface ILlmService
     {
         /// <summary>
         /// Gets the currently active LLM provider

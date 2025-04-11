@@ -86,6 +86,8 @@ namespace Adept.Services.Llm.Providers
             // Initialize available models
             _availableModels.Add(new LlmModel("deepseek-chat", "DeepSeek Chat", 32000, true, false));
             _availableModels.Add(new LlmModel("deepseek-coder", "DeepSeek Coder", 32000, true, false));
+            _availableModels.Add(new LlmModel("deepseek-v2", "DeepSeek V2", 128000, true, true));
+            _availableModels.Add(new LlmModel("deepseek-coder-v2", "DeepSeek Coder V2", 128000, true, false));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -143,6 +145,8 @@ namespace Adept.Services.Llm.Providers
                 _availableModels.Add(new LlmModel("deepseek-coder", "DeepSeek Coder", 32000, true, false));
                 _availableModels.Add(new LlmModel("deepseek-llm-67b-chat", "DeepSeek LLM 67B Chat", 16000, true, false));
                 _availableModels.Add(new LlmModel("deepseek-coder-33b-instruct", "DeepSeek Coder 33B Instruct", 16000, true, false));
+                _availableModels.Add(new LlmModel("deepseek-v2", "DeepSeek V2", 128000, true, true));
+                _availableModels.Add(new LlmModel("deepseek-coder-v2", "DeepSeek Coder V2", 128000, true, false));
 
                 // Set current model if not already set
                 if (_currentModel == null)

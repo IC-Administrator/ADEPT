@@ -154,12 +154,13 @@ namespace Adept.Services.Llm.Providers
             _logger = logger;
 
             // Initialize available models
+            _availableModels.Add(new LlmModel("claude-3-5-sonnet-20240620", "Claude 3.5 Sonnet", 200000, true, true));
             _availableModels.Add(new LlmModel("claude-3-opus-20240229", "Claude 3 Opus", 200000, true, true));
             _availableModels.Add(new LlmModel("claude-3-sonnet-20240229", "Claude 3 Sonnet", 200000, true, true));
             _availableModels.Add(new LlmModel("claude-3-haiku-20240307", "Claude 3 Haiku", 200000, true, true));
 
             // Set default model
-            _currentModel = _availableModels.First(m => m.Id == "claude-3-sonnet-20240229");
+            _currentModel = _availableModels.First(m => m.Id == "claude-3-5-sonnet-20240620");
         }
 
         /// <summary>
@@ -209,6 +210,9 @@ namespace Adept.Services.Llm.Providers
                 // but we'll make sure it includes the latest models
                 _availableModels.Clear();
 
+                // Claude 3.5 models
+                _availableModels.Add(new LlmModel("claude-3-5-sonnet-20240620", "Claude 3.5 Sonnet", 200000, true, true));
+
                 // Claude 3 models
                 _availableModels.Add(new LlmModel("claude-3-opus-20240229", "Claude 3 Opus", 200000, true, true));
                 _availableModels.Add(new LlmModel("claude-3-sonnet-20240229", "Claude 3 Sonnet", 200000, true, true));
@@ -224,7 +228,7 @@ namespace Adept.Services.Llm.Providers
                 // Set current model if not already set
                 if (_currentModel == null)
                 {
-                    _currentModel = _availableModels.First(m => m.Id == "claude-3-sonnet-20240229");
+                    _currentModel = _availableModels.First(m => m.Id == "claude-3-5-sonnet-20240620");
                 }
 
                 _logger.LogInformation("Fetched {Count} Anthropic models", _availableModels.Count);

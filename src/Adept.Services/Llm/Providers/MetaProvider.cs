@@ -86,6 +86,9 @@ namespace Adept.Services.Llm.Providers
             // Initialize available models
             _availableModels.Add(new LlmModel("llama-3-70b-instruct", "Llama 3 70B Instruct", 128000, true, false));
             _availableModels.Add(new LlmModel("llama-3-8b-instruct", "Llama 3 8B Instruct", 128000, true, false));
+            _availableModels.Add(new LlmModel("llama-3.1-405b-instruct", "Llama 3.1 405B Instruct", 128000, true, true));
+            _availableModels.Add(new LlmModel("llama-3.1-70b-instruct", "Llama 3.1 70B Instruct", 128000, true, true));
+            _availableModels.Add(new LlmModel("llama-3.1-8b-instruct", "Llama 3.1 8B Instruct", 128000, true, false));
             _availableModels.Add(new LlmModel("llama-2-70b-chat", "Llama 2 70B Chat", 4096, false, false));
 
             // Set default model
@@ -142,6 +145,9 @@ namespace Adept.Services.Llm.Providers
                 // Llama 3 models
                 _availableModels.Add(new LlmModel("llama-3-70b-instruct", "Llama 3 70B Instruct", 128000, true, false));
                 _availableModels.Add(new LlmModel("llama-3-8b-instruct", "Llama 3 8B Instruct", 128000, true, false));
+                _availableModels.Add(new LlmModel("llama-3.1-405b-instruct", "Llama 3.1 405B Instruct", 128000, true, true));
+                _availableModels.Add(new LlmModel("llama-3.1-70b-instruct", "Llama 3.1 70B Instruct", 128000, true, true));
+                _availableModels.Add(new LlmModel("llama-3.1-8b-instruct", "Llama 3.1 8B Instruct", 128000, true, false));
 
                 // Llama 2 models
                 _availableModels.Add(new LlmModel("llama-2-70b-chat", "Llama 2 70B Chat", 4096, false, false));

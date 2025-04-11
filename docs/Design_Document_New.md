@@ -224,15 +224,23 @@ ADEPT/
    - Finalize all LLM provider implementations
    - Add proper error handling and fallback mechanisms
    - Implement model selection and configuration
+   - Update hardcoded model lists with latest available models
 
-2. **Tool Integration**
+2. **Model Refresh Enhancement**
+   - Implement periodic model refresh mechanism in LlmService
+   - Add timer-based automatic refresh for providers with valid API keys
+   - Enhance model selection logic to prefer newer models
+   - Improve model capability detection (streaming, tool calls, vision)
+
+3. **Tool Integration**
    - Complete LLM tool integration
    - Implement tool call handling
    - Add streaming support for all providers
 
-3. **Testing**
+4. **Testing**
    - Create tests for each LLM provider
    - Test error handling and fallbacks
+   - Test model refresh functionality
    - Implement integration tests for LLM services
 
 #### 3.2.2 fish.audio Integration
@@ -899,16 +907,21 @@ Ongoing maintenance will include:
 #### 7.2.1 LLM Provider Integrations
 
 **Planned Tasks:**
-- Implement additional LLM providers:
+- Enhance existing LLM provider implementations:
   - Google (Gemini)
   - Meta (Llama)
   - OpenRouter
   - DeepSeek
-- Create standardized interfaces for all LLM providers
+- Update hardcoded model lists with the latest available models for all providers
+- Implement periodic model refresh mechanism in LlmService
+  - Add timer-based automatic refresh for providers with valid API keys (every 24 hours)
+  - Add refresh on application startup
+  - Add refresh when API keys are updated
+- Enhance model selection logic to prefer newer models
+- Improve model capability detection (streaming, tool calls, vision)
 - Implement provider selection and fallback mechanisms
-- Add support for the latest available models
-- Implement streaming responses
 - Add proper error handling and retry logic
+- Create comprehensive tests for all LLM providers
 
 #### 7.2.2 Fish.Audio Integration
 

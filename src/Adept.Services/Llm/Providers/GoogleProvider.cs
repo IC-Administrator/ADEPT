@@ -85,7 +85,9 @@ namespace Adept.Services.Llm.Providers
 
             // Initialize available models
             _availableModels.Add(new LlmModel("gemini-1.5-pro", "Gemini 1.5 Pro", 1000000, true, true));
+            _availableModels.Add(new LlmModel("gemini-1.5-pro-latest", "Gemini 1.5 Pro Latest", 1000000, true, true));
             _availableModels.Add(new LlmModel("gemini-1.5-flash", "Gemini 1.5 Flash", 1000000, true, true));
+            _availableModels.Add(new LlmModel("gemini-1.5-flash-latest", "Gemini 1.5 Flash Latest", 1000000, true, true));
             _availableModels.Add(new LlmModel("gemini-1.0-pro", "Gemini 1.0 Pro", 32000, true, true));
 
             // Set default model
@@ -141,10 +143,13 @@ namespace Adept.Services.Llm.Providers
 
                 // Gemini models
                 _availableModels.Add(new LlmModel("gemini-1.5-pro", "Gemini 1.5 Pro", 1000000, true, true));
+                _availableModels.Add(new LlmModel("gemini-1.5-pro-latest", "Gemini 1.5 Pro Latest", 1000000, true, true));
                 _availableModels.Add(new LlmModel("gemini-1.5-flash", "Gemini 1.5 Flash", 1000000, true, false));
+                _availableModels.Add(new LlmModel("gemini-1.5-flash-latest", "Gemini 1.5 Flash Latest", 1000000, true, false));
                 _availableModels.Add(new LlmModel("gemini-1.0-pro", "Gemini 1.0 Pro", 32000, true, false));
                 _availableModels.Add(new LlmModel("gemini-1.0-pro-vision", "Gemini 1.0 Pro Vision", 32000, true, true));
                 _availableModels.Add(new LlmModel("gemini-ultra", "Gemini Ultra", 32000, true, true));
+                _availableModels.Add(new LlmModel("gemini-ultra-vision", "Gemini Ultra Vision", 32000, true, true));
 
                 // Set current model if not already set
                 if (_currentModel == null)
