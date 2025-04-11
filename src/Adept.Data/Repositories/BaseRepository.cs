@@ -16,7 +16,7 @@ namespace Adept.Data.Repositories
         /// The database context
         /// </summary>
         protected readonly IDatabaseContext DatabaseContext;
-        
+
         /// <summary>
         /// The logger
         /// </summary>
@@ -175,13 +175,13 @@ namespace Adept.Data.Repositories
         }
 
         /// <summary>
-        /// Validates that an ID is not null or empty
+        /// Validates that an ID is not null, empty, or whitespace
         /// </summary>
         /// <param name="id">The ID to validate</param>
         /// <param name="entityName">The name of the entity</param>
         protected void ValidateId(string id, string entityName)
         {
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrWhiteSpace(id))
             {
                 throw new ArgumentException($"The {entityName} ID cannot be null or empty", nameof(id));
             }

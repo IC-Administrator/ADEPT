@@ -78,7 +78,10 @@ namespace Adept.Data.Repositories
         /// <inheritdoc/>
         public async Task<IEnumerable<LessonTemplate>> GetTemplatesByCategoryAsync(string category)
         {
-            ValidateStringNotNullOrEmpty(category, nameof(category));
+            if (string.IsNullOrWhiteSpace(category))
+            {
+                throw new ArgumentException("The category cannot be null or empty", nameof(category));
+            }
 
             return await ExecuteWithErrorHandlingAsync(
                 async () => await DatabaseContext.QueryAsync<LessonTemplate>(
@@ -104,7 +107,10 @@ namespace Adept.Data.Repositories
         /// <inheritdoc/>
         public async Task<IEnumerable<LessonTemplate>> GetTemplatesByTagAsync(string tag)
         {
-            ValidateStringNotNullOrEmpty(tag, nameof(tag));
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                throw new ArgumentException("The tag cannot be null or empty", nameof(tag));
+            }
 
             return await ExecuteWithErrorHandlingAsync(
                 async () => await DatabaseContext.QueryAsync<LessonTemplate>(
@@ -211,7 +217,9 @@ namespace Adept.Data.Repositories
                             UpdatedAt = template.UpdatedAt.ToString("o")
                         });
 
-                    if (rowsAffected == 0)
+                    // Check if the template exists before updating
+                    var existingTemplate = await GetTemplateByIdAsync(template.TemplateId);
+                    if (existingTemplate == null)
                     {
                         Logger.LogWarning("Template {TemplateId} not found for update", template.TemplateId);
                         return null;
@@ -235,15 +243,17 @@ namespace Adept.Data.Repositories
             return await ExecuteWithErrorHandlingAsync(
                 async () =>
                 {
-                    int rowsAffected = await DatabaseContext.ExecuteNonQueryAsync(
-                        "DELETE FROM LessonTemplates WHERE template_id = @TemplateId",
-                        new { TemplateId = templateId.ToString() });
-
-                    if (rowsAffected == 0)
+                    // Check if the template exists before deleting
+                    var existingTemplate = await GetTemplateByIdAsync(templateId);
+                    if (existingTemplate == null)
                     {
                         Logger.LogWarning("Template {TemplateId} not found for deletion", templateId);
                         return false;
                     }
+
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        "DELETE FROM LessonTemplates WHERE template_id = @TemplateId",
+                        new { TemplateId = templateId.ToString() });
 
                     Logger.LogInformation("Deleted template {TemplateId}", templateId);
                     return true;

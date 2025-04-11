@@ -100,7 +100,7 @@ namespace Adept.Data.Tests.Repository
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.GetPromptByIdAsync(promptId),
-                "Value cannot be null or empty");
+                "The prompt ID cannot be null or empty");
         }
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace Adept.Data.Tests.Repository
             string? nullId = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.GetPromptByIdAsync(nullId!),
-                "Value cannot be null or empty");
+                "The prompt ID cannot be null or empty");
         }
 
         /// <summary>
@@ -138,19 +138,28 @@ namespace Adept.Data.Tests.Repository
         }
 
         /// <summary>
-        /// Tests that GetDefaultPromptAsync returns null when there is no default prompt
+        /// Tests that GetDefaultPromptAsync returns a default prompt even when none exists in the database
         /// </summary>
         [Fact]
-        public async Task GetDefaultPromptAsync_NoDefaultPrompt_ReturnsNull()
+        public async Task GetDefaultPromptAsync_NoDefaultPrompt_CreatesDefaultPrompt()
         {
             // Arrange
             _fixture.SetupQuerySingleOrDefaultAsync<SystemPrompt>("WHERE is_default = 1", null);
+
+            // Setup the AddPromptAsync method to be called
+            _fixture.MockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
+                It.IsAny<string>(),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("Name") != null &&
+                             p.GetType().GetProperty("Name").GetValue(p).ToString() == "Default Teaching Assistant")))
+                .ReturnsAsync(1);
 
             // Act
             var result = await _repository.GetDefaultPromptAsync();
 
             // Assert
-            Assert.Null(result);
+            Assert.NotNull(result);
+            Assert.Equal("Default Teaching Assistant", result.Name);
+            Assert.True(result.IsDefault);
         }
 
         /// <summary>
@@ -185,7 +194,7 @@ namespace Adept.Data.Tests.Repository
             SystemPrompt? nullPrompt = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
                 () => _repository.AddPromptAsync(nullPrompt!),
-                "Value cannot be null");
+                "The prompt cannot be null");
         }
 
         /// <summary>
@@ -237,7 +246,7 @@ namespace Adept.Data.Tests.Repository
             SystemPrompt? nullPrompt = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentNullException>(
                 () => _repository.UpdatePromptAsync(nullPrompt!),
-                "Value cannot be null");
+                "The prompt cannot be null");
         }
 
         /// <summary>
@@ -286,7 +295,7 @@ namespace Adept.Data.Tests.Repository
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.DeletePromptAsync(promptId),
-                "Value cannot be null or empty");
+                "The prompt ID cannot be null or empty");
         }
 
         /// <summary>
@@ -299,7 +308,7 @@ namespace Adept.Data.Tests.Repository
             string? nullId = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.DeletePromptAsync(nullId!),
-                "Value cannot be null or empty");
+                "The prompt ID cannot be null or empty");
         }
 
         /// <summary>
@@ -349,7 +358,7 @@ namespace Adept.Data.Tests.Repository
             // Act & Assert
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.SetDefaultPromptAsync(promptId),
-                "Value cannot be null or empty");
+                "The prompt ID cannot be null or empty");
         }
 
         /// <summary>
@@ -362,7 +371,7 @@ namespace Adept.Data.Tests.Repository
             string? nullId = null;
             await AssertExtensions.ThrowsWithMessageAsync<ArgumentException>(
                 () => _repository.SetDefaultPromptAsync(nullId!),
-                "Value cannot be null or empty");
+                "The prompt ID cannot be null or empty");
         }
     }
 }
