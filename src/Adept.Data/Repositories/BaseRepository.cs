@@ -110,7 +110,17 @@ namespace Adept.Data.Repositories
             Func<IDbTransaction, Task<TResult>> operation,
             string errorMessage)
         {
+            if (DatabaseContext == null)
+            {
+                throw new InvalidOperationException("Database context is null");
+            }
+
             using var transaction = await DatabaseContext.BeginTransactionAsync();
+            if (transaction == null)
+            {
+                throw new InvalidOperationException("Failed to begin transaction");
+            }
+
             try
             {
                 var result = await operation(transaction);
@@ -134,7 +144,17 @@ namespace Adept.Data.Repositories
             Func<IDbTransaction, Task> operation,
             string errorMessage)
         {
+            if (DatabaseContext == null)
+            {
+                throw new InvalidOperationException("Database context is null");
+            }
+
             using var transaction = await DatabaseContext.BeginTransactionAsync();
+            if (transaction == null)
+            {
+                throw new InvalidOperationException("Failed to begin transaction");
+            }
+
             try
             {
                 await operation(transaction);

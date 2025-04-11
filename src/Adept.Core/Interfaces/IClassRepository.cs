@@ -44,7 +44,8 @@ namespace Adept.Core.Interfaces
         /// Deletes a class
         /// </summary>
         /// <param name="classId">The ID of the class to delete</param>
-        Task DeleteClassAsync(string classId);
+        /// <returns>True if the class was deleted, false otherwise</returns>
+        Task<bool> DeleteClassAsync(string classId);
 
         /// <summary>
         /// Gets all students for a class

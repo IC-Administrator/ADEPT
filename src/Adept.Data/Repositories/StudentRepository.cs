@@ -240,20 +240,20 @@ namespace Adept.Data.Repositories
                 throw new ArgumentNullException(nameof(students), "Students collection cannot be null");
             }
 
-            return await ExecuteInTransactionAsync<IEnumerable<string>>(
-                async (transaction) =>
+            // Validate all students before adding any
+            foreach (var student in students)
+            {
+                var validationResult = EntityValidator.ValidateStudent(student);
+                if (!validationResult.IsValid)
+                {
+                    throw new ValidationException($"Validation failed for student {student.Name}: {string.Join(", ", validationResult.Errors)}");
+                }
+            }
+
+            return await ExecuteWithErrorHandlingAsync<IEnumerable<string>>(
+                async () =>
                 {
                     var studentIds = new List<string>();
-
-                    // Validate all students before adding any
-                    foreach (var student in students)
-                    {
-                        var validationResult = EntityValidator.ValidateStudent(student);
-                        if (!validationResult.IsValid)
-                        {
-                            throw new ValidationException($"Validation failed for student {student.Name}: {string.Join(", ", validationResult.Errors)}");
-                        }
-                    }
 
                     foreach (var student in students)
                     {

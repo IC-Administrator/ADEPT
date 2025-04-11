@@ -77,7 +77,10 @@ namespace Adept.Data.Repositories
         /// <inheritdoc/>
         public async Task<LessonResource> AddResourceAsync(LessonResource resource)
         {
-            ValidateEntityNotNull(resource, nameof(resource));
+            if (resource == null)
+            {
+                throw new ArgumentNullException(nameof(resource), "The resource cannot be null");
+            }
 
             if (resource.ResourceId == Guid.Empty)
             {
@@ -136,7 +139,10 @@ namespace Adept.Data.Repositories
         /// <inheritdoc/>
         public async Task<LessonResource> UpdateResourceAsync(LessonResource resource)
         {
-            ValidateEntityNotNull(resource, nameof(resource));
+            if (resource == null)
+            {
+                throw new ArgumentNullException(nameof(resource), "The resource cannot be null");
+            }
 
             if (resource.ResourceId == Guid.Empty)
             {
@@ -146,14 +152,15 @@ namespace Adept.Data.Repositories
             ValidateStringNotNullOrEmpty(resource.Name, "Name");
             ValidateStringNotNullOrEmpty(resource.Path, "Path");
 
-            return await ExecuteWithErrorHandlingAndThrowAsync(
+            return await ExecuteWithErrorHandlingAsync(
                 async () =>
                 {
                     // Check if resource exists
                     var existingResource = await GetResourceByIdAsync(resource.ResourceId);
                     if (existingResource == null)
                     {
-                        throw new InvalidOperationException($"Resource with ID {resource.ResourceId} not found");
+                        Logger.LogWarning("Resource with ID {ResourceId} not found", resource.ResourceId);
+                        return null;
                     }
 
                     resource.CreatedAt = existingResource.CreatedAt; // Preserve original creation date
@@ -233,7 +240,7 @@ namespace Adept.Data.Repositories
                         new { LessonId = lessonId.ToString() });
 
                     Logger.LogInformation("Deleted {Count} resources for lesson {LessonId}", rowsAffected, lessonId);
-                    return true;
+                    return rowsAffected > 0;
                 },
                 $"Error deleting resources for lesson {lessonId}",
                 false);

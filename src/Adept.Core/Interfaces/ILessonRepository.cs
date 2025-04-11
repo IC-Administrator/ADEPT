@@ -60,7 +60,8 @@ namespace Adept.Core.Interfaces
         /// Deletes a lesson plan
         /// </summary>
         /// <param name="lessonId">The ID of the lesson plan to delete</param>
-        Task DeleteLessonAsync(string lessonId);
+        /// <returns>True if the lesson was deleted, false otherwise</returns>
+        Task<bool> DeleteLessonAsync(string lessonId);
 
         /// <summary>
         /// Updates the calendar event ID for a lesson plan

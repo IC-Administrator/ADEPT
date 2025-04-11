@@ -50,14 +50,18 @@ namespace Adept.Data.Tests.Database
             // Not needed for these tests
         }
 
-        protected override Task InitializeDatabaseAsync()
+        protected override async Task InitializeDatabaseAsync()
         {
             // Create test file
-            if (!File.Exists(TestDatabasePath))
+            File.WriteAllText(TestDatabasePath, "Test database content");
+
+            // Ensure the backup directory exists
+            if (!Directory.Exists(_testBackupDir))
             {
-                File.WriteAllText(TestDatabasePath, "Test database content");
+                Directory.CreateDirectory(_testBackupDir);
             }
-            return Task.CompletedTask;
+
+            await Task.CompletedTask;
         }
 
         [Fact]

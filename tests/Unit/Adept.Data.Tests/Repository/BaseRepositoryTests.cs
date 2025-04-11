@@ -249,7 +249,7 @@ namespace Adept.Data.Tests.Repository
         /// <summary>
         /// Test implementation of BaseRepository for testing
         /// </summary>
-        private class TestBaseRepository : BaseRepository<TestEntity>
+        public class TestBaseRepository : BaseRepository<TestEntity>
         {
             public TestBaseRepository(IDatabaseContext databaseContext, ILogger<TestBaseRepository> logger)
                 : base(databaseContext, logger)
@@ -297,7 +297,7 @@ namespace Adept.Data.Tests.Repository
         /// <summary>
         /// Test entity for testing
         /// </summary>
-        private class TestEntity
+        public class TestEntity
         {
             public string Id { get; set; } = string.Empty;
             public string Name { get; set; } = string.Empty;

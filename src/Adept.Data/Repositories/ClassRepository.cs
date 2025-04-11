@@ -169,13 +169,24 @@ namespace Adept.Data.Repositories
         /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task UpdateClassAsync(Class classEntity)
         {
+            if (classEntity == null)
+            {
+                throw new ArgumentException("Class entity cannot be null", nameof(classEntity));
+            }
+
+            if (string.IsNullOrEmpty(classEntity.ClassId))
+            {
+                throw new ArgumentException("Class ID cannot be null or empty", nameof(classEntity));
+            }
+
+            if (string.IsNullOrEmpty(classEntity.ClassCode))
+            {
+                throw new ArgumentException("Class code cannot be null or empty", nameof(classEntity));
+            }
+
             await ExecuteWithErrorHandlingAsync(
                 async () =>
                 {
-                    // Validate the class entity
-                    ValidateClass(classEntity);
-                    ValidateId(classEntity.ClassId, "class");
-
                     // Check if the class exists
                     var existingClass = await GetClassByIdAsync(classEntity.ClassId);
                     if (existingClass == null)
@@ -214,30 +225,40 @@ namespace Adept.Data.Repositories
         /// Deletes a class
         /// </summary>
         /// <param name="classId">The ID of the class to delete</param>
+        /// <returns>True if the class was deleted, false otherwise</returns>
         /// <exception cref="ArgumentException">Thrown when the class ID is invalid</exception>
         /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
-        public async Task DeleteClassAsync(string classId)
+        public async Task<bool> DeleteClassAsync(string classId)
         {
-            await ExecuteInTransactionAsync(
-                async (transaction) =>
-                {
-                    ValidateId(classId, "class");
+            if (string.IsNullOrEmpty(classId))
+            {
+                throw new ArgumentException("Class ID cannot be null or empty", nameof(classId));
+            }
 
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
+                {
                     // Check if the class exists
                     var existingClass = await GetClassByIdAsync(classId);
                     if (existingClass == null)
                     {
-                        throw new InvalidOperationException($"Class with ID '{classId}' not found");
+                        return false;
                     }
 
                     // Delete the class (cascade will handle related records)
-                    await DatabaseContext.ExecuteNonQueryAsync(
+                    int rowsAffected = await DatabaseContext.ExecuteNonQueryAsync(
                         "DELETE FROM Classes WHERE class_id = @ClassId",
                         new { ClassId = classId });
 
-                    Logger.LogInformation("Deleted class: {ClassId}, {ClassCode}", classId, existingClass.ClassCode);
+                    if (rowsAffected > 0)
+                    {
+                        Logger.LogInformation("Deleted class: {ClassId}, {ClassCode}", classId, existingClass.ClassCode);
+                    }
+
+                    return rowsAffected > 0;
                 },
-                $"Error deleting class {classId}");
+                $"Error deleting class {classId}",
+                false);
         }
 
         /// <summary>

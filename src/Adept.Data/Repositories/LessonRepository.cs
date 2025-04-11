@@ -286,13 +286,29 @@ namespace Adept.Data.Repositories
         /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
         public async Task UpdateLessonAsync(LessonPlan lessonPlan)
         {
+            if (lessonPlan == null)
+            {
+                throw new ArgumentException("Lesson plan cannot be null", nameof(lessonPlan));
+            }
+
+            if (string.IsNullOrEmpty(lessonPlan.LessonId))
+            {
+                throw new ArgumentException("Lesson ID cannot be null or empty", nameof(lessonPlan));
+            }
+
+            if (string.IsNullOrEmpty(lessonPlan.ClassId))
+            {
+                throw new ArgumentException("Class ID cannot be null or empty", nameof(lessonPlan));
+            }
+
+            if (string.IsNullOrEmpty(lessonPlan.Title))
+            {
+                throw new ArgumentException("Lesson title cannot be null or empty", nameof(lessonPlan));
+            }
+
             await ExecuteWithErrorHandlingAsync(
                 async () =>
                 {
-                    // Validate the lesson plan
-                    ValidateLesson(lessonPlan);
-                    ValidateId(lessonPlan.LessonId, "lesson");
-
                     // Check if the lesson plan exists
                     var existingLesson = await GetLessonByIdAsync(lessonPlan.LessonId);
                     if (existingLesson == null)
@@ -352,31 +368,41 @@ namespace Adept.Data.Repositories
         /// Deletes a lesson plan
         /// </summary>
         /// <param name="lessonId">The ID of the lesson plan to delete</param>
+        /// <returns>True if the lesson was deleted, false otherwise</returns>
         /// <exception cref="ArgumentException">Thrown when the lesson ID is invalid</exception>
         /// <exception cref="InvalidOperationException">Thrown when a database error occurs</exception>
-        public async Task DeleteLessonAsync(string lessonId)
+        public async Task<bool> DeleteLessonAsync(string lessonId)
         {
-            await ExecuteInTransactionAsync(
-                async (transaction) =>
-                {
-                    ValidateId(lessonId, "lesson");
+            if (string.IsNullOrEmpty(lessonId))
+            {
+                throw new ArgumentException("Lesson ID cannot be null or empty", nameof(lessonId));
+            }
 
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
+                {
                     // Check if the lesson plan exists
                     var existingLesson = await GetLessonByIdAsync(lessonId);
                     if (existingLesson == null)
                     {
-                        throw new InvalidOperationException($"Lesson plan with ID '{lessonId}' not found");
+                        return false;
                     }
 
                     // Delete the lesson plan
-                    await DatabaseContext.ExecuteNonQueryAsync(
+                    int rowsAffected = await DatabaseContext.ExecuteNonQueryAsync(
                         "DELETE FROM LessonPlans WHERE lesson_id = @LessonId",
                         new { LessonId = lessonId });
 
-                    Logger.LogInformation("Deleted lesson plan: {LessonId}, {Title}, {Date}, Slot {TimeSlot}",
-                        lessonId, existingLesson.Title, existingLesson.Date, existingLesson.TimeSlot);
+                    if (rowsAffected > 0)
+                    {
+                        Logger.LogInformation("Deleted lesson plan: {LessonId}, {Title}, {Date}, Slot {TimeSlot}",
+                            lessonId, existingLesson.Title, existingLesson.Date, existingLesson.TimeSlot);
+                    }
+
+                    return rowsAffected > 0;
                 },
-                $"Error deleting lesson plan {lessonId}");
+                $"Error deleting lesson plan {lessonId}",
+                false);
         }
 
         /// <summary>

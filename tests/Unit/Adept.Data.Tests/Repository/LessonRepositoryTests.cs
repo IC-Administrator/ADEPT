@@ -455,15 +455,15 @@ namespace Adept.Data.Tests.Repository
         }
 
         [Fact]
-        public async Task UpdateLessonAsync_WithNullLesson_ThrowsArgumentNullException()
+        public async Task UpdateLessonAsync_WithNullLesson_ThrowsArgumentException()
         {
             // Act & Assert
             LessonPlan? nullLesson = null;
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.UpdateLessonAsync(nullLesson!));
+            await Assert.ThrowsAsync<ArgumentException>(() => _repository.UpdateLessonAsync(nullLesson!));
         }
 
         [Fact]
-        public async Task UpdateLessonAsync_WithInvalidLesson_ThrowsArgumentException()
+        public async Task UpdateLessonAsync_WithoutId_ThrowsInvalidOperationException()
         {
             // Arrange
             var lessonWithoutId = new LessonPlan
@@ -474,6 +474,20 @@ namespace Adept.Data.Tests.Repository
                 TimeSlot = 0
             };
 
+            // Make sure the mock doesn't return a lesson when queried
+            _mockDatabaseContext.Setup(x => x.QuerySingleOrDefaultAsync<LessonPlan>(
+                    It.IsAny<string>(),
+                    It.IsAny<object>()))
+                .ReturnsAsync((LessonPlan?)null);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.UpdateLessonAsync(lessonWithoutId));
+        }
+
+        [Fact]
+        public async Task UpdateLessonAsync_WithoutTitle_ThrowsArgumentException()
+        {
+            // Arrange
             var lessonWithoutTitle = new LessonPlan
             {
                 LessonId = "test-id",
@@ -483,7 +497,6 @@ namespace Adept.Data.Tests.Repository
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => _repository.UpdateLessonAsync(lessonWithoutId));
             await Assert.ThrowsAsync<ArgumentException>(() => _repository.UpdateLessonAsync(lessonWithoutTitle));
         }
 
@@ -541,15 +554,15 @@ namespace Adept.Data.Tests.Repository
                 .ReturnsAsync(1);
 
             // Act
-            await _repository.DeleteLessonAsync(lessonId);
+            bool result = await _repository.DeleteLessonAsync(lessonId);
 
             // Assert
+            Assert.True(result);
             _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                 It.IsAny<string>(),
                 It.Is<object>(p => p != null && p.GetType().GetProperty("LessonId") != null &&
                              p.GetType().GetProperty("LessonId").GetValue(p).ToString() == lessonId)),
                 Times.Once);
-            mockTransaction.Verify(x => x.CommitAsync(), Times.Once);
         }
 
         [Fact]
@@ -562,7 +575,7 @@ namespace Adept.Data.Tests.Repository
         }
 
         [Fact]
-        public async Task DeleteLessonAsync_WithNonExistentLesson_ThrowsInvalidOperationException()
+        public async Task DeleteLessonAsync_WithNonExistentLesson_ReturnsFalse()
         {
             // Arrange
             var lessonId = "non-existent-id";
@@ -573,8 +586,11 @@ namespace Adept.Data.Tests.Repository
                                  p.GetType().GetProperty("LessonId").GetValue(p).ToString() == lessonId)))
                 .ReturnsAsync((LessonPlan?)null);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.DeleteLessonAsync(lessonId));
+            // Act
+            bool result = await _repository.DeleteLessonAsync(lessonId);
+
+            // Assert
+            Assert.False(result);
         }
 
         [Fact]

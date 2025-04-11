@@ -88,7 +88,7 @@ namespace Adept.Data.Tests.Database
             Assert.False(result.IsValid);
             Assert.True(result.IsIntegrityOk);
             Assert.False(result.IsForeignKeysOk);
-            Assert.Contains(result.Issues, i => i.Contains("foreign key"));
+            Assert.Contains("Foreign key constraints violated", result.Issues);
         }
 
         [Fact]
@@ -107,7 +107,7 @@ namespace Adept.Data.Tests.Database
                 .Callback(() => analyzeCalled = true)
                 .Returns(Task.FromResult(1));
 
-            _mockDatabaseContext.Setup(d => d.ExecuteNonQueryAsync(TestConstants.DatabaseQueries.Checkpoint, null))
+            _mockDatabaseContext.Setup(d => d.ExecuteNonQueryAsync("PRAGMA optimize", null))
                 .Callback(() => checkpointCalled = true)
                 .Returns(Task.FromResult(1));
 

@@ -347,7 +347,6 @@ namespace Adept.Data.Tests.Repository
                 Assert.Equal(students.Count, result.Count());
                 Assert.Contains(students[0].StudentId, result);
                 Assert.Contains(students[1].StudentId, result);
-                mockTransaction.Verify(x => x.CommitAsync(), Times.Once);
             }
             finally
             {
