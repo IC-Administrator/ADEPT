@@ -1,8 +1,9 @@
+using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
-using Adept.Core.Models.Llm;
 using Microsoft.Extensions.Logging;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -327,23 +328,18 @@ namespace Adept.Services.Llm.Providers
         }
 
         // Legacy methods - will be removed in future versions
-        public async Task<LlmResponse> GetCompletionAsync(LlmRequest request)
+        public async Task<LlmResponse> GetCompletionAsync(object request)
         {
             if (!_isInitialized)
             {
                 throw new InvalidOperationException("Provider not initialized");
             }
 
-            // Convert to new format and call SendMessagesAsync
-            var messages = new List<LlmMessage>
-            {
-                new LlmMessage { Role = LlmRole.User, Content = request.Prompt }
-            };
-
-            return await SendMessagesAsync(messages, request.SystemPrompt);
+            // This method is deprecated and will be removed
+            throw new NotImplementedException("This method is deprecated. Use SendMessageAsync instead.");
         }
 
-        public async Task<Stream> GetStreamingCompletionAsync(LlmRequest request)
+        public async Task<Stream> GetStreamingCompletionAsync(object request)
         {
             if (!_isInitialized)
             {
