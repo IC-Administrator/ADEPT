@@ -241,8 +241,8 @@ namespace Adept.Services.Llm
 
             // Find models with the same or better capabilities
             var compatibleModels = matchingModels.Where(m =>
-                m.SupportsToolCalls >= currentModel.SupportsToolCalls &&
-                m.SupportsVision >= currentModel.SupportsVision &&
+                (!currentModel.SupportsToolCalls || m.SupportsToolCalls) &&
+                (!currentModel.SupportsVision || m.SupportsVision) &&
                 m.MaxContextLength >= currentModel.MaxContextLength).ToList();
 
             // Return the model with the highest version number

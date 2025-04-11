@@ -1,6 +1,7 @@
 using Adept.Core.Interfaces;
 using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 
@@ -166,6 +167,46 @@ namespace Adept.Services.Llm
                 return (DateTime.UtcNow - failureTime) < _failureBackoffTime;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Gets a fallback provider that is not in failure backoff
+        /// </summary>
+        /// <returns>A fallback provider or null if none available</returns>
+        private async Task<ILlmProvider?> GetFallbackProviderAsync()
+        {
+            await _providerLock.WaitAsync();
+            try
+            {
+                // Find a provider that is not the active provider and not in failure backoff
+                var fallbackProvider = _providers
+                    .Where(p => p.ProviderName != ActiveProvider.ProviderName &&
+                           p.HasValidApiKey &&
+                           !IsProviderInFailureBackoff(p.ProviderName))
+                    .FirstOrDefault();
+
+                if (fallbackProvider != null)
+                {
+                    _logger.LogInformation("Found fallback provider: {ProviderName}", fallbackProvider.ProviderName);
+                    return fallbackProvider;
+                }
+
+                _logger.LogWarning("No fallback providers available");
+                return null;
+            }
+            finally
+            {
+                _providerLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Marks a provider as failed
+        /// </summary>
+        /// <param name="providerName">The provider name</param>
+        private async Task MarkProviderAsFailed(string providerName)
+        {
+            await MarkProviderAsFailedAsync(providerName);
         }
 
         /// <summary>
@@ -770,7 +811,7 @@ namespace Adept.Services.Llm
                 {
                     conversation = new Conversation();
                     await _conversationRepository.AddConversationAsync(conversation);
-                    conversationId = conversation.Id;
+                    conversationId = conversation.ConversationId;
                 }
 
                 // Get the system prompt if not provided
@@ -891,7 +932,7 @@ namespace Adept.Services.Llm
                 {
                     conversation = new Conversation();
                     await _conversationRepository.AddConversationAsync(conversation);
-                    conversationId = conversation.Id;
+                    conversationId = conversation.ConversationId;
                 }
 
                 // Get the system prompt if not provided

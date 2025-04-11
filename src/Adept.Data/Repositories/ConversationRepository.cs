@@ -72,6 +72,16 @@ namespace Adept.Data.Repositories
         }
 
         /// <summary>
+        /// Gets a conversation by ID (alias for GetConversationByIdAsync)
+        /// </summary>
+        /// <param name="conversationId">The conversation ID</param>
+        /// <returns>The conversation or null if not found</returns>
+        public async Task<Conversation?> GetConversationAsync(string conversationId)
+        {
+            return await GetConversationByIdAsync(conversationId);
+        }
+
+        /// <summary>
         /// Gets conversations for a class
         /// </summary>
         /// <param name="classId">The class ID</param>

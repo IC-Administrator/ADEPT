@@ -21,6 +21,13 @@ namespace Adept.Core.Interfaces
         Task<Conversation?> GetConversationByIdAsync(string conversationId);
 
         /// <summary>
+        /// Gets a conversation by ID (alias for GetConversationByIdAsync)
+        /// </summary>
+        /// <param name="conversationId">The conversation ID</param>
+        /// <returns>The conversation or null if not found</returns>
+        Task<Conversation?> GetConversationAsync(string conversationId);
+
+        /// <summary>
         /// Gets conversations for a class
         /// </summary>
         /// <param name="classId">The class ID</param>
