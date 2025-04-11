@@ -84,10 +84,8 @@ namespace Adept.Common.Json
         public JsonSerializationException(string message, Exception innerException)
             : base(message, innerException)
         {
-            if (innerException is JsonException)
-            {
-                SourceType = ((JsonException)innerException).SourceType;
-            }
+            // JsonException doesn't have a SourceType property
+            // We'll need to extract the type information from the message or other means if needed
         }
 
         /// <summary>
@@ -146,10 +144,8 @@ namespace Adept.Common.Json
         public JsonDeserializationException(string message, Exception innerException)
             : base(message, innerException)
         {
-            if (innerException is JsonException)
-            {
-                TargetType = ((JsonException)innerException).SourceType;
-            }
+            // JsonException doesn't have a SourceType property
+            // We'll need to extract the type information from the message or other means if needed
         }
 
         /// <summary>

@@ -50,9 +50,21 @@ Manual tests are interactive applications that allow manual testing of specific 
 
 The `Adept.TestUtilities` project provides shared utilities for all test projects:
 
-- **Test Fixtures**: Reusable test fixtures for database and file system tests
-- **Test Helpers**: Common helper classes like `TestDataGenerator`, `MockFactory`, and `AssertExtensions`
-- **Test Base Classes**: Base classes for different types of tests like `IntegrationTestBase` and `DatabaseTestBase`
+- **Test Fixtures**: Reusable test fixtures for various test scenarios:
+  - `DatabaseFixture`: For database tests
+  - `FileSystemFixture`: For file system tests
+  - `ServiceFixture`: For service tests
+  - `RepositoryFixture`: For repository tests
+  - `JsonFixture`: For JSON serialization tests
+
+- **Test Helpers**: Common helper classes for test data and assertions:
+  - `TestDataGenerator`: Generates test data for various models and scenarios
+  - `MockFactory`: Creates mock objects for dependencies
+  - `AssertExtensions`: Provides additional assertions for common test scenarios
+
+- **Test Base Classes**: Base classes for different types of tests:
+  - `IntegrationTestBase`: Base class for integration tests
+  - `DatabaseTestBase`: Base class for database tests
 
 ## Running Tests
 
@@ -97,6 +109,34 @@ dotnet run --project tests/Manual/Adept.Llm.ManualTests
 
 ## Writing Tests
 
+### Test Naming Conventions
+
+#### Test Class Naming
+
+Test classes should be named according to the following pattern:
+
+```
+[ClassUnderTest]Tests
+```
+
+For example:
+- `LessonTemplateRepositoryTests`
+- `SystemPromptServiceTests`
+- `JsonHelperTests`
+
+#### Test Method Naming
+
+Test methods should be named according to the following pattern:
+
+```
+[MethodUnderTest]_[Scenario]_[ExpectedResult]
+```
+
+For example:
+- `GetTemplateByIdAsync_ValidId_ReturnsTemplate`
+- `GetTemplateByIdAsync_InvalidId_ReturnsNull`
+- `AddTemplateAsync_ValidTemplate_AddsTemplateAndReturnsIt`
+
 ### Writing Unit Tests
 
 Unit tests should follow these guidelines:
@@ -106,7 +146,7 @@ Unit tests should follow these guidelines:
 3. Use the `TestDataGenerator` to generate test data
 4. Use the `AssertExtensions` for custom assertions
 5. Organize tests by feature and class
-6. Use descriptive test names that describe the behavior being tested
+6. Use descriptive test names that follow the naming convention
 7. Follow the Arrange-Act-Assert pattern
 
 Example:

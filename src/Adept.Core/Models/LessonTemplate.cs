@@ -6,6 +6,42 @@ using System.Text.Json.Serialization;
 namespace Adept.Core.Models
 {
     /// <summary>
+    /// Represents the components of a lesson
+    /// </summary>
+    public class LessonComponents
+    {
+        /// <summary>
+        /// Introduction to the lesson
+        /// </summary>
+        public string? Introduction { get; set; }
+
+        /// <summary>
+        /// Main content of the lesson
+        /// </summary>
+        public string? MainContent { get; set; }
+
+        /// <summary>
+        /// Activities for the lesson
+        /// </summary>
+        public List<string> Activities { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Assessment for the lesson
+        /// </summary>
+        public string? Assessment { get; set; }
+
+        /// <summary>
+        /// Homework for the lesson
+        /// </summary>
+        public string? Homework { get; set; }
+
+        /// <summary>
+        /// Resources for the lesson
+        /// </summary>
+        public List<string> Resources { get; set; } = new List<string>();
+    }
+
+    /// <summary>
     /// Represents a lesson template
     /// </summary>
     public class LessonTemplate
@@ -54,21 +90,21 @@ namespace Adept.Core.Models
         /// Gets or sets the template components
         /// </summary>
         [JsonIgnore]
-        public LessonPlan.LessonComponents Components
+        public LessonComponents Components
         {
             get
             {
                 if (string.IsNullOrEmpty(ComponentsJson) || ComponentsJson == "{}")
                 {
-                    return new LessonPlan.LessonComponents();
+                    return new LessonComponents();
                 }
 
-                if (ComponentsJson.TryFromJson<LessonPlan.LessonComponents>(out var components) && components != null)
+                if (ComponentsJson.TryFromJson<LessonComponents>(out var components) && components != null)
                 {
                     return components;
                 }
 
-                return new LessonPlan.LessonComponents();
+                return new LessonComponents();
             }
             set
             {

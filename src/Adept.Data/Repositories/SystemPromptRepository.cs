@@ -1,5 +1,6 @@
 using Adept.Common.Interfaces;
 using Adept.Core.Interfaces;
+using Adept.Core.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ namespace Adept.Data.Repositories
     /// <summary>
     /// Repository for system prompt data operations
     /// </summary>
-    public class SystemPromptRepository : BaseRepository<SystemPrompt>, ISystemPromptService
+    public class SystemPromptRepository : BaseRepository<SystemPrompt>, ISystemPromptRepository
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="SystemPromptRepository"/> class
@@ -71,8 +72,8 @@ namespace Adept.Data.Repositories
         /// <summary>
         /// Gets the default system prompt
         /// </summary>
-        /// <returns>The default system prompt</returns>
-        public async Task<SystemPrompt> GetDefaultPromptAsync()
+        /// <returns>The default system prompt or null if not found</returns>
+        public async Task<SystemPrompt?> GetDefaultPromptAsync()
         {
             try
             {
@@ -131,165 +132,201 @@ Always consider the needs of diverse learners and suggest differentiation strate
         /// Sets the default system prompt
         /// </summary>
         /// <param name="promptId">The ID of the prompt to set as default</param>
-        public async Task SetDefaultPromptAsync(string promptId)
+        /// <returns>True if the prompt was set as default, false otherwise</returns>
+        public async Task<bool> SetDefaultPromptAsync(string promptId)
         {
             ValidateId(promptId, "prompt");
 
-            await ExecuteInTransactionAsync(
-                async (transaction) =>
-                {
-                    // Check if prompt exists
-                    var prompt = await GetPromptByIdAsync(promptId);
-                    if (prompt == null)
+            try
+            {
+                return await ExecuteInTransactionAsync<bool>(
+                    async (transaction) =>
                     {
-                        throw new InvalidOperationException($"System prompt with ID {promptId} not found");
-                    }
+                        // Check if prompt exists
+                        var prompt = await GetPromptByIdAsync(promptId);
+                        if (prompt == null)
+                        {
+                            return false;
+                        }
 
-                    // Clear the current default
-                    await DatabaseContext.ExecuteNonQueryAsync(
-                        "UPDATE SystemPrompts SET is_default = 0");
+                        // Clear the current default
+                        await DatabaseContext.ExecuteNonQueryAsync(
+                            "UPDATE SystemPrompts SET is_default = 0");
 
-                    // Set the new default
-                    await DatabaseContext.ExecuteNonQueryAsync(
-                        @"UPDATE SystemPrompts SET
-                            is_default = 1,
-                            updated_at = CURRENT_TIMESTAMP
-                          WHERE prompt_id = @PromptId",
-                        new { PromptId = promptId });
+                        // Set the new default
+                        await DatabaseContext.ExecuteNonQueryAsync(
+                            @"UPDATE SystemPrompts SET
+                                is_default = 1,
+                                updated_at = CURRENT_TIMESTAMP
+                              WHERE prompt_id = @PromptId",
+                            new { PromptId = promptId });
 
-                    return true;
-                },
-                $"Error setting default system prompt {promptId}");
+                        return true;
+                    },
+                    $"Error setting default system prompt {promptId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error setting default system prompt {promptId}");
+                return false;
+            }
         }
 
         /// <summary>
         /// Adds a new system prompt
         /// </summary>
         /// <param name="prompt">The prompt to add</param>
-        /// <returns>The ID of the added prompt</returns>
-        public async Task<string> AddPromptAsync(SystemPrompt prompt)
+        /// <returns>The added prompt</returns>
+        public async Task<SystemPrompt> AddPromptAsync(SystemPrompt prompt)
         {
             ValidateEntityNotNull(prompt, nameof(prompt));
             ValidateStringNotNullOrEmpty(prompt.Name, "Name");
             ValidateStringNotNullOrEmpty(prompt.Content, "Content");
 
-            return await ExecuteInTransactionAsync(
-                async (transaction) =>
-                {
-                    if (string.IsNullOrEmpty(prompt.PromptId))
+            try
+            {
+                return await ExecuteInTransactionAsync(
+                    async (transaction) =>
                     {
-                        prompt.PromptId = Guid.NewGuid().ToString();
-                    }
+                        if (string.IsNullOrEmpty(prompt.PromptId))
+                        {
+                            prompt.PromptId = Guid.NewGuid().ToString();
+                        }
 
-                    prompt.CreatedAt = DateTime.UtcNow;
-                    prompt.UpdatedAt = DateTime.UtcNow;
+                        prompt.CreatedAt = DateTime.UtcNow;
+                        prompt.UpdatedAt = DateTime.UtcNow;
 
-                    // If this is the default prompt, clear other defaults
-                    if (prompt.IsDefault)
-                    {
+                        // If this is the default prompt, clear other defaults
+                        if (prompt.IsDefault)
+                        {
+                            await DatabaseContext.ExecuteNonQueryAsync(
+                                "UPDATE SystemPrompts SET is_default = 0");
+                        }
+
                         await DatabaseContext.ExecuteNonQueryAsync(
-                            "UPDATE SystemPrompts SET is_default = 0");
-                    }
+                            @"INSERT INTO SystemPrompts (
+                                prompt_id,
+                                name,
+                                content,
+                                is_default,
+                                created_at,
+                                updated_at
+                              ) VALUES (
+                                @PromptId,
+                                @Name,
+                                @Content,
+                                @IsDefault,
+                                @CreatedAt,
+                                @UpdatedAt
+                              )",
+                            prompt);
 
-                    await DatabaseContext.ExecuteNonQueryAsync(
-                        @"INSERT INTO SystemPrompts (
-                            prompt_id,
-                            name,
-                            content,
-                            is_default,
-                            created_at,
-                            updated_at
-                          ) VALUES (
-                            @PromptId,
-                            @Name,
-                            @Content,
-                            @IsDefault,
-                            @CreatedAt,
-                            @UpdatedAt
-                          )",
-                        prompt);
-
-                    return prompt.PromptId;
-                },
-                $"Error adding system prompt {prompt.Name}");
+                        return prompt;
+                    },
+                    $"Error adding system prompt {prompt.Name}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error adding system prompt {prompt.Name}");
+                throw;
+            }
         }
 
         /// <summary>
         /// Updates an existing system prompt
         /// </summary>
         /// <param name="prompt">The prompt to update</param>
-        public async Task UpdatePromptAsync(SystemPrompt prompt)
+        /// <returns>The updated prompt or null if not found</returns>
+        public async Task<SystemPrompt?> UpdatePromptAsync(SystemPrompt prompt)
         {
             ValidateEntityNotNull(prompt, nameof(prompt));
             ValidateId(prompt.PromptId, "prompt");
             ValidateStringNotNullOrEmpty(prompt.Name, "Name");
             ValidateStringNotNullOrEmpty(prompt.Content, "Content");
 
-            await ExecuteInTransactionAsync(
-                async (transaction) =>
-                {
-                    // Check if prompt exists
-                    var existingPrompt = await GetPromptByIdAsync(prompt.PromptId);
-                    if (existingPrompt == null)
+            try
+            {
+                return await ExecuteInTransactionAsync(
+                    async (transaction) =>
                     {
-                        throw new InvalidOperationException($"System prompt with ID {prompt.PromptId} not found");
-                    }
+                        // Check if prompt exists
+                        var existingPrompt = await GetPromptByIdAsync(prompt.PromptId);
+                        if (existingPrompt == null)
+                        {
+                            return null;
+                        }
 
-                    prompt.CreatedAt = existingPrompt.CreatedAt; // Preserve original creation date
-                    prompt.UpdatedAt = DateTime.UtcNow;
+                        prompt.CreatedAt = existingPrompt.CreatedAt; // Preserve original creation date
+                        prompt.UpdatedAt = DateTime.UtcNow;
 
-                    // If this is the default prompt, clear other defaults
-                    if (prompt.IsDefault)
-                    {
+                        // If this is the default prompt, clear other defaults
+                        if (prompt.IsDefault)
+                        {
+                            await DatabaseContext.ExecuteNonQueryAsync(
+                                "UPDATE SystemPrompts SET is_default = 0");
+                        }
+
                         await DatabaseContext.ExecuteNonQueryAsync(
-                            "UPDATE SystemPrompts SET is_default = 0");
-                    }
+                            @"UPDATE SystemPrompts SET
+                                name = @Name,
+                                content = @Content,
+                                is_default = @IsDefault,
+                                updated_at = @UpdatedAt
+                              WHERE prompt_id = @PromptId",
+                            prompt);
 
-                    await DatabaseContext.ExecuteNonQueryAsync(
-                        @"UPDATE SystemPrompts SET
-                            name = @Name,
-                            content = @Content,
-                            is_default = @IsDefault,
-                            updated_at = @UpdatedAt
-                          WHERE prompt_id = @PromptId",
-                        prompt);
-
-                    return true;
-                },
-                $"Error updating system prompt {prompt.PromptId}");
+                        return prompt;
+                    },
+                    $"Error updating system prompt {prompt.PromptId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error updating system prompt {prompt.PromptId}");
+                return null;
+            }
         }
 
         /// <summary>
         /// Deletes a system prompt
         /// </summary>
         /// <param name="promptId">The ID of the prompt to delete</param>
-        public async Task DeletePromptAsync(string promptId)
+        /// <returns>True if the prompt was deleted, false otherwise</returns>
+        public async Task<bool> DeletePromptAsync(string promptId)
         {
             ValidateId(promptId, "prompt");
 
-            await ExecuteWithErrorHandlingAndThrowAsync(
-                async () =>
-                {
-                    // Check if prompt exists
-                    var prompt = await GetPromptByIdAsync(promptId);
-                    if (prompt == null)
+            try
+            {
+                return await ExecuteWithErrorHandlingAsync(
+                    async () =>
                     {
-                        throw new InvalidOperationException($"System prompt with ID {promptId} not found");
-                    }
+                        // Check if prompt exists
+                        var prompt = await GetPromptByIdAsync(promptId);
+                        if (prompt == null)
+                        {
+                            return false;
+                        }
 
-                    // Check if this is the default prompt
-                    if (prompt.IsDefault)
-                    {
-                        throw new InvalidOperationException("Cannot delete the default system prompt");
-                    }
+                        // Check if this is the default prompt
+                        if (prompt.IsDefault)
+                        {
+                            Logger.LogWarning("Cannot delete the default system prompt");
+                            return false;
+                        }
 
-                    await DatabaseContext.ExecuteNonQueryAsync(
-                        "DELETE FROM SystemPrompts WHERE prompt_id = @PromptId",
-                        new { PromptId = promptId });
+                        var result = await DatabaseContext.ExecuteNonQueryAsync(
+                            "DELETE FROM SystemPrompts WHERE prompt_id = @PromptId",
+                            new { PromptId = promptId });
 
-                    return true;
-                },
-                $"Error deleting system prompt {promptId}");
+                        return result > 0;
+                    },
+                    $"Error deleting system prompt {promptId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error deleting system prompt {promptId}");
+                return false;
+            }
         }
     }
 }

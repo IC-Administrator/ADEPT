@@ -84,9 +84,9 @@ namespace Adept.Core.Models
     }
 
     /// <summary>
-    /// Represents the components of a lesson
+    /// Represents the components of a lesson plan
     /// </summary>
-    public class LessonComponents
+    public class LessonPlanComponents
     {
         /// <summary>
         /// Retrieval questions with answers

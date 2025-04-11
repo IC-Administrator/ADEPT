@@ -4,13 +4,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
-using DbTransaction = Adept.Common.Interfaces.IDbTransaction;
+using IDbTransaction = Adept.Common.Interfaces.IDbTransaction;
 
 namespace Adept.Data.Database
 {
@@ -178,7 +177,7 @@ namespace Adept.Data.Database
         /// Begins a new transaction
         /// </summary>
         /// <returns>A transaction object</returns>
-        public async Task<DbTransaction> BeginTransactionAsync()
+        public async Task<IDbTransaction> BeginTransactionAsync()
         {
             try
             {
@@ -397,7 +396,7 @@ namespace Adept.Data.Database
     /// <summary>
     /// SQLite implementation of the database transaction
     /// </summary>
-    public class SqliteDbTransaction : DbTransaction
+    public class SqliteDbTransaction : IDbTransaction
     {
         private readonly SqliteConnection _connection;
         private readonly SqliteTransaction _transaction;
@@ -415,33 +414,17 @@ namespace Adept.Data.Database
         }
 
         /// <summary>
-        /// Commits the transaction
-        /// </summary>
-        public override void Commit()
-        {
-            _transaction.Commit();
-        }
-
-        /// <summary>
         /// Commits the transaction asynchronously
         /// </summary>
-        public override async Task CommitAsync()
+        public async Task CommitAsync()
         {
             await Task.Run(() => _transaction.Commit());
         }
 
         /// <summary>
-        /// Rolls back the transaction
-        /// </summary>
-        public override void Rollback()
-        {
-            _transaction.Rollback();
-        }
-
-        /// <summary>
         /// Rolls back the transaction asynchronously
         /// </summary>
-        public override async Task RollbackAsync()
+        public async Task RollbackAsync()
         {
             await Task.Run(() => _transaction.Rollback());
         }
@@ -449,7 +432,7 @@ namespace Adept.Data.Database
         /// <summary>
         /// Disposes the transaction
         /// </summary>
-        public override void Dispose()
+        public void Dispose()
         {
             if (_isDisposed)
             {
@@ -459,6 +442,23 @@ namespace Adept.Data.Database
             _transaction.Dispose();
             _connection.Dispose();
             _isDisposed = true;
+        }
+
+        /// <summary>
+        /// Disposes the transaction asynchronously
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _transaction.Dispose();
+            _connection.Dispose();
+            _isDisposed = true;
+
+            await Task.CompletedTask;
         }
     }
 }

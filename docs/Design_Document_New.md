@@ -177,21 +177,28 @@ ADEPT/
 
 **Priority: Medium** (In Progress)
 
-1. **Unit Test Expansion** (In Progress)
+1. **Test Utilities Enhancement** ✅
+   - Enhanced MockFactory with mock implementations for all services and repositories ✅
+   - Added test data generators for all model types ✅
+   - Implemented additional assertion extensions for common test scenarios ✅
+   - Created test fixtures for different testing scenarios ✅
+
+2. **Unit Test Expansion** (In Progress)
    - Increase test coverage for core components
    - Implement tests for database operations ✅
+   - Implement tests for repositories (LessonResourceRepository, LessonTemplateRepository, SystemPromptRepository) ✅
    - Add tests for JSON serialization ✅
    - Add tests for JSON validation ✅
    - Add tests for JSON extension methods ✅
 
-2. **Integration Test Development** (In Progress)
+3. **Integration Test Development** (In Progress)
    - Create integration tests for database operations ✅
    - Implement tests for external service integrations
    - Add end-to-end tests for critical workflows
 
-3. **Test Organization**
-   - Complete test organization according to TestOrganization.md
-   - Standardize test naming and structure
+4. **Test Organization**
+   - Complete test organization according to TestOrganization.md ✅
+   - Standardize test naming and structure ✅
    - Implement test utilities for common operations
    - Create consistent test project structure ✅
 
