@@ -102,14 +102,54 @@ namespace Adept.Services.Llm
 
             try
             {
-                foreach (var toolCall in response.ToolCalls)
+                var toolResults = new List<(string ToolName, string ToolId, string Result)>();
+
+                // Execute all tool calls in parallel
+                var tasks = response.ToolCalls.Select(async toolCall =>
                 {
-                    var toolResult = await ExecuteToolAsync(toolCall.ToolName, toolCall.Arguments);
-                    
-                    // Add the tool result to the response
-                    response.Message.Content += $"\n\nTool: {toolCall.ToolName}\nResult: {toolResult}";
+                    try
+                    {
+                        var result = await ExecuteToolAsync(toolCall.ToolName, toolCall.Arguments);
+                        return (toolCall.ToolName, toolCall.Id, result);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error executing tool {ToolName}", toolCall.ToolName);
+                        return (toolCall.ToolName, toolCall.Id, $"Error: {ex.Message}");
+                    }
+                }).ToList();
+
+                // Wait for all tool calls to complete
+                await Task.WhenAll(tasks);
+
+                // Collect results
+                foreach (var task in tasks)
+                {
+                    toolResults.Add(await task);
                 }
 
+                // Format the response with tool results
+                var originalContent = response.Message.Content;
+                var sb = new System.Text.StringBuilder(originalContent);
+
+                if (!string.IsNullOrEmpty(originalContent) && !originalContent.EndsWith("\n"))
+                {
+                    sb.AppendLine();
+                    sb.AppendLine();
+                }
+
+                sb.AppendLine("**Tool Results:**");
+
+                foreach (var (toolName, toolId, result) in toolResults)
+                {
+                    sb.AppendLine($"**Tool:** {toolName} (ID: {toolId})");
+                    sb.AppendLine("```json");
+                    sb.AppendLine(result);
+                    sb.AppendLine("```");
+                    sb.AppendLine();
+                }
+
+                response.Message.Content = sb.ToString().TrimEnd();
                 return response;
             }
             catch (Exception ex)
@@ -138,12 +178,14 @@ namespace Adept.Services.Llm
                 }
 
                 var processedMessage = message;
+                var toolCalls = new List<(Match Match, string ToolName, Dictionary<string, object> Parameters)>();
 
+                // First, parse all tool calls
                 foreach (Match match in matches)
                 {
                     var toolName = match.Groups[1].Value.Trim();
                     var toolArgs = match.Groups[2].Value.Trim();
-                    
+
                     // Parse the arguments
                     Dictionary<string, object> parameters;
                     try
@@ -156,12 +198,35 @@ namespace Adept.Services.Llm
                         parameters = ParseKeyValuePairs(toolArgs);
                     }
 
-                    // Execute the tool
-                    var toolResult = await ExecuteToolAsync(toolName, parameters);
-                    
+                    toolCalls.Add((match, toolName, parameters));
+                }
+
+                // Execute all tool calls in parallel
+                var tasks = toolCalls.Select(async toolCall =>
+                {
+                    try
+                    {
+                        var result = await ExecuteToolAsync(toolCall.ToolName, toolCall.Parameters);
+                        return (toolCall.Match, toolCall.ToolName, toolArgs: JsonSerializer.Serialize(toolCall.Parameters, new JsonSerializerOptions { WriteIndented = true }), result);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error executing tool {ToolName}", toolCall.ToolName);
+                        return (toolCall.Match, toolCall.ToolName, toolArgs: JsonSerializer.Serialize(toolCall.Parameters, new JsonSerializerOptions { WriteIndented = true }), result: $"Error: {ex.Message}");
+                    }
+                }).ToList();
+
+                // Wait for all tool calls to complete
+                await Task.WhenAll(tasks);
+
+                // Replace tool calls with results in reverse order to avoid index issues
+                foreach (var task in tasks.OrderByDescending(t => t.Result.Match.Index))
+                {
+                    var (match, toolName, toolArgs, result) = await task;
+
                     // Replace the tool call with the result
-                    var replacement = $"```tool {toolName}\n{toolArgs}\n```\n\n**Tool Result:**\n```json\n{toolResult}\n```";
-                    processedMessage = processedMessage.Replace(match.Value, replacement);
+                    var replacement = $"```tool {toolName}\n{toolArgs}\n```\n\n**Tool Result:**\n```json\n{result}\n```";
+                    processedMessage = processedMessage.Substring(0, match.Index) + replacement + processedMessage.Substring(match.Index + match.Length);
                 }
 
                 return processedMessage;
@@ -215,7 +280,7 @@ namespace Adept.Services.Llm
             try
             {
                 var result = await _mcpServerManager.ExecuteToolAsync(toolName, parameters);
-                
+
                 if (result.Success)
                 {
                     return JsonSerializer.Serialize(result.Data, new JsonSerializerOptions { WriteIndented = true });
@@ -241,7 +306,7 @@ namespace Adept.Services.Llm
         {
             var parameters = new Dictionary<string, object>();
             var lines = input.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            
+
             foreach (var line in lines)
             {
                 var parts = line.Split(':', 2);
@@ -249,7 +314,7 @@ namespace Adept.Services.Llm
                 {
                     var key = parts[0].Trim();
                     var value = parts[1].Trim();
-                    
+
                     // Try to parse as number or boolean
                     if (int.TryParse(value, out var intValue))
                     {
@@ -269,7 +334,7 @@ namespace Adept.Services.Llm
                     }
                 }
             }
-            
+
             return parameters;
         }
 
@@ -311,7 +376,7 @@ namespace Adept.Services.Llm
                 {
                     // Unsubscribe from events
                     _mcpServerManager.ServerStatusChanged -= OnServerStatusChanged;
-                    
+
                     // Stop the MCP server
                     _mcpServerManager.StopServerAsync().GetAwaiter().GetResult();
                 }

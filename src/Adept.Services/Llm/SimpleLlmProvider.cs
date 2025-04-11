@@ -334,6 +334,96 @@ namespace Adept.Services.Llm
         }
 
         /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a streaming response with tool calls
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response with tool calls</returns>
+        public async Task<LlmResponse> SendMessagesWithToolsStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!_currentModel.SupportsToolCalls)
+                {
+                    _logger.LogWarning("Tool calls not supported by model {ModelName}, falling back to non-tool streaming", _currentModel.Name);
+                    return await SendMessagesStreamingAsync(messages, systemPrompt, onPartialResponse, cancellationToken);
+                }
+
+                // In a real implementation, this would call an API with tool definitions and streaming
+                // For now, we'll simulate a streaming response with a tool call
+                var lastUserMessage = messages.LastOrDefault(m => m.Role == LlmRole.User)?.Content ?? "No user message";
+
+                // Simulate streaming response
+                var responseChunks = new List<string>
+                {
+                    "I'll help you with that. ",
+                    "Let me check the weather for you. ",
+                    "I'll use a tool to get the current weather information."
+                };
+
+                var fullResponse = new StringBuilder();
+
+                // Send chunks with a delay to simulate streaming
+                foreach (var chunk in responseChunks)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(100, cancellationToken); // Simulate network delay
+                    onPartialResponse?.Invoke(chunk);
+                    fullResponse.Append(chunk);
+                }
+
+                // Create a simulated tool call
+                var toolCalls = new List<LlmToolCall>
+                {
+                    new LlmToolCall
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        ToolName = "get_current_weather",
+                        Arguments = "{\"location\": \"New York\", \"unit\": \"celsius\"}"
+                    }
+                };
+
+                var llmResponse = new LlmResponse
+                {
+                    Message = new LlmMessage
+                    {
+                        Role = LlmRole.Assistant,
+                        Content = fullResponse.ToString()
+                    },
+                    ToolCalls = toolCalls,
+                    ProviderName = ProviderName,
+                    ModelName = _currentModel.Name,
+                    Usage = new LlmUsage
+                    {
+                        PromptTokens = 100,
+                        CompletionTokens = 50,
+                        TotalTokens = 150
+                    }
+                };
+
+                _logger.LogInformation("Sent streaming message with tools to {ProviderName} using {ModelName}", ProviderName, _currentModel.Name);
+                return llmResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending streaming message with tools to {ProviderName}", ProviderName);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Sends a message with an image to the LLM and gets a response
         /// </summary>
         /// <param name="message">The message to send</param>

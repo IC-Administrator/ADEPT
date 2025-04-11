@@ -90,6 +90,40 @@ namespace Adept.Core.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a response with tool calls
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response with tool calls</returns>
+        Task<LlmResponse> SendMessageWithToolsAsync(
+            string message,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a streaming response with tool calls
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="onChunk">Callback for each chunk of the response</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response with tool calls</returns>
+        Task<LlmResponse> SendMessageWithToolsStreamingAsync(
+            string message,
+            IEnumerable<LlmTool> tools,
+            Action<string> onChunk,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets the conversation history for a conversation
         /// </summary>
         /// <param name="conversationId">The conversation ID</param>

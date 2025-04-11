@@ -739,6 +739,258 @@ namespace Adept.Services.Llm
         }
 
         /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a response with tool calls
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The LLM response with tool calls</returns>
+        public async Task<LlmResponse> SendMessageWithToolsAsync(
+            string message,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Get or create the conversation
+                Conversation? conversation = null;
+                if (!string.IsNullOrEmpty(conversationId))
+                {
+                    conversation = await _conversationRepository.GetConversationAsync(conversationId);
+                    if (conversation == null)
+                    {
+                        throw new ArgumentException($"Conversation with ID {conversationId} not found");
+                    }
+                }
+                else
+                {
+                    conversation = new Conversation();
+                    await _conversationRepository.AddConversationAsync(conversation);
+                    conversationId = conversation.Id;
+                }
+
+                // Get the system prompt if not provided
+                if (string.IsNullOrEmpty(systemPrompt))
+                {
+                    var defaultPrompt = await _systemPromptService.GetDefaultPromptAsync();
+                    systemPrompt = defaultPrompt.Content;
+                }
+
+                // Add the user message to the conversation
+                conversation!.AddUserMessage(message);
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Optimize conversation history to fit within token limits
+                var optimizedHistory = OptimizeConversationHistory(conversation.History);
+
+                // Send the message to the LLM with fallback mechanism
+                LlmResponse response;
+                try
+                {
+                    response = await ActiveProvider.SendMessagesWithToolsAsync(
+                        optimizedHistory,
+                        tools,
+                        systemPrompt,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error sending message with tools to {ProviderName}, trying fallback", ActiveProvider.ProviderName);
+                    await MarkProviderAsFailed(ActiveProvider.ProviderName);
+
+                    // Try to find a fallback provider
+                    var fallbackProvider = await GetFallbackProviderAsync();
+                    if (fallbackProvider == null)
+                    {
+                        _logger.LogError("No fallback provider available");
+                        throw new InvalidOperationException("No LLM provider available", ex);
+                    }
+
+                    _logger.LogInformation("Using fallback provider {ProviderName}", fallbackProvider.ProviderName);
+                    response = await fallbackProvider.SendMessagesWithToolsAsync(
+                        optimizedHistory,
+                        tools,
+                        systemPrompt,
+                        cancellationToken);
+                }
+
+                // Process any tool calls in the response
+                if (response.ToolCalls.Count > 0)
+                {
+                    response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                }
+                else
+                {
+                    // Check for tool calls in the message text
+                    try
+                    {
+                        var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
+                        if (processedContent != response.Message.Content)
+                        {
+                            response.Message.Content = processedContent;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing message tool calls");
+                        // Don't modify the response in this case
+                    }
+                }
+
+                // Add the assistant response to the conversation
+                conversation.AddAssistantMessage(response.Message.Content);
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Set the conversation ID in the response
+                response.ConversationId = conversationId;
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending message with tools");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a streaming response with tool calls
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="onChunk">Callback for each chunk of the response</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="conversationId">Optional conversation ID to continue a conversation</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response with tool calls</returns>
+        public async Task<LlmResponse> SendMessageWithToolsStreamingAsync(
+            string message,
+            IEnumerable<LlmTool> tools,
+            Action<string> onChunk,
+            string? systemPrompt = null,
+            string? conversationId = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Get or create the conversation
+                Conversation? conversation = null;
+                if (!string.IsNullOrEmpty(conversationId))
+                {
+                    conversation = await _conversationRepository.GetConversationAsync(conversationId);
+                    if (conversation == null)
+                    {
+                        throw new ArgumentException($"Conversation with ID {conversationId} not found");
+                    }
+                }
+                else
+                {
+                    conversation = new Conversation();
+                    await _conversationRepository.AddConversationAsync(conversation);
+                    conversationId = conversation.Id;
+                }
+
+                // Get the system prompt if not provided
+                if (string.IsNullOrEmpty(systemPrompt))
+                {
+                    var defaultPrompt = await _systemPromptService.GetDefaultPromptAsync();
+                    systemPrompt = defaultPrompt.Content;
+                }
+
+                // Add the user message to the conversation
+                conversation!.AddUserMessage(message);
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Optimize conversation history to fit within token limits
+                var optimizedHistory = OptimizeConversationHistory(conversation.History);
+
+                // Create a StringBuilder to collect the full response
+                var fullResponse = new StringBuilder();
+
+                // Wrap the onChunk callback to collect the full response
+                Action<string> onChunkWrapper = chunk =>
+                {
+                    fullResponse.Append(chunk);
+                    onChunk(chunk);
+                };
+
+                // Send the message to the LLM with streaming and fallback mechanism
+                LlmResponse response;
+                try
+                {
+                    response = await ActiveProvider.SendMessagesWithToolsStreamingAsync(
+                        optimizedHistory,
+                        tools,
+                        systemPrompt,
+                        onChunkWrapper,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error sending streaming message with tools to {ProviderName}, trying fallback", ActiveProvider.ProviderName);
+                    await MarkProviderAsFailed(ActiveProvider.ProviderName);
+
+                    // Try to find a fallback provider
+                    var fallbackProvider = await GetFallbackProviderAsync();
+                    if (fallbackProvider == null)
+                    {
+                        _logger.LogError("No fallback provider available");
+                        throw new InvalidOperationException("No LLM provider available", ex);
+                    }
+
+                    _logger.LogInformation("Using fallback provider {ProviderName}", fallbackProvider.ProviderName);
+                    response = await fallbackProvider.SendMessagesWithToolsStreamingAsync(
+                        optimizedHistory,
+                        tools,
+                        systemPrompt,
+                        onChunkWrapper,
+                        cancellationToken);
+                }
+
+                // Process any tool calls in the response
+                if (response.ToolCalls.Count > 0)
+                {
+                    response = await _toolIntegrationService.ProcessToolCallsAsync(response);
+                }
+                else
+                {
+                    // Check for tool calls in the message text
+                    try
+                    {
+                        var processedContent = await _toolIntegrationService.ProcessMessageToolCallsAsync(response.Message.Content);
+                        if (processedContent != response.Message.Content)
+                        {
+                            response.Message.Content = processedContent;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing message tool calls in streaming response");
+                        // Don't modify the response in this case
+                    }
+                }
+
+                // Add the assistant response to the conversation
+                conversation.AddAssistantMessage(response.Message.Content);
+                await _conversationRepository.UpdateConversationAsync(conversation);
+
+                // Set the conversation ID in the response
+                response.ConversationId = conversationId;
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending streaming message with tools");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Sends a message with an image to the LLM and gets a response
         /// </summary>
         /// <param name="message">The message to send</param>

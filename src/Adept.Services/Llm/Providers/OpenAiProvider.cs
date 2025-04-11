@@ -596,6 +596,67 @@ namespace Adept.Services.Llm.Providers
         }
 
         /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a streaming response with tool calls
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response with tool calls</returns>
+        public async Task<LlmResponse> SendMessagesWithToolsStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (!HasValidApiKey)
+            {
+                throw new InvalidOperationException($"{ProviderName} API key not set");
+            }
+
+            if (!_currentModel.SupportsToolCalls)
+            {
+                _logger.LogWarning("Tool calls not supported by model {ModelName}, falling back to non-tool streaming", _currentModel.Name);
+                return await SendMessagesStreamingAsync(messages, systemPrompt, onPartialResponse, cancellationToken);
+            }
+
+            try
+            {
+                // For now, we'll use the non-streaming version and simulate streaming
+                // This should be replaced with actual streaming implementation for each provider
+                var fullResponse = await SendMessagesWithToolsAsync(messages, tools, systemPrompt, cancellationToken);
+
+                // Simulate streaming by sending the response in chunks
+                if (onPartialResponse != null)
+                {
+                    var content = fullResponse.Message.Content;
+                    var chunkSize = Math.Max(10, content.Length / 5); // Split into ~5 chunks
+
+                    for (int i = 0; i < content.Length; i += chunkSize)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        var chunk = content.Substring(i, Math.Min(chunkSize, content.Length - i));
+                        onPartialResponse(chunk);
+                        await Task.Delay(100, cancellationToken); // Simulate network delay
+                    }
+                }
+
+                return fullResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending streaming message with tools to {ProviderName}", ProviderName);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Sends a message with an image to the LLM and gets a response
         /// </summary>
         /// <param name="message">The message to send</param>

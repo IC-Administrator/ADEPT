@@ -89,6 +89,9 @@ namespace Adept.Services.Llm.Providers
             _availableModels.Add(new LlmModel("gemini-1.5-flash", "Gemini 1.5 Flash", 1000000, true, true));
             _availableModels.Add(new LlmModel("gemini-1.5-flash-latest", "Gemini 1.5 Flash Latest", 1000000, true, true));
             _availableModels.Add(new LlmModel("gemini-1.0-pro", "Gemini 1.0 Pro", 32000, true, true));
+            _availableModels.Add(new LlmModel("gemini-1.0-pro-vision", "Gemini 1.0 Pro Vision", 32000, true, true));
+            _availableModels.Add(new LlmModel("gemini-ultra", "Gemini Ultra", 32000, true, true));
+            _availableModels.Add(new LlmModel("gemini-ultra-vision", "Gemini Ultra Vision", 32000, true, true));
 
             // Set default model
             _currentModel = _availableModels.First();
@@ -144,12 +147,15 @@ namespace Adept.Services.Llm.Providers
                 // Gemini models
                 _availableModels.Add(new LlmModel("gemini-1.5-pro", "Gemini 1.5 Pro", 1000000, true, true));
                 _availableModels.Add(new LlmModel("gemini-1.5-pro-latest", "Gemini 1.5 Pro Latest", 1000000, true, true));
-                _availableModels.Add(new LlmModel("gemini-1.5-flash", "Gemini 1.5 Flash", 1000000, true, false));
-                _availableModels.Add(new LlmModel("gemini-1.5-flash-latest", "Gemini 1.5 Flash Latest", 1000000, true, false));
-                _availableModels.Add(new LlmModel("gemini-1.0-pro", "Gemini 1.0 Pro", 32000, true, false));
+                _availableModels.Add(new LlmModel("gemini-1.5-flash", "Gemini 1.5 Flash", 1000000, true, true));
+                _availableModels.Add(new LlmModel("gemini-1.5-flash-latest", "Gemini 1.5 Flash Latest", 1000000, true, true));
+                _availableModels.Add(new LlmModel("gemini-1.0-pro", "Gemini 1.0 Pro", 32000, true, true));
                 _availableModels.Add(new LlmModel("gemini-1.0-pro-vision", "Gemini 1.0 Pro Vision", 32000, true, true));
                 _availableModels.Add(new LlmModel("gemini-ultra", "Gemini Ultra", 32000, true, true));
                 _availableModels.Add(new LlmModel("gemini-ultra-vision", "Gemini Ultra Vision", 32000, true, true));
+                _availableModels.Add(new LlmModel("gemini-1.5-pro-001", "Gemini 1.5 Pro 001", 1000000, true, true));
+                _availableModels.Add(new LlmModel("gemini-1.5-flash-001", "Gemini 1.5 Flash 001", 1000000, true, true));
+                _availableModels.Add(new LlmModel("gemini-1.5-pro-vision-001", "Gemini 1.5 Pro Vision 001", 1000000, true, true));
 
                 // Set current model if not already set
                 if (_currentModel == null)
@@ -460,6 +466,67 @@ namespace Adept.Services.Llm.Providers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending streaming message to Google");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a streaming response with tool calls
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response with tool calls</returns>
+        public async Task<LlmResponse> SendMessagesWithToolsStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (!HasValidApiKey)
+            {
+                throw new InvalidOperationException($"{ProviderName} API key not set");
+            }
+
+            if (!_currentModel.SupportsToolCalls)
+            {
+                _logger.LogWarning("Tool calls not supported by model {ModelName}, falling back to non-tool streaming", _currentModel.Name);
+                return await SendMessagesStreamingAsync(messages, systemPrompt, onPartialResponse, cancellationToken);
+            }
+
+            try
+            {
+                // For now, we'll use the non-streaming version and simulate streaming
+                // This should be replaced with actual streaming implementation for each provider
+                var fullResponse = await SendMessagesWithToolsAsync(messages, tools, systemPrompt, cancellationToken);
+
+                // Simulate streaming by sending the response in chunks
+                if (onPartialResponse != null)
+                {
+                    var content = fullResponse.Message.Content;
+                    var chunkSize = Math.Max(10, content.Length / 5); // Split into ~5 chunks
+
+                    for (int i = 0; i < content.Length; i += chunkSize)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        var chunk = content.Substring(i, Math.Min(chunkSize, content.Length - i));
+                        onPartialResponse(chunk);
+                        await Task.Delay(100, cancellationToken); // Simulate network delay
+                    }
+                }
+
+                return fullResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending streaming message with tools to {ProviderName}", ProviderName);
                 throw;
             }
         }

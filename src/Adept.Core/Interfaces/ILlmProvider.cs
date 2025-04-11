@@ -125,6 +125,22 @@ namespace Adept.Core.Interfaces
             IEnumerable<LlmTool> tools,
             string? systemPrompt = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sends a message with tool definitions to the LLM and gets a streaming response with tool calls
+        /// </summary>
+        /// <param name="messages">The conversation history</param>
+        /// <param name="tools">The tool definitions</param>
+        /// <param name="systemPrompt">Optional system prompt to use</param>
+        /// <param name="onPartialResponse">Callback for partial responses</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>The complete LLM response with tool calls</returns>
+        Task<LlmResponse> SendMessagesWithToolsStreamingAsync(
+            IEnumerable<LlmMessage> messages,
+            IEnumerable<LlmTool> tools,
+            string? systemPrompt = null,
+            Action<string>? onPartialResponse = null,
+            CancellationToken cancellationToken = default);
     }
 
     /// <summary>
