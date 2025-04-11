@@ -161,18 +161,17 @@ namespace Adept.Data.Tests.Repository
                 Name = "John Doe"
             };
 
-            // Setup validation result
-            var validationResult = new ValidationResult { };
+            // Create a mock for the validation result
+            var validationResult = new ValidationResult();
 
             // Store the original method for restoration
             var originalValidateStudent = EntityValidator.ValidateStudent;
 
-            // Use reflection to set the IsValid property
-            var isValidProperty = typeof(ValidationResult).GetProperty("IsValid");
-            isValidProperty?.SetValue(validationResult, true);
+            // Create a delegate that returns our validation result
+            Func<Student, ValidationResult> mockValidateStudent = _ => validationResult;
 
-            // Set up our test delegate
-            EntityValidator.ValidateStudent = _ => validationResult;
+            // Use reflection to set the static method
+            typeof(EntityValidator).GetField("ValidateStudent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.SetValue(null, mockValidateStudent);
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
@@ -194,8 +193,8 @@ namespace Adept.Data.Tests.Repository
             }
             finally
             {
-                // Restore the original method
-                EntityValidator.ValidateStudent = originalValidateStudent;
+                // Restore the original method using reflection
+                typeof(EntityValidator).GetField("ValidateStudent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.SetValue(null, originalValidateStudent);
             }
         }
 
@@ -225,18 +224,17 @@ namespace Adept.Data.Tests.Repository
                 Name = "John Doe"
             };
 
-            // Setup validation result
-            var validationResult = new ValidationResult { };
+            // Create a mock for the validation result
+            var validationResult = new ValidationResult();
 
             // Store the original method for restoration
             var originalValidateStudent = EntityValidator.ValidateStudent;
 
-            // Use reflection to set the IsValid property
-            var isValidProperty = typeof(ValidationResult).GetProperty("IsValid");
-            isValidProperty?.SetValue(validationResult, true);
+            // Create a delegate that returns our validation result
+            Func<Student, ValidationResult> mockValidateStudent = _ => validationResult;
 
-            // Set up our test delegate
-            EntityValidator.ValidateStudent = _ => validationResult;
+            // Use reflection to set the static method
+            typeof(EntityValidator).GetField("ValidateStudent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.SetValue(null, mockValidateStudent);
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
@@ -257,8 +255,8 @@ namespace Adept.Data.Tests.Repository
             }
             finally
             {
-                // Restore the original method
-                EntityValidator.ValidateStudent = originalValidateStudent;
+                // Restore the original method using reflection
+                typeof(EntityValidator).GetField("ValidateStudent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.SetValue(null, originalValidateStudent);
             }
         }
 
@@ -285,7 +283,8 @@ namespace Adept.Data.Tests.Repository
 
             _mockDatabaseContext.Setup(x => x.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
-                    It.Is<object>(p => ((dynamic)p).StudentId == studentId)))
+                    It.Is<object>(p => p != null && p.GetType().GetProperty("StudentId") != null &&
+                                 p.GetType().GetProperty("StudentId").GetValue(p).ToString() == studentId)))
                 .ReturnsAsync(1);
 
             // Act
@@ -294,7 +293,8 @@ namespace Adept.Data.Tests.Repository
             // Assert
             _mockDatabaseContext.Verify(x => x.ExecuteNonQueryAsync(
                 It.IsAny<string>(),
-                It.Is<object>(p => ((dynamic)p).StudentId == studentId)),
+                It.Is<object>(p => p != null && p.GetType().GetProperty("StudentId") != null &&
+                             p.GetType().GetProperty("StudentId").GetValue(p).ToString() == studentId)),
                 Times.Once);
         }
 
@@ -317,18 +317,17 @@ namespace Adept.Data.Tests.Repository
                 new Student { StudentId = "2", ClassId = "class-1", Name = "Jane Smith" }
             };
 
-            // Setup validation result
-            var validationResult = new ValidationResult { };
+            // Create a mock for the validation result
+            var validationResult = new ValidationResult();
 
             // Store the original method for restoration
             var originalValidateStudent = EntityValidator.ValidateStudent;
 
-            // Use reflection to set the IsValid property
-            var isValidProperty = typeof(ValidationResult).GetProperty("IsValid");
-            isValidProperty?.SetValue(validationResult, true);
+            // Create a delegate that returns our validation result
+            Func<Student, ValidationResult> mockValidateStudent = _ => validationResult;
 
-            // Set up our test delegate
-            EntityValidator.ValidateStudent = _ => validationResult;
+            // Use reflection to set the static method
+            typeof(EntityValidator).GetField("ValidateStudent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.SetValue(null, mockValidateStudent);
 
             var mockTransaction = new Mock<IDbTransaction>();
             _mockDatabaseContext.Setup(x => x.BeginTransactionAsync())
@@ -352,8 +351,8 @@ namespace Adept.Data.Tests.Repository
             }
             finally
             {
-                // Restore the original method
-                EntityValidator.ValidateStudent = originalValidateStudent;
+                // Restore the original method using reflection
+                typeof(EntityValidator).GetField("ValidateStudent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.SetValue(null, originalValidateStudent);
             }
         }
 
