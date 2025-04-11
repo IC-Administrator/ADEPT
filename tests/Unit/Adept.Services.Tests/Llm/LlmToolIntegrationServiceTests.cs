@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
+using static Adept.Core.Interfaces.IMcpServerManager;
 
 namespace Adept.Services.Tests.Llm
 {
@@ -58,10 +59,10 @@ namespace Adept.Services.Tests.Llm
 
             // Setup mock responses for tool execution
             _mockMcpServerManager.Setup(m => m.ExecuteToolAsync("get_weather", It.IsAny<Dictionary<string, object>>()))
-                .ReturnsAsync("{\"temperature\": 25, \"condition\": \"sunny\"}");
-            
+                .ReturnsAsync(new McpToolResult(true, "{\"temperature\": 25, \"condition\": \"sunny\"}"));
+
             _mockMcpServerManager.Setup(m => m.ExecuteToolAsync("search", It.IsAny<Dictionary<string, object>>()))
-                .ReturnsAsync("[{\"title\": \"Breaking News\", \"url\": \"https://example.com/news\"}]");
+                .ReturnsAsync(new McpToolResult(true, "[{\"title\": \"Breaking News\", \"url\": \"https://example.com/news\"}]"));
 
             // Act
             var result = await _toolIntegrationService.ProcessToolCallsAsync(response);
@@ -72,7 +73,7 @@ namespace Adept.Services.Tests.Llm
             Assert.Contains("search", result.Message.Content);
             Assert.Contains("temperature", result.Message.Content);
             Assert.Contains("Breaking News", result.Message.Content);
-            
+
             _mockMcpServerManager.Verify(m => m.ExecuteToolAsync("get_weather", It.IsAny<Dictionary<string, object>>()), Times.Once);
             _mockMcpServerManager.Verify(m => m.ExecuteToolAsync("search", It.IsAny<Dictionary<string, object>>()), Times.Once);
         }
@@ -85,10 +86,10 @@ namespace Adept.Services.Tests.Llm
 
             // Setup mock responses for tool execution
             _mockMcpServerManager.Setup(m => m.ExecuteToolAsync("get_weather", It.IsAny<Dictionary<string, object>>()))
-                .ReturnsAsync("{\"temperature\": 25, \"condition\": \"sunny\"}");
-            
+                .ReturnsAsync(new McpToolResult(true, "{\"temperature\": 25, \"condition\": \"sunny\"}"));
+
             _mockMcpServerManager.Setup(m => m.ExecuteToolAsync("search", It.IsAny<Dictionary<string, object>>()))
-                .ReturnsAsync("[{\"title\": \"Breaking News\", \"url\": \"https://example.com/news\"}]");
+                .ReturnsAsync(new McpToolResult(true, "[{\"title\": \"Breaking News\", \"url\": \"https://example.com/news\"}]"));
 
             // Act
             var result = await _toolIntegrationService.ProcessMessageToolCallsAsync(message);
@@ -97,7 +98,7 @@ namespace Adept.Services.Tests.Llm
             Assert.Contains("Tool Result", result);
             Assert.Contains("temperature", result);
             Assert.Contains("Breaking News", result);
-            
+
             _mockMcpServerManager.Verify(m => m.ExecuteToolAsync("get_weather", It.IsAny<Dictionary<string, object>>()), Times.Once);
             _mockMcpServerManager.Verify(m => m.ExecuteToolAsync("search", It.IsAny<Dictionary<string, object>>()), Times.Once);
         }
@@ -128,9 +129,9 @@ namespace Adept.Services.Tests.Llm
                 ModelName = "TestModel"
             };
 
-            // Setup mock to throw an exception
+            // Setup mock to return an error result
             _mockMcpServerManager.Setup(m => m.ExecuteToolAsync("get_weather", It.IsAny<Dictionary<string, object>>()))
-                .ThrowsAsync(new Exception("Tool execution failed"));
+                .ReturnsAsync(new McpToolResult { Success = false, ErrorMessage = "Tool execution failed" });
 
             // Act
             var result = await _toolIntegrationService.ProcessToolCallsAsync(response);
@@ -139,7 +140,7 @@ namespace Adept.Services.Tests.Llm
             Assert.Contains("Tool Results", result.Message.Content);
             Assert.Contains("get_weather", result.Message.Content);
             Assert.Contains("Error:", result.Message.Content);
-            
+
             _mockMcpServerManager.Verify(m => m.ExecuteToolAsync("get_weather", It.IsAny<Dictionary<string, object>>()), Times.Once);
         }
     }

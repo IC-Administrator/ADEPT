@@ -82,7 +82,7 @@ namespace Adept.Services.Tests.Llm
             Assert.True(_provider.SupportsVision);
             Assert.NotEmpty(_provider.AvailableModels);
             Assert.NotNull(_provider.CurrentModel);
-            Assert.Equal(_provider.CurrentModel.Id, _provider.ModelName);
+            Assert.Equal(_provider.CurrentModel!.Id, _provider.ModelName);
         }
 
         [Fact]
@@ -113,7 +113,7 @@ namespace Adept.Services.Tests.Llm
 
             // Assert
             Assert.True(result);
-            Assert.Equal(modelToSet, _provider.CurrentModel.Id);
+            Assert.Equal(modelToSet, _provider.CurrentModel!.Id);
         }
 
         [Fact]
@@ -142,7 +142,7 @@ namespace Adept.Services.Tests.Llm
             Assert.Equal(LlmRole.Assistant, response.Message.Role);
             Assert.NotEmpty(response.Message.Content);
             Assert.Equal("OpenRouter", response.ProviderName);
-            Assert.Equal(_provider.CurrentModel.Name, response.ModelName);
+            Assert.Equal(_provider.CurrentModel!.Name, response.ModelName);
         }
     }
 }
