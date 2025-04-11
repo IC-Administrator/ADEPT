@@ -8,6 +8,9 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
+// Use alias to avoid ambiguity with Moq.MockFactory
+using TestMockFactory = Adept.TestUtilities.Helpers.MockFactory;
+
 namespace Adept.TestUtilities.Fixtures
 {
     /// <summary>
@@ -31,12 +34,12 @@ namespace Adept.TestUtilities.Fixtures
         {
             // Create mocks
             MockLogger = new Mock<ILogger<object>>();
-            MockDatabaseContext = MockFactory.CreateMockDatabaseContext();
-            MockFileSystemService = MockFactory.CreateMockFileSystemService();
-            MockLlmProvider = MockFactory.CreateMockLlmProvider();
-            MockSystemPromptRepository = MockFactory.CreateMockSystemPromptRepository();
-            MockLessonResourceRepository = MockFactory.CreateMockLessonResourceRepository();
-            MockLessonTemplateRepository = MockFactory.CreateMockLessonTemplateRepository();
+            MockDatabaseContext = TestMockFactory.CreateMockDatabaseContext();
+            MockFileSystemService = TestMockFactory.CreateMockFileSystemService();
+            MockLlmProvider = TestMockFactory.CreateMockLlmProvider();
+            MockSystemPromptRepository = TestMockFactory.CreateMockSystemPromptRepository();
+            MockLessonResourceRepository = TestMockFactory.CreateMockLessonResourceRepository();
+            MockLessonTemplateRepository = TestMockFactory.CreateMockLessonTemplateRepository();
 
             // Configure services
             Services = new ServiceCollection();
@@ -85,7 +88,7 @@ namespace Adept.TestUtilities.Fixtures
         /// <returns>A mock logger</returns>
         public Mock<ILogger<T>> CreateMockLogger<T>()
         {
-            return MockFactory.CreateMockLogger<T>();
+            return TestMockFactory.CreateMockLogger<T>();
         }
 
         /// <summary>

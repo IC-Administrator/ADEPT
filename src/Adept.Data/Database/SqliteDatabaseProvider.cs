@@ -45,7 +45,8 @@ namespace Adept.Data.Database
 
             // Configure connection pooling
             _connectionStringBuilder.Pooling = true;
-            _connectionStringBuilder.MaxPoolSize = 100;
+            // Note: SQLite connection pooling is managed internally by Microsoft.Data.Sqlite
+            // and doesn't expose MaxPoolSize configuration
 
             // Ensure the directory exists
             var directory = Path.GetDirectoryName(_databasePath);

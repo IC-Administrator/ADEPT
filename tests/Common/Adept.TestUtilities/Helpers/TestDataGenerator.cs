@@ -210,8 +210,6 @@ namespace Adept.TestUtilities.Helpers
                 }
             }
 
-            string tagsJson = JsonSerializer.Serialize(selectedTags);
-
             var components = new LessonComponents
             {
                 Introduction = $"Introduction to {category} lesson",
@@ -230,7 +228,7 @@ namespace Adept.TestUtilities.Helpers
                 Name = $"{category} Lesson Template {GenerateRandomString(5)}",
                 Description = $"A template for {category.ToLower()} lessons",
                 Category = category,
-                Tags = tagsJson,
+                Tags = selectedTags,
                 Title = $"{category} Lesson",
                 LearningObjectives = $"Understand basic {category.ToLower()} concepts",
                 ComponentsJson = componentsJson,

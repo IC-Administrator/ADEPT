@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
+// Use alias to avoid ambiguity with Moq.MockFactory
+using TestMockFactory = Adept.TestUtilities.Helpers.MockFactory;
+
 namespace Adept.TestUtilities.Fixtures
 {
     /// <summary>
@@ -26,7 +29,7 @@ namespace Adept.TestUtilities.Fixtures
         public RepositoryFixture()
         {
             // Create mocks
-            MockDatabaseContext = MockFactory.CreateMockDatabaseContext();
+            MockDatabaseContext = TestMockFactory.CreateMockDatabaseContext();
             MockLogger = new Mock<ILogger<object>>();
 
             // Create test data
@@ -42,7 +45,7 @@ namespace Adept.TestUtilities.Fixtures
         /// <returns>A mock logger</returns>
         public Mock<ILogger<T>> CreateMockLogger<T>()
         {
-            return MockFactory.CreateMockLogger<T>();
+            return TestMockFactory.CreateMockLogger<T>();
         }
 
         /// <summary>
@@ -80,7 +83,7 @@ namespace Adept.TestUtilities.Fixtures
         /// <param name="result">The result to return</param>
         public void SetupExecuteAsync(string sql, int result)
         {
-            MockDatabaseContext.Setup(db => db.ExecuteAsync(
+            MockDatabaseContext.Setup(db => db.ExecuteNonQueryAsync(
                     It.Is<string>(s => s.Contains(sql)),
                     It.IsAny<object>()))
                 .ReturnsAsync(result);

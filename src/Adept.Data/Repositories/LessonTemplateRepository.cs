@@ -130,200 +130,180 @@ namespace Adept.Data.Repositories
         /// <inheritdoc/>
         public async Task<LessonTemplate> AddTemplateAsync(LessonTemplate template)
         {
-            try
-            {
-                using (var connection = _databaseProvider.CreateConnection())
+            ValidateTemplate(template);
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
+                    // Set created/updated timestamps
+                    template.CreatedAt = DateTime.UtcNow;
+                    template.UpdatedAt = template.CreatedAt;
 
-                    string sql = @"
-                        INSERT INTO LessonTemplates (TemplateId, Name, Description, Category, Tags, Title, LearningObjectives, ComponentsJson, CreatedAt, UpdatedAt)
-                        VALUES (@TemplateId, @Name, @Description, @Category, @Tags, @Title, @LearningObjectives, @ComponentsJson, @CreatedAt, @UpdatedAt)";
-
-                    using (var command = connection.CreateCommand())
+                    // Generate a new ID if not provided
+                    if (template.TemplateId == Guid.Empty)
                     {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@TemplateId", template.TemplateId.ToString());
-                        command.Parameters.AddWithValue("@Name", template.Name);
-                        command.Parameters.AddWithValue("@Description", template.Description ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@Category", template.Category ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@Tags", JsonSerializer.Serialize(template.Tags));
-                        command.Parameters.AddWithValue("@Title", template.Title ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@LearningObjectives", template.LearningObjectives ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@ComponentsJson", template.ComponentsJson ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@CreatedAt", template.CreatedAt.ToString("o"));
-                        command.Parameters.AddWithValue("@UpdatedAt", template.UpdatedAt.ToString("o"));
-
-                        await command.ExecuteNonQueryAsync();
+                        template.TemplateId = Guid.NewGuid();
                     }
-                    }
-                }
 
-                _logger.LogInformation("Added template {TemplateId}", template.TemplateId);
-                return template;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding template");
-                throw;
-            }
+                    // Insert the template
+                    await DatabaseContext.ExecuteNonQueryAsync(
+                        @"INSERT INTO LessonTemplates (
+                            template_id, name, description, category, tags,
+                            title, learning_objectives, components_json, created_at, updated_at)
+                          VALUES (
+                            @TemplateId, @Name, @Description, @Category, @Tags,
+                            @Title, @LearningObjectives, @ComponentsJson, @CreatedAt, @UpdatedAt)",
+                        new
+                        {
+                            TemplateId = template.TemplateId.ToString(),
+                            Name = template.Name,
+                            Description = template.Description,
+                            Category = template.Category,
+                            Tags = JsonSerializer.Serialize(template.Tags),
+                            Title = template.Title,
+                            LearningObjectives = template.LearningObjectives,
+                            ComponentsJson = template.ComponentsJson,
+                            CreatedAt = template.CreatedAt.ToString("o"),
+                            UpdatedAt = template.UpdatedAt.ToString("o")
+                        });
+
+                    // Return the newly created template
+                    Logger.LogInformation("Added template {TemplateId}", template.TemplateId);
+                    return template;
+                },
+                $"Error adding template {template.Name}",
+                null);
         }
 
         /// <inheritdoc/>
         public async Task<LessonTemplate> UpdateTemplateAsync(LessonTemplate template)
         {
-            try
-            {
-                using (var connection = _databaseProvider.CreateConnection())
+            ValidateTemplate(template);
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
+                    // Update timestamp
+                    template.UpdatedAt = DateTime.UtcNow;
 
-                    string sql = @"
-                        UPDATE LessonTemplates
-                        SET Name = @Name, Description = @Description, Category = @Category, Tags = @Tags,
-                            Title = @Title, LearningObjectives = @LearningObjectives, ComponentsJson = @ComponentsJson, UpdatedAt = @UpdatedAt
-                        WHERE TemplateId = @TemplateId";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@TemplateId", template.TemplateId.ToString());
-                        command.Parameters.AddWithValue("@Name", template.Name);
-                        command.Parameters.AddWithValue("@Description", template.Description ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@Category", template.Category ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@Tags", JsonSerializer.Serialize(template.Tags));
-                        command.Parameters.AddWithValue("@Title", template.Title ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@LearningObjectives", template.LearningObjectives ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@ComponentsJson", template.ComponentsJson ?? (object)DBNull.Value);
-                        command.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow.ToString("o"));
-
-                        int rowsAffected = await command.ExecuteNonQueryAsync();
-                        if (rowsAffected == 0)
+                    // Update the template
+                    int rowsAffected = await DatabaseContext.ExecuteNonQueryAsync(
+                        @"UPDATE LessonTemplates
+                          SET name = @Name,
+                              description = @Description,
+                              category = @Category,
+                              tags = @Tags,
+                              title = @Title,
+                              learning_objectives = @LearningObjectives,
+                              components_json = @ComponentsJson,
+                              updated_at = @UpdatedAt
+                          WHERE template_id = @TemplateId",
+                        new
                         {
-                            _logger.LogWarning("Template {TemplateId} not found for update", template.TemplateId);
-                            return null;
-                        }
-                    }
-                    }
-                }
+                            TemplateId = template.TemplateId.ToString(),
+                            Name = template.Name,
+                            Description = template.Description,
+                            Category = template.Category,
+                            Tags = JsonSerializer.Serialize(template.Tags),
+                            Title = template.Title,
+                            LearningObjectives = template.LearningObjectives,
+                            ComponentsJson = template.ComponentsJson,
+                            UpdatedAt = template.UpdatedAt.ToString("o")
+                        });
 
-                _logger.LogInformation("Updated template {TemplateId}", template.TemplateId);
-                return template;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating template {TemplateId}", template.TemplateId);
-                throw;
-            }
+                    if (rowsAffected == 0)
+                    {
+                        Logger.LogWarning("Template {TemplateId} not found for update", template.TemplateId);
+                        return null;
+                    }
+
+                    Logger.LogInformation("Updated template {TemplateId}", template.TemplateId);
+                    return template;
+                },
+                $"Error updating template {template.Name}",
+                null);
         }
 
         /// <inheritdoc/>
         public async Task<bool> DeleteTemplateAsync(Guid templateId)
         {
-            try
+            if (templateId == Guid.Empty)
             {
-                using (var connection = _databaseProvider.CreateConnection())
+                throw new ArgumentException("Template ID cannot be empty", nameof(templateId));
+            }
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
+                    int rowsAffected = await DatabaseContext.ExecuteNonQueryAsync(
+                        "DELETE FROM LessonTemplates WHERE template_id = @TemplateId",
+                        new { TemplateId = templateId.ToString() });
 
-                    string sql = "DELETE FROM LessonTemplates WHERE TemplateId = @TemplateId";
-
-                    using (var command = connection.CreateCommand())
+                    if (rowsAffected == 0)
                     {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@TemplateId", templateId.ToString());
-
-                        int rowsAffected = await command.ExecuteNonQueryAsync();
-                        if (rowsAffected == 0)
-                        {
-                            _logger.LogWarning("Template {TemplateId} not found for deletion", templateId);
-                            return false;
-                        }
+                        Logger.LogWarning("Template {TemplateId} not found for deletion", templateId);
+                        return false;
                     }
-                    }
-                }
 
-                _logger.LogInformation("Deleted template {TemplateId}", templateId);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting template {TemplateId}", templateId);
-                throw;
-            }
+                    Logger.LogInformation("Deleted template {TemplateId}", templateId);
+                    return true;
+                },
+                $"Error deleting template {templateId}",
+                false);
         }
 
         /// <inheritdoc/>
         public async Task<IEnumerable<LessonTemplate>> SearchTemplatesAsync(string searchTerm)
         {
-            var templates = new List<LessonTemplate>();
-
-            try
+            if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                using (var connection = _databaseProvider.CreateConnection())
+                return await GetAllTemplatesAsync();
+            }
+
+            return await ExecuteWithErrorHandlingAsync(
+                async () =>
                 {
-                    await connection.OpenAsync();
+                    var templates = await DatabaseContext.QueryAsync<LessonTemplate>(
+                        @"SELECT
+                            template_id AS TemplateId,
+                            name AS Name,
+                            description AS Description,
+                            category AS Category,
+                            tags AS Tags,
+                            title AS Title,
+                            learning_objectives AS LearningObjectives,
+                            components_json AS ComponentsJson,
+                            created_at AS CreatedAt,
+                            updated_at AS UpdatedAt
+                          FROM LessonTemplates
+                          WHERE name LIKE @SearchTerm
+                             OR description LIKE @SearchTerm
+                             OR title LIKE @SearchTerm
+                             OR learning_objectives LIKE @SearchTerm
+                          ORDER BY name",
+                        new { SearchTerm = $"%{searchTerm}%" });
 
-                    string sql = @"
-                        SELECT TemplateId, Name, Description, Category, Tags, Title, LearningObjectives, ComponentsJson, CreatedAt, UpdatedAt
-                        FROM LessonTemplates
-                        WHERE Name LIKE @SearchTerm OR Description LIKE @SearchTerm OR Title LIKE @SearchTerm OR LearningObjectives LIKE @SearchTerm
-                        ORDER BY Name";
-
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = sql;
-                    {
-                        command.Parameters.AddWithValue("@SearchTerm", $"%{searchTerm}%");
-
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                templates.Add(MapTemplateFromReader(reader));
-                            }
-                        }
-                    }
-                    }
-                }
-
-                _logger.LogInformation("Retrieved {Count} templates for search term {SearchTerm}", templates.Count, searchTerm);
-                return templates;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error searching templates for term {SearchTerm}", searchTerm);
-                throw;
-            }
+                    Logger.LogInformation("Retrieved {Count} templates for search term {SearchTerm}", templates.Count(), searchTerm);
+                    return templates;
+                },
+                $"Error searching templates for term {searchTerm}",
+                Enumerable.Empty<LessonTemplate>());
         }
 
         /// <summary>
-        /// Maps a template from a data reader
+        /// Validates a template
         /// </summary>
-        /// <param name="reader">The data reader</param>
-        /// <returns>The mapped template</returns>
-        private LessonTemplate MapTemplateFromReader(IDataReader reader)
+        /// <param name="template">The template to validate</param>
+        private void ValidateTemplate(LessonTemplate template)
         {
-            var tags = reader["Tags"] != DBNull.Value
-                ? JsonSerializer.Deserialize<List<string>>(reader["Tags"].ToString())
-                : new List<string>();
-
-            return new LessonTemplate
+            if (template == null)
             {
-                TemplateId = Guid.Parse(reader["TemplateId"].ToString()),
-                Name = reader["Name"].ToString(),
-                Description = reader["Description"] != DBNull.Value ? reader["Description"].ToString() : null,
-                Category = reader["Category"] != DBNull.Value ? reader["Category"].ToString() : null,
-                Tags = tags,
-                Title = reader["Title"] != DBNull.Value ? reader["Title"].ToString() : null,
-                LearningObjectives = reader["LearningObjectives"] != DBNull.Value ? reader["LearningObjectives"].ToString() : null,
-                ComponentsJson = reader["ComponentsJson"] != DBNull.Value ? reader["ComponentsJson"].ToString() : null,
-                CreatedAt = DateTime.Parse(reader["CreatedAt"].ToString()),
-                UpdatedAt = DateTime.Parse(reader["UpdatedAt"].ToString())
-            };
+                throw new ArgumentNullException(nameof(template));
+            }
+
+            ValidateStringNotNullOrEmpty(template.Name, nameof(template.Name));
+            ValidateStringNotNullOrEmpty(template.Title, nameof(template.Title));
+            ValidateStringNotNullOrEmpty(template.LearningObjectives, nameof(template.LearningObjectives));
         }
     }
 }

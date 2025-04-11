@@ -273,10 +273,14 @@ namespace Adept.Data.Repositories
         /// </summary>
         /// <param name="conversationId">The conversation ID</param>
         /// <param name="message">The message to add</param>
-        public async Task AddMessageToConversationAsync(string conversationId, LlmMessage message)
+        public async Task AddMessageToConversationAsync(string conversationId, Core.Interfaces.LlmMessage message)
         {
             ValidateId(conversationId, "conversation");
-            ValidateEntityNotNull(message, nameof(message));
+
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message), "The message cannot be null");
+            }
 
             await ExecuteWithErrorHandlingAndThrowAsync(
                 async () =>

@@ -105,18 +105,38 @@ namespace Adept.TestUtilities.Helpers
                     It.IsAny<object>()))
                 .ReturnsAsync(0);
 
-            // Setup basic query methods
-            mockDbContext.Setup(db => db.QueryAsync<It.IsAnyType>(
+            // Setup basic query methods for common types
+            mockDbContext.Setup(db => db.QueryAsync<LessonTemplate>(
                     It.IsAny<string>(),
                     It.IsAny<object>()))
-                .ReturnsAsync(new List<object>());
+                .ReturnsAsync(Enumerable.Empty<LessonTemplate>());
 
-            mockDbContext.Setup(db => db.QuerySingleOrDefaultAsync<It.IsAnyType>(
+            mockDbContext.Setup(db => db.QueryAsync<LessonResource>(
                     It.IsAny<string>(),
                     It.IsAny<object>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(Enumerable.Empty<LessonResource>());
 
-            mockDbContext.Setup(db => db.ExecuteAsync(
+            mockDbContext.Setup(db => db.QueryAsync<SystemPrompt>(
+                    It.IsAny<string>(),
+                    It.IsAny<object>()))
+                .ReturnsAsync(Enumerable.Empty<SystemPrompt>());
+
+            mockDbContext.Setup(db => db.QuerySingleOrDefaultAsync<LessonTemplate>(
+                    It.IsAny<string>(),
+                    It.IsAny<object>()))
+                .ReturnsAsync((LessonTemplate)null);
+
+            mockDbContext.Setup(db => db.QuerySingleOrDefaultAsync<LessonResource>(
+                    It.IsAny<string>(),
+                    It.IsAny<object>()))
+                .ReturnsAsync((LessonResource)null);
+
+            mockDbContext.Setup(db => db.QuerySingleOrDefaultAsync<SystemPrompt>(
+                    It.IsAny<string>(),
+                    It.IsAny<object>()))
+                .ReturnsAsync((SystemPrompt)null);
+
+            mockDbContext.Setup(db => db.ExecuteNonQueryAsync(
                     It.IsAny<string>(),
                     It.IsAny<object>()))
                 .ReturnsAsync(1);
@@ -128,7 +148,7 @@ namespace Adept.TestUtilities.Helpers
 
             // Setup transaction methods
             mockDbContext.Setup(db => db.BeginTransactionAsync())
-                .ReturnsAsync(new Mock<IDbTransaction>().Object);
+                .ReturnsAsync(new Mock<Adept.Common.Interfaces.IDbTransaction>().Object);
 
             return mockDbContext;
         }
@@ -327,7 +347,7 @@ namespace Adept.TestUtilities.Helpers
                     Name = "Math Lesson Template",
                     Description = "A template for math lessons",
                     Category = "Math",
-                    Tags = "[\"algebra\", \"geometry\", \"calculus\"]",
+                    Tags = new List<string> { "algebra", "geometry", "calculus" },
                     Title = "Math Lesson",
                     LearningObjectives = "Understand basic math concepts",
                     ComponentsJson = "{\"introduction\": \"Introduction to math\", \"activities\": []}",
@@ -340,7 +360,7 @@ namespace Adept.TestUtilities.Helpers
                     Name = "Science Lesson Template",
                     Description = "A template for science lessons",
                     Category = "Science",
-                    Tags = "[\"physics\", \"chemistry\", \"biology\"]",
+                    Tags = new List<string> { "physics", "chemistry", "biology" },
                     Title = "Science Lesson",
                     LearningObjectives = "Understand basic science concepts",
                     ComponentsJson = "{\"introduction\": \"Introduction to science\", \"activities\": []}",
